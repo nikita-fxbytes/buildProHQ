@@ -1,0 +1,55 @@
+# =========================
+# Root / OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.log
+logs/
+
+.idea/
+.vscode/
+
+# =========================
+# Secrets / env files
+# =========================
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# =========================
+# Node / package managers
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Frontend (Next.js)
+# =========================
+.next/
+out/
+.turbo/
+
+# =========================
+# Backend (NestJS / TypeScript)
+# =========================
+dist/
+coverage/
+*.tsbuildinfo
+
+# =========================
+# Misc caches
+# =========================
+.cache/
+
+# =========================
+# Office / temp lock files
+# =========================
+.~lock.*
+~$*

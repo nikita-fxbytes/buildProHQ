@@ -1,0 +1,58 @@
+export const MESSAGES = {
+  AUTH_VALIDATION: {
+    EMAIL_REQUIRED: 'Email is required',
+    EMAIL_INVALID: 'Please enter a valid email address',
+    EMAIL_MAX_LENGTH: 'Email must be at most 255 characters',
+    PASSWORD_REQUIRED: 'Password is required',
+    PASSWORD_MIN_LENGTH: 'Password must be at least 8 characters',
+    PASSWORD_MAX_LENGTH: 'Password must be at most 128 characters',
+    PASSWORD_WHITESPACE_ONLY: 'Password cannot be only spaces',
+    PASSWORD_MUST_BE_STRING: 'Password must be a string',
+    PORTAL_ROLE_INVALID:
+      'Portal must be one of: manager, field_user, trade_user',
+    PORTAL_ROLE_REQUIRED: 'Portal role selection is required',
+  },
+  AUTH: {
+    LOGIN_SUCCESS: 'Logged in successfully',
+    LOGIN_FAILED: 'Invalid email or password',
+    UNAUTHORIZED: 'You are not authorized to perform this action',
+    PORTAL_MISMATCH:
+      'This account does not have access to this portal. Sign in using the correct portal for your role.',
+  },
+  TASKS: {
+    CREATED: 'Task created successfully',
+    UPDATED: 'Task updated successfully',
+    DELETED: 'Task deleted successfully',
+    COMPLETED: 'Task marked as completed',
+    ASSIGNED: 'Task assigned successfully',
+    BULK_COMPLETED: 'Bulk task completion processed',
+    BULK_DELETED: 'Bulk task deletion processed',
+    ANALYTICS_MANAGER_ONLY: 'Only managers can access analytics',
+    READ_SCOPE_DENIED: 'You do not have permission to view this task',
+    UPDATE_SCOPE_DENIED: 'You do not have permission to modify this task',
+    DELETE_SCOPE_DENIED: 'You do not have permission to delete this task',
+    COMPLETE_SCOPE_DENIED: 'You do not have permission to complete this task',
+    BULK_ITEM_FAILED: 'Unable to process this task',
+  },
+  USERS: {
+    CREATED: 'User created successfully',
+    UPDATED: 'User updated successfully',
+    DELETED: 'User deleted successfully',
+  },
+  NOTIFICATIONS: {
+    RETRIEVED: 'Notifications retrieved successfully',
+    MARKED_READ: 'Notification marked as read',
+    ALL_MARKED_READ: 'All notifications marked as read',
+  },
+  COMMON: {
+    SUCCESS: 'Success',
+    INTERNAL_SERVER_ERROR: 'An internal server error occurred',
+    VALIDATION_FAILED: 'Validation failed',
+    BAD_REQUEST: 'The request could not be processed',
+    UNAUTHORIZED: 'Authentication is required',
+    FORBIDDEN: 'You do not have permission to perform this action',
+    NOT_FOUND: 'Resource not found',
+    CONFLICT: 'The request conflicts with existing data',
+    DATABASE_ERROR: 'A data processing error occurred',
+  },
+};
