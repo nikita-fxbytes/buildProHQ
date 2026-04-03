@@ -8,6 +8,7 @@ import {
   mergeSx,
   autocompletePaperSx,
 } from "@/components/common/fieldStyles";
+import { compactHelperText } from "@/components/common/formField.utils";
 
 type AppAutocompleteBaseProps<T, Multiple extends boolean | undefined> = Omit<
   AutocompleteProps<T, Multiple, false, false>,
@@ -72,7 +73,7 @@ export function AppAutocomplete<T, Multiple extends boolean | undefined = false>
           placeholder={placeholder}
           required={required}
           error={error}
-          helperText={helperText}
+          helperText={compactHelperText(helperText)}
         />
       )}
       sx={mergeSx(autocompleteControlSx, sx)}

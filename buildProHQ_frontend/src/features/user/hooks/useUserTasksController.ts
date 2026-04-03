@@ -11,6 +11,7 @@ import {
   type TaskStats,
   type ListOpenTasksBody,
 } from "@/services/tasksApi.service";
+import { truncateRichPlainText } from "@/utils/richText";
 import { appToast } from "@/utils/toast";
 
 type ConfirmAction = "completeSelected" | "deleteSelected" | "deleteSingle";
@@ -193,7 +194,7 @@ export function useUserTasksController() {
     openConfirm(
       "deleteSingle",
       "Delete Action Item",
-      `Delete "${task.desc.slice(0, 60)}${task.desc.length > 60 ? "..." : ""}"? This cannot be undone.`,
+      `Delete "${truncateRichPlainText(task.desc, 60)}"? This cannot be undone.`,
       "Yes, Delete",
       "error",
       task.id,

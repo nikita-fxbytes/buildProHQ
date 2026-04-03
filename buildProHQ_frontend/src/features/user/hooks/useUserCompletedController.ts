@@ -6,6 +6,7 @@ import { UI_DEFAULTS } from "@/constants/ui";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { userTasksService } from "@/services/userTasks.service";
 import type { CompletedTask } from "@/types/domain";
+import { htmlToPlainText } from "@/utils/richText";
 import { appToast } from "@/utils/toast";
 
 type CompletedSortKey = "level" | "trade" | "desc" | "date" | "duration";
@@ -53,7 +54,7 @@ export function useUserCompletedController() {
         (task) =>
           task.level.toLowerCase().includes(term) ||
           task.trade.toLowerCase().includes(term) ||
-          task.desc.toLowerCase().includes(term),
+          htmlToPlainText(task.desc).toLowerCase().includes(term),
       );
     }
     if (tradeFilters.length) {
@@ -74,6 +75,7 @@ export function useUserCompletedController() {
         const [day, month, year] = row.date.split(".").map(Number);
         return new Date((year ?? 0) + 2000, (month ?? 1) - 1, day ?? 1).getTime();
       }
+      if (sortKey === "desc") return htmlToPlainText(row.desc).toLowerCase();
       return row[sortKey].toString().toLowerCase();
     };
     rows.sort((a, b) => {

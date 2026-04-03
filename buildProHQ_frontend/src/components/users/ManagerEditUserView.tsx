@@ -53,8 +53,9 @@ export function ManagerEditUserView({ form, onSubmit, onCancel }: ManagerEditUse
                   {...field}
                   label="Full Name"
                   placeholder="e.g. John Smith"
+                  required
                   error={!!fieldState.error}
-                  helperText={fieldState.error?.message || " "}
+                  helperText={fieldState.error?.message}
                   sx={{
                     "& .MuiInputLabel-root": {
                       fontSize: 12,
@@ -76,8 +77,9 @@ export function ManagerEditUserView({ form, onSubmit, onCancel }: ManagerEditUse
                   {...field}
                   label="Email Address"
                   placeholder="john@buildpro.com"
+                  required
                   error={!!fieldState.error}
-                  helperText={fieldState.error?.message || " "}
+                  helperText={fieldState.error?.message}
                   sx={{
                     "& .MuiInputLabel-root": {
                       fontSize: 12,
@@ -103,8 +105,9 @@ export function ManagerEditUserView({ form, onSubmit, onCancel }: ManagerEditUse
                     { value: "Trade", label: "Trade User" },
                     { value: "Management", label: "Management" },
                   ]}
+                  required
                   error={!!fieldState.error}
-                  helperText={fieldState.error?.message || " "}
+                  helperText={fieldState.error?.message}
                   sx={{
                     "& .MuiInputLabel-root": {
                       fontSize: 12,
@@ -129,7 +132,7 @@ export function ManagerEditUserView({ form, onSubmit, onCancel }: ManagerEditUse
                     label="New Password"
                     placeholder="Set new password"
                     error={!!fieldState.error}
-                    helperText={fieldState.error?.message || " "}
+                    helperText={fieldState.error?.message}
                     sx={{
                       "& .MuiInputLabel-root": {
                         fontSize: 12,

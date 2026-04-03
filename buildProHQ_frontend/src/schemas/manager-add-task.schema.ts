@@ -1,10 +1,18 @@
 import { z } from "zod";
-import { nonEmptyString } from "@/schemas/base.schema";
+import { MESSAGES } from "@/constants/messages";
+import { htmlToPlainText } from "@/utils/richText";
 
 export const managerAddTaskSchema = z.object({
-  desc: nonEmptyString.min(3, "Description is required"),
-  level: nonEmptyString,
-  trade: nonEmptyString,
+  desc: z.string().superRefine((val, ctx) => {
+    const plain = htmlToPlainText(val);
+    if (!plain) {
+      ctx.addIssue({ code: "custom", message: MESSAGES.validation.taskDescriptionRequired });
+    } else if (plain.length < 3) {
+      ctx.addIssue({ code: "custom", message: MESSAGES.validation.taskDescriptionMin });
+    }
+  }),
+  level: z.string().trim().min(1, MESSAGES.validation.selectLevel),
+  trade: z.string().trim().min(1, MESSAGES.validation.selectTrade),
 });
 
 export type ManagerAddTaskFormValues = z.infer<typeof managerAddTaskSchema>;

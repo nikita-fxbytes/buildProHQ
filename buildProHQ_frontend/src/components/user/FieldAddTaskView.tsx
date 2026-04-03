@@ -1,20 +1,38 @@
 "use client";
 
+import { useMemo } from "react";
 import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { Controller, type UseFormReturn } from "react-hook-form";
-import { FormAutocompleteField } from "@/components/common/FormAutocompleteField";
+import { FormLookupAutocompleteField } from "@/components/common/FormLookupAutocompleteField";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
-import { FormTextareaField } from "@/components/common/FormTextareaField";
-import type { ManagerAddTaskFormValues } from "@/schemas/manager-add-task.schema";
+import { FormRichTextField } from "@/components/common/FormRichTextField";
+import { FormFieldLabel } from "@/components/common/FormFieldLabel";
+import type { FieldAddTaskFormValues } from "@/schemas/field-add-task.schema";
+import type { LookupItem } from "@/services/lookupsApi.service";
+import { MESSAGES } from "@/constants/messages";
+import {
+  TASK_BEFORE_PHOTOS_MAX,
+  TASK_PRIORITY_LABEL,
+  TASK_PRIORITY_SX,
+  type TaskPriorityCode,
+} from "@/constants/task-form.constants";
+import type { UploadItem } from "@/components/common/FormUploadField";
+import { FormUploadField } from "@/components/common/FormUploadField";
 
 type Props = {
-  form: UseFormReturn<ManagerAddTaskFormValues>;
-  levels: string[];
-  trades: string[];
+  form: UseFormReturn<FieldAddTaskFormValues>;
+  levels: LookupItem[];
+  trades: LookupItem[];
+  priorityOptions: LookupItem[];
+  photos: UploadItem[];
+  setPhotos: (items: UploadItem[]) => void;
+  loadingLookups: boolean;
+  submitting: boolean;
   onSubmit: () => void;
   onCancel: () => void;
   onPaste: () => void;
@@ -22,16 +40,43 @@ type Props = {
   voiceActive: boolean;
 };
 
+function sortLookups(items: LookupItem[]): LookupItem[] {
+  return [...items].sort((a, b) => {
+    const ao = a.sortOrder ?? 0;
+    const bo = b.sortOrder ?? 0;
+    if (ao !== bo) return ao - bo;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function priorityCodeFromLookup(p: LookupItem): TaskPriorityCode | null {
+  const c = p.code.toLowerCase();
+  if (c === "low" || c === "medium" || c === "high" || c === "critical") {
+    return c;
+  }
+  return null;
+}
+
 export function FieldAddTaskView({
   form,
   levels,
   trades,
+  priorityOptions,
+  photos,
+  setPhotos,
+  loadingLookups,
+  submitting,
   onSubmit,
   onCancel,
   onPaste,
   toggleVoice,
   voiceActive,
 }: Props) {
+  const disabled = loadingLookups || submitting;
+
+  const sortedLevels = useMemo(() => sortLookups(levels), [levels]);
+  const sortedTrades = useMemo(() => sortLookups(trades), [trades]);
+
   return (
     <Box sx={{ maxWidth: "640px" }}>
       <Paper
@@ -41,8 +86,26 @@ export function FieldAddTaskView({
           borderRadius: "12px",
           boxShadow: "0 2px 16px rgba(0,0,0,0.08)",
           padding: "28px 32px",
+          position: "relative",
         }}
       >
+        {loadingLookups ? (
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "rgba(255,255,255,0.7)",
+              zIndex: 2,
+              borderRadius: "12px",
+            }}
+          >
+            <CircularProgress size={28} sx={{ color: "#F5A623" }} />
+          </Box>
+        ) : null}
+
         <Typography
           sx={{
             fontFamily: "Rajdhani, sans-serif",
@@ -57,53 +120,38 @@ export function FieldAddTaskView({
             gap: "8px",
           }}
         >
-          <AppIcon name="clipboard" size={16} /> New Action Item
+          <span aria-hidden>📋</span> New Action Item
         </Typography>
 
         <form onSubmit={onSubmit} noValidate>
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
             <Box sx={{ gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "6px" }}>
-              <Typography
-                sx={{
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  color: "#7B89A8",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.7px",
-                }}
-              >
-                Description
-              </Typography>
+              <FormFieldLabel required>Description</FormFieldLabel>
 
               <Box sx={{ position: "relative" }}>
                 <Controller
                   control={form.control}
-                  name="desc"
+                  name="description"
                   render={({ field, fieldState }) => (
-                    <FormTextareaField
-                      {...field}
-                      minRows={4}
+                    <FormRichTextField
+                      name={field.name}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      disabled={disabled}
                       placeholder="Describe the action item..."
                       error={!!fieldState.error}
-                      helperText={fieldState.error?.message || " "}
-                      sx={{
-                        "& .MuiInputBase-root": {
-                          pr: "80px",
-                        },
-                        "& .MuiOutlinedInput-input": {
-                          fontSize: "14px",
-                          padding: "10px 14px",
-                        },
-                      }}
+                      helperText={fieldState.error?.message}
                     />
                   )}
                 />
 
-                <Stack direction="row" spacing={0.75} sx={{ position: "absolute", top: 8, right: 8 }}>
+                <Stack direction="row" spacing={0.75} sx={{ position: "absolute", top: 46, right: 8 }}>
                   <Box
                     component="button"
                     type="button"
                     title="Voice Input"
+                    disabled={disabled}
                     onClick={toggleVoice}
                     sx={{
                       width: "32px",
@@ -112,7 +160,7 @@ export function FieldAddTaskView({
                       border: "1.5px solid",
                       borderColor: voiceActive ? "#EF4444" : "#E4E8F0",
                       background: voiceActive ? "#FEE2E2" : "#fff",
-                      cursor: "pointer",
+                      cursor: disabled ? "not-allowed" : "pointer",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -128,6 +176,7 @@ export function FieldAddTaskView({
                     component="button"
                     type="button"
                     title="Paste from Clipboard"
+                    disabled={disabled}
                     onClick={onPaste}
                     sx={{
                       width: "32px",
@@ -135,7 +184,7 @@ export function FieldAddTaskView({
                       borderRadius: "8px",
                       border: "1.5px solid #E4E8F0",
                       background: "#fff",
-                      cursor: "pointer",
+                      cursor: disabled ? "not-allowed" : "pointer",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -155,36 +204,108 @@ export function FieldAddTaskView({
                   fontSize: "11px",
                   color: "#7B89A8",
                   marginTop: "4px",
-                  display: voiceActive ? "block" : "none",
+                  display: voiceActive ? "flex" : "none",
+                  alignItems: "center",
+                  gap: 0.25,
                 }}
               >
-                <AppIcon name="listening" size={12} sx={{ mr: 0.25 }} /> Listening... speak your action item
+                <span aria-hidden>🔴</span> {MESSAGES.taskForm.voiceListeningLine}
               </Typography>
             </Box>
 
             <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <Typography sx={{ fontSize: "12px", fontWeight: 700, color: "#7B89A8", textTransform: "uppercase", letterSpacing: "0.7px" }}>
-                Level
-              </Typography>
-              <FormAutocompleteField<ManagerAddTaskFormValues, string>
+              <FormFieldLabel required>Level</FormFieldLabel>
+              <FormLookupAutocompleteField
                 control={form.control}
-                name="level"
-                options={levels}
-                placeholder="Select Level"
-                isOptionEqualToValue={(option, value) => option === value}
+                name="levelId"
+                options={sortedLevels}
+                placeholder={MESSAGES.taskForm.selectLevelPlaceholder}
+                noOptionsText={MESSAGES.taskForm.autocompleteNoOptions}
+                disabled={disabled}
               />
             </Box>
 
             <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <Typography sx={{ fontSize: "12px", fontWeight: 700, color: "#7B89A8", textTransform: "uppercase", letterSpacing: "0.7px" }}>
-                Trade
-              </Typography>
-              <FormAutocompleteField<ManagerAddTaskFormValues, string>
+              <FormFieldLabel required>Trade</FormFieldLabel>
+              <FormLookupAutocompleteField
                 control={form.control}
-                name="trade"
-                options={trades}
-                placeholder="Select Trade"
-                isOptionEqualToValue={(option, value) => option === value}
+                name="tradeId"
+                options={sortedTrades}
+                placeholder={MESSAGES.taskForm.selectTradePlaceholder}
+                noOptionsText={MESSAGES.taskForm.autocompleteNoOptions}
+                disabled={disabled}
+              />
+            </Box>
+
+            <Box sx={{ gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "6px" }}>
+              <FormFieldLabel required>Priority</FormFieldLabel>
+              <Controller
+                control={form.control}
+                name="priorityId"
+                render={({ field, fieldState }) => (
+                  <Box>
+                    <Stack
+                      direction="row"
+                      useFlexGap
+                      flexWrap="wrap"
+                      sx={{ gap: "8px" }}
+                    >
+                      {priorityOptions.map((p) => {
+                        const code = priorityCodeFromLookup(p);
+                        const ui = code ? TASK_PRIORITY_SX[code] : null;
+                        const label = code ? TASK_PRIORITY_LABEL[code] : p.name;
+                        const selected = field.value === p.id;
+                        return (
+                          <AppButton
+                            key={p.id}
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => field.onChange(p.id)}
+                            sx={{
+                              padding: "7px 16px",
+                              borderRadius: "8px",
+                              border: ui?.border ?? "2px solid #E4E8F0",
+                              background: selected
+                                ? ui?.background ?? "#FFF7ED"
+                                : ui?.background ?? "#fafafa",
+                              color: ui?.color ?? "#1A2035",
+                              fontWeight: 700,
+                              fontSize: "13px",
+                              textTransform: "none",
+                              boxShadow: "none",
+                              opacity: selected ? 1 : 0.85,
+                              outline: selected ? "2px solid #F5A623" : "none",
+                              outlineOffset: 2,
+                              "&:hover": {
+                                opacity: 1,
+                                borderColor: "#F5A623",
+                              },
+                            }}
+                          >
+                            {label}
+                          </AppButton>
+                        );
+                      })}
+                    </Stack>
+                    {fieldState.error ? (
+                      <Typography sx={{ fontSize: "12px", color: "error.main", mt: 0.5 }}>
+                        {fieldState.error.message}
+                      </Typography>
+                    ) : null}
+                  </Box>
+                )}
+              />
+            </Box>
+
+            <Box sx={{ gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "6px" }}>
+              <FormFieldLabel>{MESSAGES.taskForm.beforePhotosSection}</FormFieldLabel>
+              <FormUploadField
+                mode="multiple"
+                value={photos}
+                onChange={setPhotos}
+                maxFiles={TASK_BEFORE_PHOTOS_MAX}
+                maxSizeBytes={10 * 1024 * 1024}
+                disabled={disabled}
               />
             </Box>
           </Box>
@@ -193,6 +314,7 @@ export function FieldAddTaskView({
             <AppButton
               type="submit"
               variant="contained"
+              disabled={disabled}
               sx={{ background: "#F5A623", color: "#fff", "&:hover": { background: "#E09010" } }}
             >
               + Add Action Item
@@ -200,14 +322,20 @@ export function FieldAddTaskView({
             <AppButton
               type="button"
               variant="outlined"
+              disabled={disabled}
               onClick={onCancel}
-              sx={{ borderColor: "#E4E8F0", color: "#1A2035", "&:hover": { borderColor: "#F5A623", color: "#F5A623" } }}
+              sx={{
+                borderColor: "#E4E8F0",
+                color: "#1A2035",
+                "&:hover": { borderColor: "#F5A623", color: "#F5A623" },
+              }}
             >
               Cancel
             </AppButton>
           </Stack>
         </form>
       </Paper>
+
     </Box>
   );
 }

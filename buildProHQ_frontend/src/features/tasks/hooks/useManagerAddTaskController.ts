@@ -8,6 +8,7 @@ import { MESSAGES } from "@/constants/messages";
 import { ROUTES } from "@/constants/routes";
 import { managerAddTaskSchema, type ManagerAddTaskFormValues } from "@/schemas/manager-add-task.schema";
 import { managerAddTaskService } from "@/services/managerAddTask.service";
+import { appendPlainTextToRichHtml } from "@/utils/richText";
 import { appToast } from "@/utils/toast";
 
 export function useManagerAddTaskController() {
@@ -54,10 +55,10 @@ export function useManagerAddTaskController() {
     try {
       const text = await navigator.clipboard.readText();
       const current = form.getValues("desc");
-      form.setValue("desc", `${current ? `${current} ` : ""}${text}`, { shouldValidate: true });
-      appToast.info("Pasted from clipboard");
+      form.setValue("desc", appendPlainTextToRichHtml(current, text), { shouldValidate: true });
+      appToast.info(MESSAGES.validation.clipboardPasted);
     } catch {
-      appToast.error("Clipboard access denied. Try Ctrl+V in the text box.");
+      appToast.error(MESSAGES.validation.clipboardDenied);
     }
   };
 

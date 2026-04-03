@@ -53,8 +53,9 @@ export function ManagerAddUserView({ form, onSubmit, onCancel }: ManagerAddUserV
                   {...field}
                   label="Full Name"
                   placeholder="e.g. John Smith"
+                  required
                   error={!!fieldState.error}
-                  helperText={fieldState.error?.message || " "}
+                  helperText={fieldState.error?.message}
                   sx={{
                     "& .MuiInputLabel-root": {
                       fontSize: 12,
@@ -76,8 +77,9 @@ export function ManagerAddUserView({ form, onSubmit, onCancel }: ManagerAddUserV
                   {...field}
                   label="Email Address"
                   placeholder="john@buildpro.com"
+                  required
                   error={!!fieldState.error}
-                  helperText={fieldState.error?.message || " "}
+                  helperText={fieldState.error?.message}
                   sx={{
                     "& .MuiInputLabel-root": {
                       fontSize: 12,
@@ -103,8 +105,9 @@ export function ManagerAddUserView({ form, onSubmit, onCancel }: ManagerAddUserV
                     { value: "Trade", label: "Trade User" },
                     { value: "Management", label: "Management" },
                   ]}
+                  required
                   error={!!fieldState.error}
-                  helperText={fieldState.error?.message || " "}
+                  helperText={fieldState.error?.message}
                   sx={{
                     "& .MuiInputLabel-root": {
                       fontSize: 12,
@@ -129,7 +132,7 @@ export function ManagerAddUserView({ form, onSubmit, onCancel }: ManagerAddUserV
                     label="Password"
                     placeholder="Set password"
                     error={!!fieldState.error}
-                    helperText={fieldState.error?.message || " "}
+                    helperText={fieldState.error?.message}
                     sx={{
                       "& .MuiInputLabel-root": {
                         fontSize: 12,

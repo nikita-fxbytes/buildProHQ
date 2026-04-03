@@ -8,7 +8,8 @@ import { Controller, type UseFormReturn } from "react-hook-form";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
 import { FormSelectField } from "@/components/common/FormSelectField";
-import { FormTextareaField } from "@/components/common/FormTextareaField";
+import { FormRichTextField } from "@/components/common/FormRichTextField";
+import { FormFieldLabel } from "@/components/common/FormFieldLabel";
 import type { ManagerAddTaskFormValues } from "@/schemas/manager-add-task.schema";
 
 type Props = {
@@ -63,43 +64,32 @@ export function ManagerAddTaskView({
         <form onSubmit={onSubmit} noValidate>
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
             <Box sx={{ gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "6px" }}>
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "#7B89A8",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.7px",
-                }}
-              >
-                Description
-              </Typography>
+              <FormFieldLabel required>Description</FormFieldLabel>
 
               <Box sx={{ position: "relative" }}>
                 <Controller
                   control={form.control}
                   name="desc"
                   render={({ field, fieldState }) => (
-                    <FormTextareaField
-                      {...field}
-                      minRows={4}
+                    <FormRichTextField
+                      name={field.name}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
                       placeholder="Describe the action item..."
                       error={!!fieldState.error}
-                      helperText={fieldState.error?.message || " "}
+                      helperText={fieldState.error?.message}
                       sx={{
-                        "& .MuiInputBase-root": {
-                          fontSize: 14,
+                        "& > div:first-of-type": {
                           background: "#fff",
-                          pr: "80px",
+                          borderRadius: "8px",
                         },
-                        "& .MuiOutlinedInput-root": { borderRadius: "8px" },
-                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#E4E8F0", borderWidth: 1.5 },
                       }}
                     />
                   )}
                 />
 
-                <Stack direction="row" spacing={0.75} sx={{ position: "absolute", top: 8, right: 8 }}>
+                <Stack direction="row" spacing={0.75} sx={{ position: "absolute", top: 46, right: 8 }}>
                   <Box
                     component="button"
                     type="button"
@@ -150,9 +140,7 @@ export function ManagerAddTaskView({
             </Box>
 
             <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#7B89A8", textTransform: "uppercase", letterSpacing: "0.7px" }}>
-                Level
-              </Typography>
+              <FormFieldLabel required>Level</FormFieldLabel>
               <Controller
                 control={form.control}
                 name="level"
@@ -160,7 +148,7 @@ export function ManagerAddTaskView({
                   <FormSelectField
                     {...field}
                     error={!!fieldState.error}
-                    helperText={fieldState.error?.message || " "}
+                    helperText={fieldState.error?.message}
                     options={[
                       { value: "", label: "Select Level" },
                       ...levels.map((level) => ({ value: level, label: level })),
@@ -176,9 +164,7 @@ export function ManagerAddTaskView({
             </Box>
 
             <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#7B89A8", textTransform: "uppercase", letterSpacing: "0.7px" }}>
-                Trade
-              </Typography>
+              <FormFieldLabel required>Trade</FormFieldLabel>
               <Controller
                 control={form.control}
                 name="trade"
@@ -186,7 +172,7 @@ export function ManagerAddTaskView({
                   <FormSelectField
                     {...field}
                     error={!!fieldState.error}
-                    helperText={fieldState.error?.message || " "}
+                    helperText={fieldState.error?.message}
                     options={[
                       { value: "", label: "Select Trade" },
                       ...trades.map((trade) => ({ value: trade, label: trade })),

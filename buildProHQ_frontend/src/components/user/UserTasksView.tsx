@@ -17,6 +17,7 @@ import { AppTableHeader } from "@/components/common/table/AppTableHeader";
 import { AppTablePagination } from "@/components/common/table/AppTablePagination";
 import { AppTableRow } from "@/components/common/table/AppTableRow";
 import { AppTableShell } from "@/components/common/table/AppTableShell";
+import { htmlToPlainText } from "@/utils/richText";
 import { PageToolbar } from "@/components/common/toolbar/PageToolbar";
 import { SearchInput } from "@/components/common/SearchInput";
 import { StatCard } from "@/components/common/StatCard";
@@ -274,7 +275,7 @@ export function UserTasksView(props: Props) {
               <AppTableCell variant="default">
                 <PriorityBadge label={task.priority} />
               </AppTableCell>
-              <AppTableCell variant="text">{task.desc}</AppTableCell>
+              <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
               <DaysBadge days={task.days} />
               <AppButton
                 type="button"

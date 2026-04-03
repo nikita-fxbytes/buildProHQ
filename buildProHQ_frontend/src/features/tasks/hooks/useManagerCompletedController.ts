@@ -5,6 +5,7 @@ import { MESSAGES } from "@/constants/messages";
 import { UI_DEFAULTS } from "@/constants/ui";
 import { taskService } from "@/services/task.service";
 import type { CompletedTask } from "@/types/domain";
+import { htmlToPlainText } from "@/utils/richText";
 import { appToast } from "@/utils/toast";
 
 type ManagerCompletedRow = CompletedTask & {
@@ -60,7 +61,9 @@ export function useManagerCompletedController() {
     return allRows.filter((task) => {
       if (
         query &&
-        !`${task.level} ${task.trade} ${task.desc} ${task.user}`.toLowerCase().includes(query)
+        !`${task.level} ${task.trade} ${htmlToPlainText(task.desc)} ${task.user}`
+          .toLowerCase()
+          .includes(query)
       ) {
         return false;
       }

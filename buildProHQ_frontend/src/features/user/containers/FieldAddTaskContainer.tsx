@@ -11,6 +11,11 @@ export function FieldAddTaskContainer() {
       form={controller.form}
       levels={controller.levels}
       trades={controller.trades}
+      priorityOptions={controller.priorityOptions}
+      photos={controller.photos}
+      setPhotos={controller.setPhotos}
+      loadingLookups={controller.loadingLookups}
+      submitting={controller.submitting}
       onSubmit={controller.onSubmit}
       onCancel={controller.onCancel}
       onPaste={controller.onPaste}

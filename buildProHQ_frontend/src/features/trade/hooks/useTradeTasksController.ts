@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { tradeCompletedService } from "@/services/tradeCompleted.service";
 import { tradeTasksService } from "@/services/tradeTasks.service";
 import type { Task } from "@/types/domain";
+import { htmlToPlainText } from "@/utils/richText";
 import { appToast } from "@/utils/toast";
 
 const DEFAULT_TRADE = "Painter";
@@ -51,7 +52,7 @@ export function useTradeTasksController() {
       (task) =>
         task.level.toLowerCase().includes(term) ||
         task.trade.toLowerCase().includes(term) ||
-        task.desc.toLowerCase().includes(term),
+        htmlToPlainText(task.desc).toLowerCase().includes(term),
     );
   }, [allRows, search]);
 

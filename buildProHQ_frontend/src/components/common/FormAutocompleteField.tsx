@@ -32,7 +32,7 @@ export function FormAutocompleteField<
           onChange={(nextValue) => field.onChange(nextValue)}
           onBlur={field.onBlur}
           error={!!fieldState.error}
-          helperText={fieldState.error?.message || " "}
+          helperText={fieldState.error?.message}
         />
       )}
     />

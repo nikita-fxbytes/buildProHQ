@@ -17,6 +17,7 @@ import { AppTableRow } from "@/components/common/table/AppTableRow";
 import { AppTableShell } from "@/components/common/table/AppTableShell";
 import { PageToolbar } from "@/components/common/toolbar/PageToolbar";
 import { SearchInput } from "@/components/common/SearchInput";
+import { htmlToPlainText } from "@/utils/richText";
 
 type ManagerCompletedViewRow = {
   id: number;
@@ -172,7 +173,7 @@ export function ManagerCompletedView(props: Props) {
                 <AppTableCell variant="level">{task.level}</AppTableCell>
                 <AppTableCell variant="trade">{task.trade}</AppTableCell>
                 <InitialsBadge initials={task.userLabel} />
-                <AppTableCell variant="text">{task.desc}</AppTableCell>
+                <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
                 <AppTableCell variant="muted">{task.date}</AppTableCell>
                 <DoneBadge label={task.durationLabel} />
               </AppTableRow>

@@ -71,6 +71,32 @@ export type TaskStats = {
   tradesActive: number;
 };
 
+export type CreateTaskPayload = {
+  statusId: string;
+  priorityId?: string;
+  levelId: string;
+  tradeId: string;
+  description: string;
+  notes?: string;
+};
+
+export type TaskDetailResponse = {
+  id: string;
+  description?: string;
+  status_id?: string;
+  [key: string]: unknown;
+};
+
+export type AddTaskAttachmentPayload = {
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  mimeType?: string;
+  fileSize: number;
+  isBefore?: boolean;
+  isAfter?: boolean;
+};
+
 export const tasksApi = {
   async getStats(): Promise<TaskStats> {
     const { data } = await apiClient.get<ApiEnvelope<TaskStats>>("/v1/tasks/stats");
@@ -105,6 +131,19 @@ export const tasksApi = {
   async deleteOne(id: string): Promise<{ id: string; deleted: true }> {
     const { data } = await apiClient.delete<ApiEnvelope<{ id: string; deleted: true }>>(
       `/v1/tasks/${id}`,
+    );
+    return data.data;
+  },
+
+  async createTask(body: CreateTaskPayload): Promise<TaskDetailResponse> {
+    const { data } = await apiClient.post<ApiEnvelope<TaskDetailResponse>>("/v1/tasks", body);
+    return data.data;
+  },
+
+  async addAttachment(taskId: string, payload: AddTaskAttachmentPayload): Promise<{ id: string }> {
+    const { data } = await apiClient.post<ApiEnvelope<{ id: string }>>(
+      `/v1/tasks/${taskId}/attachments`,
+      payload,
     );
     return data.data;
   },

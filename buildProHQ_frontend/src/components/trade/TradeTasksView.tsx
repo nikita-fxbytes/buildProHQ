@@ -16,6 +16,7 @@ import { AppTableShell } from "@/components/common/table/AppTableShell";
 import { SearchInput } from "@/components/common/SearchInput";
 import { StatCard } from "@/components/common/StatCard";
 import type { Task } from "@/types/domain";
+import { htmlToPlainText, truncateRichPlainText } from "@/utils/richText";
 
 type Props = {
   loading: boolean;
@@ -75,7 +76,7 @@ export function TradeTasksView(props: Props) {
             >
               <AppTableCell variant="level">{task.level}</AppTableCell>
               <AppTableCell variant="trade">{task.trade}</AppTableCell>
-              <AppTableCell variant="text">{task.desc}</AppTableCell>
+              <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
               <DaysBadge days={task.days} />
               <AppButton
                 type="button"
@@ -109,7 +110,7 @@ export function TradeTasksView(props: Props) {
         title="Confirm Complete"
         message={
           props.pendingTask
-            ? `Mark "${props.pendingTask.desc}" as completed?`
+            ? `Mark "${truncateRichPlainText(props.pendingTask.desc, 120)}" as completed?`
             : "Mark this task as completed?"
         }
         confirmLabel="Complete"

@@ -1,5 +1,6 @@
 import { taskService } from "@/services/task.service";
 import type { Task } from "@/types/domain";
+import { sanitizeRichHtml } from "@/utils/richText";
 
 export type ManagerAddTaskOptions = {
   levels: string[];
@@ -16,6 +17,7 @@ export const managerAddTaskService = {
   async createTask(input: Pick<Task, "desc" | "level" | "trade">): Promise<void> {
     await taskService.createTask({
       ...input,
+      desc: sanitizeRichHtml(input.desc),
       user: "MGR",
     });
   },

@@ -6,6 +6,7 @@ import { UI_DEFAULTS } from "@/constants/ui";
 import { taskService } from "@/services/task.service";
 import { userService } from "@/services/user.service";
 import type { Task, User } from "@/types/domain";
+import { htmlToPlainText, truncateRichPlainText } from "@/utils/richText";
 import { appToast } from "@/utils/toast";
 
 type Sort = "asc" | "desc" | null;
@@ -68,7 +69,12 @@ export function useManagerTasksController() {
       if (tradeFilters.length && !tradeFilters.includes(task.trade)) return false;
       if (levelFilters.length && !levelFilters.includes(task.level)) return false;
       if (userFilters.length && !userFilters.includes(task.user)) return false;
-      if (query && !`${task.level} ${task.trade} ${task.desc} ${task.user}`.toLowerCase().includes(query)) {
+      if (
+        query &&
+        !`${task.level} ${task.trade} ${htmlToPlainText(task.desc)} ${task.user}`
+          .toLowerCase()
+          .includes(query)
+      ) {
         return false;
       }
       return true;
@@ -193,7 +199,7 @@ export function useManagerTasksController() {
       openConfirm(
         "deleteSingle",
         "Delete Task",
-        `Delete "${task.desc.slice(0, 60)}${task.desc.length > 60 ? "..." : ""}"? This cannot be undone.`,
+        `Delete "${truncateRichPlainText(task.desc, 60)}"? This cannot be undone.`,
         "Yes, Delete",
         "error",
         task.id,

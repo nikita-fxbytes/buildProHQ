@@ -30,5 +30,9 @@ export const lookupsApi = {
     );
     return data.data;
   },
+  async getTaskStatuses(): Promise<LookupItem[]> {
+    const { data } = await apiClient.get<ApiEnvelope<LookupItem[]>>("/v1/lookups/task-statuses");
+    return data.data;
+  },
 };
 
