@@ -166,7 +166,12 @@ export class TasksController {
 
   @Post()
   @Roles('manager', 'field_user')
-  @ApiOperation({ summary: 'Create task (manager/field user)' })
+  @ApiOperation({
+    summary: 'Create task (manager/field user)',
+    description:
+      'Creates an open action item. Send `statusId` for the `open` status from GET /lookups/task-statuses. Optional `priorityId` from GET /lookups/task-priorities.',
+  })
+  @ApiBody({ type: CreateTaskDto })
   createTask(@Body() dto: CreateTaskDto, @CurrentUser() user: AuthUser) {
     return this.tasksService.create(dto, user);
   }

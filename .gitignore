@@ -44,6 +44,11 @@ coverage/
 *.tsbuildinfo
 
 # =========================
+# Uploaded files (API local disk)
+# =========================
+uploads/
+
+# =========================
 # Misc caches
 # =========================
 .cache/

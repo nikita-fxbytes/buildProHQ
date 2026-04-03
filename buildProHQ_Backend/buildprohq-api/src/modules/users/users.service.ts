@@ -155,10 +155,7 @@ export class UsersService {
     await this.userRepository.update(id, updatePayload);
 
     if (dto.roleId) {
-      await this.userRoleRepository.update(
-        { userId: id, deletedAt: IsNull() },
-        { deletedAt: new Date(), updatedBy: actorId },
-      );
+      await this.userRoleRepository.softDelete({ userId: id, deletedAt: IsNull() });
       const userRole = this.userRoleRepository.create({
         userId: id,
         roleId: dto.roleId,

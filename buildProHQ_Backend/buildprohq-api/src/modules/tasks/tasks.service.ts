@@ -27,6 +27,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { BulkTasksDto } from './dto/bulk-tasks.dto';
 import { MESSAGES } from '../../infrastructure/common/constants/messages';
 import { SearchOpenTasksDto } from './dto/search-open-tasks.dto';
+import { TaskAttachmentsService } from './task-attachments.service';
 
 @Injectable()
 export class TasksService {
@@ -47,6 +48,7 @@ export class TasksService {
     private readonly taskHistoryRepository: Repository<TaskHistory>,
     @InjectRepository(Attachment)
     private readonly attachmentRepository: Repository<Attachment>,
+    private readonly taskAttachments: TaskAttachmentsService,
     private readonly audit: AuditService,
   ) {}
 
@@ -209,8 +211,8 @@ export class TasksService {
       throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
     }
 
+    await this.taskRepository.softDelete(id);
     await this.taskRepository.update(id, {
-      deletedAt: new Date(),
       updatedBy: user.id,
       statusId: deletedStatus.id,
     });
@@ -302,21 +304,11 @@ export class TasksService {
     await this.taskCompletionRepository.save(completion);
 
     if (dto.photos && dto.photos.length > 0) {
-      const attachments = dto.photos.map((url) =>
-        this.attachmentRepository.create({
-          entityType: 'task',
-          entityId: id,
-          taskId: id,
-          fileUrl: url,
-          fileName: url.split('/').pop() || 'verification_photo',
-          fileType: 'image',
-          uploadedBy: user.id,
-          isAfter: true,
-          createdBy: user.id,
-          updatedBy: user.id,
-        }),
+      await this.taskAttachments.addAfterPhotosFromUrls(
+        id,
+        dto.photos,
+        user.id,
       );
-      await this.attachmentRepository.save(attachments);
     }
 
     const history = this.taskHistoryRepository.create({
@@ -371,22 +363,7 @@ export class TasksService {
 
   async addAttachment(taskId: string, dto: AddAttachmentDto, user: AuthUser) {
     await this.getById(taskId, user);
-    const row = this.attachmentRepository.create({
-      entityType: 'task',
-      entityId: taskId,
-      taskId,
-      fileUrl: dto.fileUrl,
-      fileName: dto.fileName,
-      fileType: dto.fileType,
-      mimeType: dto.mimeType ?? null,
-      fileSize: String(dto.fileSize),
-      uploadedBy: user.id,
-      isBefore: Boolean(dto.isBefore),
-      isAfter: Boolean(dto.isAfter),
-      createdBy: user.id,
-      updatedBy: user.id,
-    });
-    await this.attachmentRepository.save(row);
+    await this.taskAttachments.addOneFromDto(taskId, dto, user.id);
     return { taskId, attachmentAdded: true, message: MESSAGES.TASKS.UPDATED };
   }
 

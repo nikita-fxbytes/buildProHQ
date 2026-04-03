@@ -8,6 +8,7 @@ import type { LogLevel } from 'typeorm';
 import {
   AuditModule,
   AuthModule,
+  FilesModule,
   HealthModule,
   LookupsModule,
   TasksModule,
@@ -65,6 +66,7 @@ import { ALL_TYPEORM_ENTITIES } from './infrastructure/persistence/typeorm/entit
     }),
     AuditModule,
     HealthModule,
+    FilesModule,
     AuthModule,
     UsersModule,
     TasksModule,

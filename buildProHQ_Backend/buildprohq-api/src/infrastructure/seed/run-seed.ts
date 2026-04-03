@@ -187,6 +187,10 @@ async function run(): Promise<void> {
     name: 'High',
     sortOrder: 3,
   });
+  await getOrCreateByCode(taskPriorityRepo, 'critical', {
+    name: 'Critical',
+    sortOrder: 4,
+  });
 
   const painterTrade = await getOrCreateByCode(tradeRepo, 'painter', {
     name: 'Painter',
@@ -200,6 +204,10 @@ async function run(): Promise<void> {
     name: 'Plumber',
     sortOrder: 3,
   });
+  await getOrCreateByCode(tradeRepo, 'plasterer', {
+    name: 'Plasterer',
+    sortOrder: 4,
+  });
 
   const level1 = await getOrCreateByCode(levelRepo, 'l1', {
     name: 'L1',
@@ -210,6 +218,12 @@ async function run(): Promise<void> {
     sortOrder: 2,
   });
   await getOrCreateByCode(levelRepo, 'l3', { name: 'L3', sortOrder: 3 });
+  for (let i = 4; i <= 10; i++) {
+    await getOrCreateByCode(levelRepo, `l${i}`, {
+      name: `L${i}`,
+      sortOrder: i,
+    });
+  }
 
   const tradeCategory = await getOrCreateByCode(filterCategoryRepo, 'trade', {
     name: 'Trade',

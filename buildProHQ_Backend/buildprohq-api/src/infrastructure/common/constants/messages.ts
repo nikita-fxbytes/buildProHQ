@@ -19,6 +19,26 @@ export const MESSAGES = {
     PORTAL_MISMATCH:
       'This account does not have access to this portal. Sign in using the correct portal for your role.',
   },
+  TASK_VALIDATION: {
+    STATUS_ID_REQUIRED: 'Please select a valid task status',
+    STATUS_ID_INVALID: 'Task status must be a valid identifier',
+    PRIORITY_ID_INVALID: 'Priority must be a valid identifier',
+    LEVEL_ID_REQUIRED: 'Please select a level',
+    LEVEL_ID_INVALID: 'Level must be a valid identifier',
+    TRADE_ID_REQUIRED: 'Please select a trade',
+    TRADE_ID_INVALID: 'Trade must be a valid identifier',
+    DESCRIPTION_REQUIRED: 'Description is required',
+    DESCRIPTION_MIN: 'Description must be at least 3 characters',
+    ASSIGNED_USER_ID_INVALID: 'Assigned user must be a valid identifier',
+    FILE_URL_INVALID: 'Attachment URL must be a valid http(s) address',
+  },
+  FILES: {
+    REQUIRED: 'Please choose a file to upload',
+    INVALID_TYPE:
+      'Please upload a valid image file (JPG, PNG, HEIC, or WebP)',
+    TOO_LARGE: 'File is too large',
+    NOT_FOUND: 'File not found',
+  },
   TASKS: {
     CREATED: 'Task created successfully',
     UPDATED: 'Task updated successfully',
@@ -27,6 +47,7 @@ export const MESSAGES = {
     ASSIGNED: 'Task assigned successfully',
     BULK_COMPLETED: 'Bulk task completion processed',
     BULK_DELETED: 'Bulk task deletion processed',
+    ATTACHMENTS_TOO_MANY: 'Too many attachments are linked to this task',
     ANALYTICS_MANAGER_ONLY: 'Only managers can access analytics',
     READ_SCOPE_DENIED: 'You do not have permission to view this task',
     UPDATE_SCOPE_DENIED: 'You do not have permission to modify this task',

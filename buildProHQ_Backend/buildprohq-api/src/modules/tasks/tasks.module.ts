@@ -11,6 +11,7 @@ import {
   TaskHistory,
   TaskStatus,
 } from '../../infrastructure/persistence/typeorm/entities';
+import { TaskAttachmentsService } from './task-attachments.service';
 
 @Module({
   imports: [
@@ -25,6 +26,6 @@ import {
     ]),
   ],
   controllers: [TasksController],
-  providers: [TasksService],
+  providers: [TasksService, TaskAttachmentsService],
 })
 export class TasksModule {}

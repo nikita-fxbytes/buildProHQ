@@ -7,10 +7,17 @@ import {
   IsUrl,
   Min,
 } from 'class-validator';
+import { MESSAGES } from '../../../infrastructure/common/constants/messages';
 
 export class AddAttachmentDto {
-  @ApiProperty()
-  @IsUrl()
+  @ApiProperty({
+    example: 'http://localhost:3000/api/v1/files/uuid.jpg',
+    description: 'Public URL of the uploaded file',
+  })
+  @IsUrl(
+    { require_tld: false, require_protocol: true },
+    { message: MESSAGES.TASK_VALIDATION.FILE_URL_INVALID },
+  )
   fileUrl!: string;
 
   @ApiProperty()
