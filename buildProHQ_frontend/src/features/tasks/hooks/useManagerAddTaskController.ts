@@ -10,6 +10,7 @@ import { managerAddTaskSchema, type ManagerAddTaskFormValues } from "@/schemas/m
 import { managerAddTaskService } from "@/services/managerAddTask.service";
 import { appendPlainTextToRichHtml } from "@/utils/richText";
 import { appToast } from "@/utils/toast";
+import { emitTasksChanged } from "@/utils/taskEvents";
 
 export function useManagerAddTaskController() {
   const router = useRouter();
@@ -43,6 +44,7 @@ export function useManagerAddTaskController() {
     try {
       await managerAddTaskService.createTask(values);
       appToast.success(MESSAGES.task.created);
+      emitTasksChanged();
       router.push(ROUTES.MANAGER_TASKS);
     } catch {
       appToast.error(MESSAGES.common.saveFailed);

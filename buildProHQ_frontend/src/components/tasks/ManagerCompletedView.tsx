@@ -1,7 +1,6 @@
 "use client";
 
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
 import { DoneBadge } from "@/components/common/badges/DoneBadge";
@@ -9,6 +8,7 @@ import { InitialsBadge } from "@/components/common/badges/InitialsBadge";
 import { FilterChipGroup } from "@/components/common/filters/FilterChipGroup";
 import { FilterPanel } from "@/components/common/filters/FilterPanel";
 import { PageSizeSelect } from "@/components/common/PageSizeSelect";
+import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTableSkeleton";
 import { AppTableCell } from "@/components/common/table/AppTableCell";
 import { AppTableEmptyState } from "@/components/common/table/AppTableEmptyState";
 import { AppTableHeader } from "@/components/common/table/AppTableHeader";
@@ -17,6 +17,7 @@ import { AppTableRow } from "@/components/common/table/AppTableRow";
 import { AppTableShell } from "@/components/common/table/AppTableShell";
 import { PageToolbar } from "@/components/common/toolbar/PageToolbar";
 import { SearchInput } from "@/components/common/SearchInput";
+import { formatIndianLongDate } from "@/utils/date";
 import { htmlToPlainText } from "@/utils/richText";
 
 type ManagerCompletedViewRow = {
@@ -155,11 +156,7 @@ export function ManagerCompletedView(props: Props) {
 
         <Box id="mgr-completed-rows">
           {props.loading ? (
-            <Box sx={{ padding: "24px 20px" }}>
-              <Typography sx={{ fontSize: 13, color: "#7B89A8" }}>
-                Loading completed tasks...
-              </Typography>
-            </Box>
+            <AppGridTableSkeleton columnsTemplate="80px 130px 50px 1fr 80px 100px" rowCount={8} />
           ) : props.rows.length === 0 ? (
             <AppTableEmptyState icon={<AppIcon name="complete" size={36} />} message="No completed tasks yet." />
           ) : (
@@ -174,7 +171,7 @@ export function ManagerCompletedView(props: Props) {
                 <AppTableCell variant="trade">{task.trade}</AppTableCell>
                 <InitialsBadge initials={task.userLabel} />
                 <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
-                <AppTableCell variant="muted">{task.date}</AppTableCell>
+                <AppTableCell variant="muted">{formatIndianLongDate(task.date)}</AppTableCell>
                 <DoneBadge label={task.durationLabel} />
               </AppTableRow>
             ))

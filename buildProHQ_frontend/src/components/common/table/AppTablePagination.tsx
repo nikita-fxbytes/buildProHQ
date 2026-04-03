@@ -15,6 +15,11 @@ export function AppTablePagination({
   onChange,
   managerMode,
 }: AppTablePaginationProps) {
+  /** Aligns with API meta: hide when total ≤ limit (e.g. limit 10 and total 10 → one page, no chrome). */
+  if (pageSize <= 0 || total <= pageSize) {
+    return null;
+  }
+
   return (
     <PaginationBar
       page={page}

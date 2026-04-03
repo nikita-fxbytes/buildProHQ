@@ -60,6 +60,15 @@ export type ListOpenTasksBody = {
   filters?: OpenTasksFilters;
 };
 
+export type ListCompletedTasksBody = {
+  page: number;
+  limit: number;
+  search?: string;
+  sortBy?: "closedAt" | "daysOpen" | "level" | "trade" | "description";
+  sortOrder?: "asc" | "desc";
+  filters?: OpenTasksFilters;
+};
+
 export type TaskStats = {
   totalOpen: number;
   totalCompleted: number;
@@ -97,6 +106,17 @@ export type AddTaskAttachmentPayload = {
   isAfter?: boolean;
 };
 
+/** Matches Attachment entity fields returned by GET /v1/tasks/:id/attachments */
+export type TaskAttachmentItem = {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  mimeType?: string | null;
+  isBefore: boolean;
+  isAfter: boolean;
+};
+
 export const tasksApi = {
   async getStats(): Promise<TaskStats> {
     const { data } = await apiClient.get<ApiEnvelope<TaskStats>>("/v1/tasks/stats");
@@ -108,6 +128,17 @@ export const tasksApi = {
   ): Promise<{ items: TaskListItem[]; meta: ListTasksResponseMeta }> {
     const { data } = await apiClient.post<ApiEnvelope<TaskListItem[]>>(
       "/v1/tasks/open",
+      body,
+    );
+    const meta = (data.meta || {}) as ListTasksResponseMeta;
+    return { items: data.data, meta };
+  },
+
+  async listCompleted(
+    body: ListCompletedTasksBody,
+  ): Promise<{ items: TaskListItem[]; meta: ListTasksResponseMeta }> {
+    const { data } = await apiClient.post<ApiEnvelope<TaskListItem[]>>(
+      "/v1/tasks/completed",
       body,
     );
     const meta = (data.meta || {}) as ListTasksResponseMeta;
@@ -144,6 +175,13 @@ export const tasksApi = {
     const { data } = await apiClient.post<ApiEnvelope<{ id: string }>>(
       `/v1/tasks/${taskId}/attachments`,
       payload,
+    );
+    return data.data;
+  },
+
+  async listTaskAttachments(taskId: string): Promise<TaskAttachmentItem[]> {
+    const { data } = await apiClient.get<ApiEnvelope<TaskAttachmentItem[]>>(
+      `/v1/tasks/${taskId}/attachments`,
     );
     return data.data;
   },

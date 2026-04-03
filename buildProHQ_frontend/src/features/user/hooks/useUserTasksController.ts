@@ -7,12 +7,14 @@ import { useTableSort } from "@/hooks/use-table-sort";
 import { lookupsApi } from "@/services/lookupsApi.service";
 import {
   tasksApi,
+  type TaskAttachmentItem,
   type TaskListItem,
   type TaskStats,
   type ListOpenTasksBody,
 } from "@/services/tasksApi.service";
 import { truncateRichPlainText } from "@/utils/richText";
 import { appToast } from "@/utils/toast";
+import { emitTasksChanged } from "@/utils/taskEvents";
 
 type ConfirmAction = "completeSelected" | "deleteSelected" | "deleteSingle";
 
@@ -28,7 +30,10 @@ const mapRow = (row: TaskListItem) => ({
 type ActionItemRow = ReturnType<typeof mapRow>;
 
 export function useUserTasksController() {
-  const [loading, setLoading] = useState(true);
+  /** Stats cards only — toggled by `loadStats`, not by table sort/page/search. */
+  const [statsLoading, setStatsLoading] = useState(true);
+  /** Task grid only — toggled by `loadTasks` (sort, search, filters, pagination, mutations). */
+  const [tableLoading, setTableLoading] = useState(true);
   const [rows, setRows] = useState<ActionItemRow[]>([]);
   const [stats, setStats] = useState<TaskStats>({
     totalOpen: 0,
@@ -63,6 +68,10 @@ export function useUserTasksController() {
   const [confirmColor, setConfirmColor] = useState<"error" | "success" | "primary">("error");
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [singleDeleteId, setSingleDeleteId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailTask, setDetailTask] = useState<ActionItemRow | null>(null);
+  const [detailAttachments, setDetailAttachments] = useState<TaskAttachmentItem[]>([]);
+  const [detailAttachmentsLoading, setDetailAttachmentsLoading] = useState(false);
 
   const pageSize = UI_DEFAULTS.TASK_PAGE_SIZE;
 
@@ -77,17 +86,20 @@ export function useUserTasksController() {
   }, []);
 
   const loadStats = useCallback(async () => {
+    setStatsLoading(true);
     try {
       const res = await tasksApi.getStats();
       setStats(res);
     } catch {
       // Non-fatal; keep the page usable even if stats fail.
+    } finally {
+      setStatsLoading(false);
     }
   }, []);
 
   const loadTasks = useCallback(
     async (opts?: { pageOverride?: number; searchOverride?: string }) => {
-      setLoading(true);
+      setTableLoading(true);
       try {
         const queryPage = opts?.pageOverride ?? page;
         const querySearch = (opts?.searchOverride ?? search).trim() || undefined;
@@ -108,7 +120,7 @@ export function useUserTasksController() {
       } catch {
         appToast.error(MESSAGES.task.loadFailed);
       } finally {
-        setLoading(false);
+        setTableLoading(false);
       }
     },
     [levelFilters, page, pageSize, search, sortDirection, sortKey, tradeFilters],
@@ -207,6 +219,27 @@ export function useUserTasksController() {
     setSingleDeleteId(null);
   };
 
+  const openTaskDetail = useCallback(async (task: ActionItemRow) => {
+    setDetailTask(task);
+    setDetailOpen(true);
+    setDetailAttachments([]);
+    setDetailAttachmentsLoading(true);
+    try {
+      const list = await tasksApi.listTaskAttachments(task.id);
+      setDetailAttachments(list);
+    } catch {
+      appToast.error(MESSAGES.task.loadFailed);
+    } finally {
+      setDetailAttachmentsLoading(false);
+    }
+  }, []);
+
+  const closeTaskDetail = useCallback(() => {
+    setDetailOpen(false);
+    setDetailTask(null);
+    setDetailAttachments([]);
+  }, []);
+
   const onConfirm = async () => {
     if (!confirmAction) return;
     setConfirmOpen(false);
@@ -228,7 +261,7 @@ export function useUserTasksController() {
       }
       await loadStats();
       await loadTasks();
-      window.dispatchEvent(new Event("buildprohq:tasksChanged"));
+      emitTasksChanged();
     } catch {
       appToast.error(MESSAGES.common.somethingWrong);
     } finally {
@@ -238,7 +271,8 @@ export function useUserTasksController() {
   };
 
   return {
-    loading,
+    statsLoading,
+    tableLoading,
     search,
     setSearch: (value: string) => {
       setSearch(value);
@@ -283,6 +317,12 @@ export function useUserTasksController() {
     openCompleteSelectedConfirm,
     openDeleteSelectedConfirm,
     openDeleteSingleConfirm,
+    detailOpen,
+    detailTask,
+    detailAttachments,
+    detailAttachmentsLoading,
+    openTaskDetail,
+    closeTaskDetail,
     confirmOpen,
     confirmTitle,
     confirmMessage,

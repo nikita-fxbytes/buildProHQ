@@ -3,6 +3,7 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { AppButton } from "@/components/common/AppButton";
+import { ManageFiltersListSkeleton } from "@/components/common/skeletons/ManageFiltersListSkeleton";
 import { AppIcon } from "@/components/common/AppIcon";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import type { FilterCategory } from "@/types/domain";
@@ -43,7 +44,7 @@ export function ManageFiltersView(props: Props) {
           </Box>
           <Box id="filter-list-view" sx={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {props.loading ? (
-              <Box sx={{ fontSize: 13, color: "#7B89A8", padding: "10px 2px" }}>Loading filters...</Box>
+              <ManageFiltersListSkeleton cards={3} />
             ) : props.filters.length === 0 ? (
               <Box sx={{ fontSize: 13, color: "#7B89A8", padding: "10px 2px" }}>No filters yet.</Box>
             ) : (

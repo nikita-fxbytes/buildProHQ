@@ -33,6 +33,7 @@ import { CommentTaskDto } from './dto/comment-task.dto';
 import { AddAttachmentDto } from './dto/add-attachment.dto';
 import { BulkTasksDto } from './dto/bulk-tasks.dto';
 import { SearchOpenTasksDto } from './dto/search-open-tasks.dto';
+import { SearchCompletedTasksDto } from './dto/search-completed-tasks.dto';
 
 @ApiTags('tasks')
 @ApiBearerAuth()
@@ -133,10 +134,90 @@ export class TasksController {
 
   @Get('completed')
   @ApiOperation({
-    summary: 'List completed tasks with pagination/filter/search',
+    summary: 'List completed tasks with pagination/filter/search (query string)',
+    description:
+      'Prefer POST /tasks/completed when sending many filter IDs. This endpoint remains for simple clients.',
+  })
+  @ApiOkResponse({
+    description: 'Completed tasks fetched successfully',
+    schema: {
+      example: {
+        success: true,
+        statusCode: 200,
+        message: 'Completed tasks fetched successfully',
+        data: [
+          {
+            id: '0b2f6a2d-4c79-4b52-9b5a-0b873ad58a52',
+            description: 'Finish wall painting – north side',
+            days_open: 11,
+            created_at: '2026-03-10T08:00:00.000Z',
+            opened_at: '2026-03-10T08:00:00.000Z',
+            closed_at: '2026-04-01T16:00:00.000Z',
+            status_code: 'completed',
+            status_name: 'Completed',
+            trade_name: 'Painter',
+            level_name: 'L10',
+          },
+        ],
+        meta: {
+          page: 1,
+          limit: 20,
+          total: 25,
+          totalPages: 2,
+        },
+      },
+    },
   })
   listCompleted(@CurrentUser() user: AuthUser, @Query() query: QueryTasksDto) {
     return this.tasksService.listCompleted(user, query);
+  }
+
+  @Post('completed')
+  @ApiOperation({
+    summary: 'List/search completed tasks with filters (POST body)',
+    description:
+      'Lists terminal (completed) tasks with pagination, optional text search, multi-value trade/level filters, sort, and date range — aligned with POST /tasks/open.',
+  })
+  @ApiBody({ type: SearchCompletedTasksDto })
+  @ApiOkResponse({
+    description: 'Completed tasks fetched successfully',
+    schema: {
+      example: {
+        success: true,
+        statusCode: 200,
+        message: 'Completed tasks fetched successfully',
+        data: [
+          {
+            id: '0b2f6a2d-4c79-4b52-9b5a-0b873ad58a52',
+            description: 'Finish wall painting – north side',
+            days_open: 11,
+            closed_at: '2026-04-01T16:00:00.000Z',
+            trade_name: 'Painter',
+            level_name: 'L10',
+          },
+        ],
+        meta: {
+          page: 1,
+          limit: 20,
+          total: 25,
+          totalPages: 2,
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request body',
+    schema: {
+      example: {
+        success: false,
+        statusCode: 400,
+        message: 'Validation failed',
+        error: { code: 'BAD_REQUEST', details: [] },
+      },
+    },
+  })
+  searchCompleted(@CurrentUser() user: AuthUser, @Body() dto: SearchCompletedTasksDto) {
+    return this.tasksService.searchCompleted(user, dto);
   }
 
   @Post('bulk-complete')

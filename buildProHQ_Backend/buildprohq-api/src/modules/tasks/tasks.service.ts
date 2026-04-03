@@ -27,7 +27,9 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { BulkTasksDto } from './dto/bulk-tasks.dto';
 import { MESSAGES } from '../../infrastructure/common/constants/messages';
 import { SearchOpenTasksDto } from './dto/search-open-tasks.dto';
+import { SearchCompletedTasksDto } from './dto/search-completed-tasks.dto';
 import { TaskAttachmentsService } from './task-attachments.service';
+import { sanitizeRichHtml } from '../../infrastructure/common/utils/rich-text';
 
 @Injectable()
 export class TasksService {
@@ -53,7 +55,46 @@ export class TasksService {
   ) {}
 
   async searchOpen(user: AuthUser, dto: SearchOpenTasksDto) {
-    return this.searchByTerminalState(user, dto, false);
+    return this.searchTerminalTasksPaged(
+      user,
+      dto,
+      false,
+      {
+        sortMap: {
+          createdAt: { column: 't.created_at' },
+          daysOpen: { column: 't.days_open' },
+          level: { column: 'lv.name' },
+          trade: { column: 'tr.name' },
+          priority: { column: 'tp.name' },
+          description: { column: 't.description' },
+        },
+        defaultSortBy: 'createdAt',
+        defaultSortOrder: (key: string) =>
+          key === 'createdAt' ? 'desc' : 'asc',
+      },
+      MESSAGES.TASKS.OPEN_LIST_FETCHED,
+    );
+  }
+
+  async searchCompleted(user: AuthUser, dto: SearchCompletedTasksDto) {
+    return this.searchTerminalTasksPaged(
+      user,
+      dto,
+      true,
+      {
+        sortMap: {
+          closedAt: { column: 't.closed_at' },
+          daysOpen: { column: 't.days_open' },
+          level: { column: 'lv.name' },
+          trade: { column: 'tr.name' },
+          description: { column: 't.description' },
+        },
+        defaultSortBy: 'closedAt',
+        defaultSortOrder: (key: string) =>
+          key === 'closedAt' ? 'desc' : 'asc',
+      },
+      MESSAGES.TASKS.COMPLETED_LIST_FETCHED,
+    );
   }
 
   async listCompleted(user: AuthUser, query: QueryTasksDto) {
@@ -107,7 +148,7 @@ export class TasksService {
       tradeId: dto.tradeId,
       createdByUserId: user.id,
       assignedToUserId: dto.assignedToUserId ?? null,
-      description: dto.description,
+      description: sanitizeRichHtml(dto.description),
       notes: dto.notes ?? null,
       createdBy: user.id,
       updatedBy: user.id,
@@ -167,7 +208,7 @@ export class TasksService {
     if (dto.assignedToUserId !== undefined)
       updatePayload.assignedToUserId = dto.assignedToUserId;
     if (dto.description !== undefined)
-      updatePayload.description = dto.description;
+      updatePayload.description = sanitizeRichHtml(dto.description);
     if (dto.notes !== undefined) updatePayload.notes = dto.notes;
 
     await this.taskRepository.update(id, updatePayload);
@@ -615,7 +656,9 @@ export class TasksService {
     ]);
 
     return {
-      message: 'Action items fetched successfully',
+      message: isTerminal
+        ? MESSAGES.TASKS.COMPLETED_LIST_FETCHED
+        : MESSAGES.TASKS.OPEN_LIST_FETCHED,
       data: items,
       meta: {
         page: query.page,
@@ -626,10 +669,27 @@ export class TasksService {
     };
   }
 
-  private async searchByTerminalState(
+  /**
+   * Shared POST listing for open vs completed (terminal) tasks — same filters
+   * and role scoping as GET list endpoints, with configurable sort columns.
+   */
+  private async searchTerminalTasksPaged(
     user: AuthUser,
-    dto: SearchOpenTasksDto,
+    dto: {
+      page: number;
+      limit: number;
+      search?: string;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+      filters?: SearchOpenTasksDto['filters'];
+    },
     isTerminal: boolean,
+    sorting: {
+      sortMap: Record<string, { column: string }>;
+      defaultSortBy: string;
+      defaultSortOrder: (sortKey: string) => 'asc' | 'desc';
+    },
+    successMessage: string,
   ) {
     const qb = this.taskRepository
       .createQueryBuilder('t')
@@ -697,23 +757,16 @@ export class TasksService {
       );
     }
 
-    const effectiveSortBy = dto.sortBy ?? 'createdAt';
+    const effectiveSortBy =
+      dto.sortBy && sorting.sortMap[dto.sortBy]
+        ? dto.sortBy
+        : sorting.defaultSortBy;
     const effectiveSortOrder =
-      dto.sortOrder ?? (effectiveSortBy === 'createdAt' ? 'desc' : 'asc');
+      dto.sortOrder ?? sorting.defaultSortOrder(effectiveSortBy);
     const dir = effectiveSortOrder.toUpperCase() as 'ASC' | 'DESC';
 
-    const sortMap: Record<
-      NonNullable<SearchOpenTasksDto['sortBy']>,
-      { column: string }
-    > = {
-      createdAt: { column: 't.created_at' },
-      daysOpen: { column: 't.days_open' },
-      level: { column: 'lv.name' },
-      trade: { column: 'tr.name' },
-      priority: { column: 'tp.name' },
-      description: { column: 't.description' },
-    };
-    qb.orderBy(sortMap[effectiveSortBy].column, dir).addOrderBy('t.created_at', 'DESC');
+    const sortCol = sorting.sortMap[effectiveSortBy].column;
+    qb.orderBy(sortCol, dir).addOrderBy('t.created_at', 'DESC');
 
     const offset = (dto.page - 1) * dto.limit;
     const [items, total] = await Promise.all([
@@ -722,7 +775,7 @@ export class TasksService {
     ]);
 
     return {
-      message: 'Action items fetched successfully',
+      message: successMessage,
       data: items,
       meta: {
         page: dto.page,

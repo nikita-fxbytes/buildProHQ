@@ -2,7 +2,6 @@
 
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
 import { DoneBadge } from "@/components/common/badges/DoneBadge";
@@ -12,13 +11,18 @@ import { PageSizeSelect } from "@/components/common/PageSizeSelect";
 import { AppTableCell } from "@/components/common/table/AppTableCell";
 import { AppTableEmptyState } from "@/components/common/table/AppTableEmptyState";
 import { AppTableHeader } from "@/components/common/table/AppTableHeader";
+import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTableSkeleton";
 import { AppTablePagination } from "@/components/common/table/AppTablePagination";
 import { AppTableRow } from "@/components/common/table/AppTableRow";
 import { AppTableShell } from "@/components/common/table/AppTableShell";
 import { PageToolbar } from "@/components/common/toolbar/PageToolbar";
 import { SearchInput } from "@/components/common/SearchInput";
-import type { CompletedTask } from "@/types/domain";
+import type { ListCompletedTasksBody } from "@/services/tasksApi.service";
+import type { FieldCompletedTaskRow } from "@/types/domain";
+import { MESSAGES } from "@/constants/messages";
 import { htmlToPlainText } from "@/utils/richText";
+
+type CompletedSortKey = NonNullable<ListCompletedTasksBody["sortBy"]>;
 
 type Props = {
   loading: boolean;
@@ -29,22 +33,25 @@ type Props = {
   pageSize: number;
   setPageSize: (size: number) => void;
   total: number;
-  rows: CompletedTask[];
-  tradeOptions: string[];
-  levelOptions: string[];
+  rows: FieldCompletedTaskRow[];
+  tradeOptions: Array<string | { value: string; label: string }>;
+  levelOptions: Array<string | { value: string; label: string }>;
   tradeFilters: string[];
   levelFilters: string[];
   setTradeFilters: (value: string) => void;
   setLevelFilters: (value: string) => void;
   clearFilters: () => void;
-  sortKey: "level" | "trade" | "desc" | "date" | "duration" | null;
+  sortKey: CompletedSortKey | null;
   sortDirection: "asc" | "desc";
-  onSortColumn: (key: "level" | "trade" | "desc" | "date" | "duration") => void;
+  onSortColumn: (key: CompletedSortKey) => void;
+  showFilters: boolean;
+  setShowFilters: (value: boolean) => void;
 };
 
 export function UserCompletedView(props: Props) {
   const filterCount = props.tradeFilters.length + props.levelFilters.length;
-  const showFilters = true;
+  const isFiltered =
+    filterCount > 0 || props.search.trim().length > 0;
 
   return (
     <Stack spacing={2}>
@@ -52,7 +59,7 @@ export function UserCompletedView(props: Props) {
         <Box sx={{ flex: 1, minWidth: 220 }}>
           <SearchInput
             value={props.search}
-            placeholder="Search completed..."
+            placeholder={MESSAGES.task.completedSearchPlaceholder}
             onChange={props.setSearch}
             sx={{
               "& .MuiInputBase-root": {
@@ -70,9 +77,10 @@ export function UserCompletedView(props: Props) {
           type="button"
           variant="outlined"
           size="small"
-          sx={{ borderColor: "#E4E8F0", color: "#1A2035" }}
+          onClick={() => props.setShowFilters(!props.showFilters)}
+          sx={{ borderColor: "#E4E8F0", color: "#1A2035", fontSize: "13px" }}
         >
-          <AppIcon name="filters" size={14} /> Filters{" "}
+          <AppIcon name="filters" size={14} /> {MESSAGES.task.completedFilters}{" "}
           {filterCount > 0 ? (
             <Box
               component="span"
@@ -93,7 +101,7 @@ export function UserCompletedView(props: Props) {
         <PageSizeSelect value={props.pageSize} onChange={props.setPageSize} />
       </PageToolbar>
 
-      <FilterPanel open={showFilters}>
+      <FilterPanel open={props.showFilters}>
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: "16px" }}>
           <FilterChipGroup
             label="Trade"
@@ -117,7 +125,7 @@ export function UserCompletedView(props: Props) {
             onClick={props.clearFilters}
             sx={{ background: "#FEE2E2", color: "#EF4444", boxShadow: "none" }}
           >
-            Clear All
+            {MESSAGES.task.completedClearFilters}
           </AppButton>
         </Box>
       </FilterPanel>
@@ -128,30 +136,30 @@ export function UserCompletedView(props: Props) {
           columns={[
             { key: "level", label: "Level", sortable: true },
             { key: "trade", label: "Trade", sortable: true },
-            { key: "desc", label: "Description", sortable: true },
-            { key: "date", label: "Date", sortable: true },
-            { key: "duration", label: "Duration", sortable: true },
+            { key: "description", label: "Description", sortable: true },
+            { key: "closedAt", label: "Date", sortable: true },
+            { key: "daysOpen", label: "Duration", sortable: true },
           ]}
           sortKey={props.sortKey}
           sortDirection={props.sortDirection}
-          onSort={(key) =>
-            props.onSortColumn(key as "level" | "trade" | "desc" | "date" | "duration")
-          }
+          onSort={(key) => props.onSortColumn(key as CompletedSortKey)}
         />
 
         {props.loading ? (
-          <Box sx={{ p: 3 }}>
-            <Typography sx={{ fontSize: 13, color: "#7B89A8" }}>Loading completed tasks...</Typography>
-          </Box>
+          <AppGridTableSkeleton columnsTemplate="80px 130px 1fr 80px 100px" rowCount={8} />
         ) : props.rows.length === 0 ? (
           <AppTableEmptyState
             icon={<AppIcon name="complete" size={36} />}
-            message="No completed tasks match your filters."
+            message={
+              isFiltered
+                ? MESSAGES.task.completedEmptyFiltered
+                : MESSAGES.task.completedEmpty
+            }
           />
         ) : (
           props.rows.map((task) => (
             <AppTableRow
-              key={`${task.id}-${task.date}`}
+              key={task.id}
               columnsTemplate="80px 130px 1fr 80px 100px"
             >
               <AppTableCell variant="level">{task.level}</AppTableCell>
@@ -173,4 +181,3 @@ export function UserCompletedView(props: Props) {
     </Stack>
   );
 }
-

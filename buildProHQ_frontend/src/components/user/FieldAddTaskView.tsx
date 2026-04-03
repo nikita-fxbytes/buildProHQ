@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import Box from "@mui/material/Box";
-import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -23,6 +22,7 @@ import {
 } from "@/constants/task-form.constants";
 import type { UploadItem } from "@/components/common/FormUploadField";
 import { FormUploadField } from "@/components/common/FormUploadField";
+import { FieldAddTaskFormSkeleton } from "@/components/common/skeletons/FieldAddTaskFormSkeleton";
 
 type Props = {
   form: UseFormReturn<FieldAddTaskFormValues>;
@@ -72,10 +72,14 @@ export function FieldAddTaskView({
   toggleVoice,
   voiceActive,
 }: Props) {
-  const disabled = loadingLookups || submitting;
-
   const sortedLevels = useMemo(() => sortLookups(levels), [levels]);
   const sortedTrades = useMemo(() => sortLookups(trades), [trades]);
+
+  if (loadingLookups) {
+    return <FieldAddTaskFormSkeleton />;
+  }
+
+  const disabled = submitting;
 
   return (
     <Box sx={{ maxWidth: "640px" }}>
@@ -89,23 +93,6 @@ export function FieldAddTaskView({
           position: "relative",
         }}
       >
-        {loadingLookups ? (
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "rgba(255,255,255,0.7)",
-              zIndex: 2,
-              borderRadius: "12px",
-            }}
-          >
-            <CircularProgress size={28} sx={{ color: "#F5A623" }} />
-          </Box>
-        ) : null}
-
         <Typography
           sx={{
             fontFamily: "Rajdhani, sans-serif",

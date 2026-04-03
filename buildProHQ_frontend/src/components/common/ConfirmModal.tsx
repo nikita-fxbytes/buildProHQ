@@ -5,6 +5,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Typography from "@mui/material/Typography";
 import type { ReactNode } from "react";
 import { AppButton } from "@/components/common/AppButton";
+import { MESSAGES } from "@/constants/messages";
 import { STYLE_TOKENS } from "@/constants/style-tokens";
 
 export type ConfirmModalProps = {
@@ -12,6 +13,8 @@ export type ConfirmModalProps = {
   title: string;
   message: string;
   confirmLabel: string;
+  /** Secondary action label (defaults to centralized cancel). */
+  cancelLabel?: string;
   confirmColor?: "error" | "success" | "primary";
   icon?: ReactNode;
   onClose: () => void;
@@ -23,6 +26,7 @@ export function ConfirmModal({
   title,
   message,
   confirmLabel,
+  cancelLabel = MESSAGES.common.cancel,
   confirmColor = "error",
   icon = "⚠️",
   onClose,
@@ -68,7 +72,7 @@ export function ConfirmModal({
         }}
       >
         <AppButton variant="outlined" onClick={onClose}>
-          Cancel
+          {cancelLabel}
         </AppButton>
         <AppButton variant="contained" color={confirmColor} onClick={onConfirm}>
           {confirmLabel}

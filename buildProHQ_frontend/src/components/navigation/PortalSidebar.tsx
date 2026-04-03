@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { tasksApi } from "@/services/tasksApi.service";
 import { userService } from "@/services/user.service";
 import { appToast } from "@/utils/toast";
+import { TASKS_CHANGED_EVENT } from "@/utils/taskEvents";
 
 type NavItem = {
   href: string;
@@ -161,8 +162,8 @@ export function PortalSidebar({ role }: PortalSidebarProps) {
     void loadBadges();
 
     const onTasksChanged = () => void loadBadges();
-    window.addEventListener("buildprohq:tasksChanged", onTasksChanged);
-    return () => window.removeEventListener("buildprohq:tasksChanged", onTasksChanged);
+    window.addEventListener(TASKS_CHANGED_EVENT, onTasksChanged);
+    return () => window.removeEventListener(TASKS_CHANGED_EVENT, onTasksChanged);
   }, [user]);
 
   return (

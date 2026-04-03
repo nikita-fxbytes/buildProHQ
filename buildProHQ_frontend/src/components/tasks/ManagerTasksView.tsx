@@ -18,6 +18,8 @@ import { AppTablePagination } from "@/components/common/table/AppTablePagination
 import { AppTableRow } from "@/components/common/table/AppTableRow";
 import { AppTableShell } from "@/components/common/table/AppTableShell";
 import { PageToolbar } from "@/components/common/toolbar/PageToolbar";
+import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTableSkeleton";
+import { AppStatCardsSkeleton } from "@/components/common/skeletons/AppStatCardsSkeleton";
 import { SearchInput } from "@/components/common/SearchInput";
 import { StatCard } from "@/components/common/StatCard";
 import { htmlToPlainText } from "@/utils/richText";
@@ -76,12 +78,16 @@ export function ManagerTasksView(props: Props) {
 
   return (
     <Stack spacing={2}>
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px" }}>
-        <StatCard value={props.stats.totalOpen} label="Total Open Tasks" accentColor="#F5A623" />
-        <StatCard value={props.stats.overdue} label="Overdue (10+ days)" accentColor="#EF4444" />
-        <StatCard value={props.stats.completedStub} label="Completed" accentColor="#22C55E" />
-        <StatCard value={props.stats.activeUsers} label="Active Users" accentColor="#3BB0D8" />
-      </Box>
+      {props.loading ? (
+        <AppStatCardsSkeleton count={4} />
+      ) : (
+        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px" }}>
+          <StatCard value={props.stats.totalOpen} label="Total Open Tasks" accentColor="#F5A623" />
+          <StatCard value={props.stats.overdue} label="Overdue (10+ days)" accentColor="#EF4444" />
+          <StatCard value={props.stats.completedStub} label="Completed" accentColor="#22C55E" />
+          <StatCard value={props.stats.activeUsers} label="Active Users" accentColor="#3BB0D8" />
+        </Box>
+      )}
 
       <PageToolbar>
         <Box sx={{ flex: 1, minWidth: 220 }}>
@@ -230,9 +236,7 @@ export function ManagerTasksView(props: Props) {
         />
 
         {props.loading ? (
-          <Box sx={{ p: 3 }}>
-            <Typography sx={{ fontSize: 13, color: "#7B89A8" }}>Loading tasks...</Typography>
-          </Box>
+          <AppGridTableSkeleton columnsTemplate="36px 80px 130px 50px 1fr 100px 36px" rowCount={8} />
         ) : props.rows.length === 0 ? (
           <AppTableEmptyState icon={<AppIcon name="folder" size={36} />} message="No tasks match your filters." />
         ) : (

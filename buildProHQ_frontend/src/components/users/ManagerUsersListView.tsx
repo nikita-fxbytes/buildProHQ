@@ -10,6 +10,7 @@ import { RoleChip } from "@/components/common/badges/RoleChip";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { FormSelectField } from "@/components/common/FormSelectField";
 import { SearchInput } from "@/components/common/SearchInput";
+import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTableSkeleton";
 import { AppTableCell } from "@/components/common/table/AppTableCell";
 import { AppTableEmptyState } from "@/components/common/table/AppTableEmptyState";
 import { AppTableHeader } from "@/components/common/table/AppTableHeader";
@@ -113,9 +114,7 @@ export function ManagerUsersListView({
         />
 
         {loading ? (
-          <Box sx={{ padding: "24px 20px" }}>
-            <Typography sx={{ fontSize: 13, color: "#7B89A8" }}>Loading users...</Typography>
-          </Box>
+          <AppGridTableSkeleton columnsTemplate="44px 1fr 180px 110px 100px 130px" rowCount={8} />
         ) : rows.length === 0 ? (
           <AppTableEmptyState icon={<AppIcon name="folder" size={36} />} message="No users match your search." />
         ) : (

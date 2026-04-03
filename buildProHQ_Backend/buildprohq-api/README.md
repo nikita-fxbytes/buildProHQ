@@ -48,6 +48,10 @@ Production-style core backend implementation for BuildPro HQ aligned to:
 
 These are intentionally deferred for core scope while keeping architecture extendable.
 
+## Documented technical debt
+
+- **Uploads & attachments:** [docs/TECH_DEBT_UPLOADS_AND_ATTACHMENTS.md](docs/TECH_DEBT_UPLOADS_AND_ATTACHMENTS.md) — accepted trade-offs for this stage; `POST /v1/files/upload` and task attachment flows stay stable until a future refactor is justified.
+
 ## Setup
 
 1. Copy env file:

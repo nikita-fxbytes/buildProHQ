@@ -22,6 +22,7 @@ import HandymanIcon from "@mui/icons-material/Handyman";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import MicNoneIcon from "@mui/icons-material/MicNone";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
+import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import SettingsIcon from "@mui/icons-material/Settings";
 import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
@@ -58,7 +59,8 @@ type IconName =
   | "addUser"
   | "assignedTasks"
   | "myCompleted"
-  | "logoutSidebar";
+  | "logoutSidebar"
+  | "photos";
 
 const ICON_MAP = {
   search: SearchIcon,
@@ -90,6 +92,7 @@ const ICON_MAP = {
   assignedTasks: BuildCircleOutlinedIcon,
   myCompleted: CheckCircleOutlineIcon,
   logoutSidebar: LogoutOutlinedIcon,
+  photos: PhotoCameraOutlinedIcon,
 } as const satisfies Record<IconName, ComponentType<{ sx?: SxProps<Theme> }>>;
 
 export type AppIconProps = {

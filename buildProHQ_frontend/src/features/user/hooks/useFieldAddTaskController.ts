@@ -20,6 +20,7 @@ import { getApiErrorMessage } from "@/services/apiError";
 import { appendPlainTextToRichHtml } from "@/utils/richText";
 import { appToast } from "@/utils/toast";
 import type { UploadItem } from "@/components/common/FormUploadField";
+import { emitTasksChanged } from "@/utils/taskEvents";
 
 export function useFieldAddTaskController() {
   const router = useRouter();
@@ -87,6 +88,7 @@ export function useFieldAddTaskController() {
         files,
       );
       appToast.success(MESSAGES.task.created);
+      emitTasksChanged();
       setPhotos((prev) => {
         prev.forEach((p) => {
           if (p.url.startsWith("blob:")) URL.revokeObjectURL(p.url);
