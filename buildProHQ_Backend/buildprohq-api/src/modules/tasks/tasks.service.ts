@@ -27,6 +27,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { BulkTasksDto } from './dto/bulk-tasks.dto';
 import { MESSAGES } from '../../infrastructure/common/constants/messages';
 import { SearchOpenTasksDto } from './dto/search-open-tasks.dto';
+import { SearchCompletedTasksDto } from './dto/search-completed-tasks.dto';
 import { TaskAttachmentsService } from './task-attachments.service';
 
 @Injectable()
@@ -58,6 +59,10 @@ export class TasksService {
 
   async listCompleted(user: AuthUser, query: QueryTasksDto) {
     return this.listByTerminalState(user, query, true);
+  }
+
+  async searchCompleted(user: AuthUser, dto: SearchCompletedTasksDto) {
+    return this.searchCompletedByTerminalState(user, dto);
   }
 
   async getById(id: string, user: AuthUser) {
@@ -446,6 +451,27 @@ export class TasksService {
       throw new ForbiddenException(MESSAGES.TASKS.ANALYTICS_MANAGER_ONLY);
     }
 
+    const [openTasks, completedTotalRaw, avgCompletionRaw] = await Promise.all([
+      this.taskRepository
+        .createQueryBuilder('t')
+        .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
+        .where('t.deleted_at IS NULL')
+        .andWhere('ts.is_terminal = :isTerminal', { isTerminal: false })
+        .getCount(),
+      this.taskRepository
+        .createQueryBuilder('t')
+        .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
+        .where('t.deleted_at IS NULL')
+        .andWhere('ts.is_terminal = :isTerminal', { isTerminal: true })
+        .getCount(),
+      this.taskCompletionRepository
+        .createQueryBuilder('tc')
+        .select('AVG(tc.duration_days)', 'avg')
+        .where('tc.deleted_at IS NULL')
+        .getRawOne<{ avg: string | null }>(),
+    ]);
+    const avgCompletionDays = Math.round(Number(avgCompletionRaw?.avg ?? 0));
+
     const byTrade = await this.taskRepository
       .createQueryBuilder('t')
       .innerJoin('trades', 'tr', 'tr.id = t.trade_id')
@@ -483,7 +509,49 @@ export class TasksService {
       .limit(6)
       .getRawMany();
 
-    return { byTrade, byLevel, completionRate };
+    const overdueTop = await this.taskRepository
+      .createQueryBuilder('t')
+      .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
+      .leftJoin('levels', 'lv', 'lv.id = t.level_id')
+      .leftJoin('users', 'uc', 'uc.id = t.created_by_user_id')
+      .select([
+        't.days_open AS days_open',
+        't.description AS description',
+        'lv.name AS level_name',
+        'uc.initials AS user_initials',
+      ])
+      .where('t.deleted_at IS NULL')
+      .andWhere('ts.is_terminal = :isTerminal', { isTerminal: false })
+      .andWhere('t.days_open > 10')
+      .orderBy('t.days_open', 'DESC')
+      .limit(6)
+      .getRawMany<{ days_open: number; description: string; level_name: string | null; user_initials: string | null }>();
+
+    const byUser = await this.taskCompletionRepository
+      .createQueryBuilder('tc')
+      .leftJoin('users', 'u', 'u.id = tc.completed_by_user_id')
+      .select('COALESCE(u.initials, \'–\')', 'user')
+      .addSelect('COUNT(tc.id)', 'completed')
+      .where('tc.deleted_at IS NULL')
+      .groupBy('u.initials')
+      .orderBy('completed', 'DESC')
+      .getRawMany<{ user: string; completed: string }>();
+
+    return {
+      openTasks,
+      completedTotal: completedTotalRaw,
+      avgCompletionDays,
+      byTrade: byTrade.map((r) => ({ trade: r.trade, count: Number(r.count) })),
+      byLevel: byLevel.map((r) => ({ level: r.level, count: Number(r.count) })),
+      overdueTop: overdueTop.map((r) => ({
+        daysOpen: Number(r.days_open),
+        level: r.level_name,
+        description: r.description,
+        user: r.user_initials,
+      })),
+      byUser: byUser.map((r) => ({ user: r.user, completed: Number(r.completed) })),
+      completionRate,
+    };
   }
 
   async bulkComplete(dto: BulkTasksDto, user: AuthUser) {
@@ -637,6 +705,7 @@ export class TasksService {
       .leftJoin('task_priorities', 'tp', 'tp.id = t.priority_id')
       .leftJoin('trades', 'tr', 'tr.id = t.trade_id')
       .leftJoin('levels', 'lv', 'lv.id = t.level_id')
+      .leftJoin('users', 'uc', 'uc.id = t.created_by_user_id')
       .select([
         't.id AS id',
         't.description AS description',
@@ -646,6 +715,8 @@ export class TasksService {
         't.closed_at AS closed_at',
         't.assigned_to_user_id AS assigned_to_user_id',
         't.created_by_user_id AS created_by_user_id',
+        'uc.initials AS created_by_initials',
+        'uc.full_name AS created_by_full_name',
         't.status_id AS status_id',
         't.priority_id AS priority_id',
         'ts.code AS status_code',
@@ -665,6 +736,11 @@ export class TasksService {
     if (filters?.levelIds?.length) {
       qb.andWhere('t.level_id IN (:...levelIds)', { levelIds: filters.levelIds });
     }
+    if (filters?.createdByUserIds?.length) {
+      qb.andWhere('t.created_by_user_id IN (:...createdByUserIds)', {
+        createdByUserIds: filters.createdByUserIds,
+      });
+    }
     if (filters?.statusIds?.length) {
       qb.andWhere('t.status_id IN (:...statusIds)', { statusIds: filters.statusIds });
     }
@@ -683,7 +759,7 @@ export class TasksService {
     const term = dto.search?.trim();
     if (term) {
       qb.andWhere(
-        '(t.description ILIKE :search OR tr.name ILIKE :search OR lv.name ILIKE :search)',
+        '(t.description ILIKE :search OR tr.name ILIKE :search OR lv.name ILIKE :search OR uc.full_name ILIKE :search OR uc.initials ILIKE :search)',
         { search: `%${term}%` },
       );
     }
@@ -712,6 +788,7 @@ export class TasksService {
       trade: { column: 'tr.name' },
       priority: { column: 'tp.name' },
       description: { column: 't.description' },
+      user: { column: 'uc.full_name' },
     };
     qb.orderBy(sortMap[effectiveSortBy].column, dir).addOrderBy('t.created_at', 'DESC');
 
@@ -723,6 +800,107 @@ export class TasksService {
 
     return {
       message: 'Action items fetched successfully',
+      data: items,
+      meta: {
+        page: dto.page,
+        limit: dto.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / dto.limit)),
+      },
+    };
+  }
+
+  private async searchCompletedByTerminalState(
+    user: AuthUser,
+    dto: SearchCompletedTasksDto,
+  ) {
+    const qb = this.taskRepository
+      .createQueryBuilder('t')
+      .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
+      .leftJoin('trades', 'tr', 'tr.id = t.trade_id')
+      .leftJoin('levels', 'lv', 'lv.id = t.level_id')
+      .leftJoin(
+        'task_completions',
+        'tc',
+        'tc.task_id = t.id AND tc.deleted_at IS NULL',
+      )
+      .leftJoin('users', 'ucomp', 'ucomp.id = tc.completed_by_user_id')
+      .select([
+        't.id AS id',
+        't.description AS description',
+        't.closed_at AS closed_at',
+        't.days_open AS days_open',
+        'tr.name AS trade_name',
+        'lv.name AS level_name',
+        'tc.completed_by_user_id AS completed_by_user_id',
+        'ucomp.initials AS completed_by_initials',
+        'ucomp.full_name AS completed_by_full_name',
+      ])
+      .where('t.deleted_at IS NULL')
+      .andWhere('ts.is_terminal = :isTerminal', { isTerminal: true });
+
+    const filters = dto.filters;
+    if (filters?.tradeIds?.length) {
+      qb.andWhere('t.trade_id IN (:...tradeIds)', { tradeIds: filters.tradeIds });
+    }
+    if (filters?.levelIds?.length) {
+      qb.andWhere('t.level_id IN (:...levelIds)', { levelIds: filters.levelIds });
+    }
+    if (filters?.completedByUserIds?.length) {
+      qb.andWhere('tc.completed_by_user_id IN (:...completedByUserIds)', {
+        completedByUserIds: filters.completedByUserIds,
+      });
+    }
+
+    const term = dto.search?.trim();
+    if (term) {
+      qb.andWhere(
+        '(t.description ILIKE :search OR tr.name ILIKE :search OR lv.name ILIKE :search OR ucomp.full_name ILIKE :search OR ucomp.initials ILIKE :search)',
+        { search: `%${term}%` },
+      );
+    }
+
+    if (user.role === 'trade_user') {
+      qb.andWhere('t.assigned_to_user_id = :authUserId', { authUserId: user.id });
+    } else if (user.role === 'field_user') {
+      qb.andWhere(
+        '(t.created_by_user_id = :authUserId OR t.assigned_to_user_id = :authUserId)',
+        { authUserId: user.id },
+      );
+    }
+
+    const effectiveSortBy = dto.sortBy ?? 'date';
+    const effectiveSortOrder =
+      dto.sortOrder ?? (effectiveSortBy === 'date' ? 'desc' : 'asc');
+    const dir = effectiveSortOrder.toUpperCase() as 'ASC' | 'DESC';
+
+    const sortMap: Record<
+      NonNullable<SearchCompletedTasksDto['sortBy']>,
+      { column: string; nulls?: 'NULLS LAST' | 'NULLS FIRST' }
+    > = {
+      level: { column: 'lv.name', nulls: 'NULLS LAST' },
+      trade: { column: 'tr.name', nulls: 'NULLS LAST' },
+      user: { column: 'ucomp.full_name', nulls: 'NULLS LAST' },
+      description: { column: 't.description' },
+      date: { column: 't.closed_at', nulls: 'NULLS LAST' },
+      duration: { column: 't.days_open' },
+    };
+
+    const cfg = sortMap[effectiveSortBy];
+    qb.orderBy(cfg.column, dir);
+    if (cfg.nulls) {
+      qb.addOrderBy(cfg.column, dir, cfg.nulls);
+    }
+    qb.addOrderBy('t.closed_at', 'DESC');
+
+    const offset = (dto.page - 1) * dto.limit;
+    const [items, total] = await Promise.all([
+      qb.clone().offset(offset).limit(dto.limit).getRawMany(),
+      qb.clone().getCount(),
+    ]);
+
+    return {
+      message: 'Completed tasks fetched successfully',
       data: items,
       meta: {
         page: dto.page,

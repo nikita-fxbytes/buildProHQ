@@ -1,6 +1,7 @@
 "use client";
 
 import Box from "@mui/material/Box";
+import Skeleton from "@mui/material/Skeleton";
 import Typography from "@mui/material/Typography";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
@@ -8,7 +9,6 @@ import { DoneBadge } from "@/components/common/badges/DoneBadge";
 import { InitialsBadge } from "@/components/common/badges/InitialsBadge";
 import { FilterChipGroup } from "@/components/common/filters/FilterChipGroup";
 import { FilterPanel } from "@/components/common/filters/FilterPanel";
-import { PageSizeSelect } from "@/components/common/PageSizeSelect";
 import { AppTableCell } from "@/components/common/table/AppTableCell";
 import { AppTableEmptyState } from "@/components/common/table/AppTableEmptyState";
 import { AppTableHeader } from "@/components/common/table/AppTableHeader";
@@ -20,13 +20,13 @@ import { SearchInput } from "@/components/common/SearchInput";
 import { htmlToPlainText } from "@/utils/richText";
 
 type ManagerCompletedViewRow = {
-  id: number;
+  id: string;
   level: string;
   trade: string;
-  userLabel: string;
+  user: string;
   desc: string;
   date: string;
-  durationLabel: string;
+  durationDays: number;
 };
 
 type Props = {
@@ -35,9 +35,9 @@ type Props = {
   setSearch: (value: string) => void;
   showFilters: boolean;
   setShowFilters: (value: boolean) => void;
-  tradeOptions: string[];
-  levelOptions: string[];
-  userOptions: string[];
+  tradeOptions: Array<string | { value: string; label: string }>;
+  levelOptions: Array<string | { value: string; label: string }>;
+  userOptions: Array<string | { value: string; label: string }>;
   tradeFilters: string[];
   levelFilters: string[];
   userFilters: string[];
@@ -48,14 +48,44 @@ type Props = {
   page: number;
   setPage: (page: number) => void;
   pageSize: number;
-  setPageSize: (size: number) => void;
   total: number;
   rows: ManagerCompletedViewRow[];
+  sortKey: "level" | "trade" | "user" | "description" | "date" | "duration" | null;
+  sortDirection: "asc" | "desc";
+  onSortColumn: (key: "level" | "trade" | "user" | "description" | "date" | "duration") => void;
 };
+
+function TableRowsSkeleton() {
+  return (
+    <Box sx={{ px: "20px", py: "14px" }}>
+      {Array.from({ length: 6 }).map((_, idx) => (
+        <Box
+          key={idx}
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "80px 130px 50px 1fr 80px 100px",
+            alignItems: "center",
+            gap: 0,
+            py: "13px",
+            borderBottom: "1px solid #E4E8F0",
+          }}
+        >
+          <Skeleton variant="text" width={46} />
+          <Skeleton variant="text" width={90} />
+          <Skeleton variant="circular" width={28} height={28} />
+          <Skeleton variant="text" width="92%" />
+          <Skeleton variant="text" width={64} />
+          <Skeleton variant="rounded" width={62} height={22} />
+        </Box>
+      ))}
+    </Box>
+  );
+}
 
 export function ManagerCompletedView(props: Props) {
   const filterCount =
     props.tradeFilters.length + props.levelFilters.length + props.userFilters.length;
+  const initialLoading = props.loading && props.rows.length === 0;
 
   return (
     <>
@@ -100,7 +130,6 @@ export function ManagerCompletedView(props: Props) {
             </Box>
           ) : null}
         </AppButton>
-        <PageSizeSelect value={props.pageSize} onChange={props.setPageSize} />
       </PageToolbar>
 
       {/* Filter panel: matches #mgr-comp-filter-panel */}
@@ -150,16 +179,26 @@ export function ManagerCompletedView(props: Props) {
       <AppTableShell>
         <AppTableHeader
           columnsTemplate="80px 130px 50px 1fr 80px 100px"
-          cells={["Level", "Trade", "User", "Description", "Date", "Duration"]}
+          columns={[
+            { key: "level", label: "Level", sortable: true },
+            { key: "trade", label: "Trade", sortable: true },
+            { key: "user", label: "User", sortable: true },
+            { key: "description", label: "Description", sortable: true },
+            { key: "date", label: "Date", sortable: true },
+            { key: "duration", label: "Duration", sortable: true },
+          ]}
+          sortKey={props.sortKey}
+          sortDirection={props.sortDirection}
+          onSort={(key) =>
+            props.onSortColumn(
+              key as "level" | "trade" | "user" | "description" | "date" | "duration",
+            )
+          }
         />
 
         <Box id="mgr-completed-rows">
-          {props.loading ? (
-            <Box sx={{ padding: "24px 20px" }}>
-              <Typography sx={{ fontSize: 13, color: "#7B89A8" }}>
-                Loading completed tasks...
-              </Typography>
-            </Box>
+          {initialLoading ? (
+            <TableRowsSkeleton />
           ) : props.rows.length === 0 ? (
             <AppTableEmptyState icon={<AppIcon name="complete" size={36} />} message="No completed tasks yet." />
           ) : (
@@ -172,22 +211,28 @@ export function ManagerCompletedView(props: Props) {
               >
                 <AppTableCell variant="level">{task.level}</AppTableCell>
                 <AppTableCell variant="trade">{task.trade}</AppTableCell>
-                <InitialsBadge initials={task.userLabel} />
+                <InitialsBadge initials={task.user} />
                 <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
                 <AppTableCell variant="muted">{task.date}</AppTableCell>
-                <DoneBadge label={task.durationLabel} />
+                <DoneBadge label={`${task.durationDays}d`} />
               </AppTableRow>
             ))
           )}
         </Box>
 
-        <AppTablePagination
-          page={props.page}
-          pageSize={props.pageSize}
-          total={props.total}
-          onChange={props.setPage}
-          managerMode
-        />
+        {props.total > props.pageSize ? (
+          <AppTablePagination
+            page={props.page}
+            pageSize={props.pageSize}
+            total={props.total}
+            onChange={props.setPage}
+            managerMode
+          />
+        ) : initialLoading ? (
+          <Box sx={{ px: 2, py: 1.5 }}>
+            <Skeleton variant="rounded" height={40} />
+          </Box>
+        ) : null}
       </AppTableShell>
     </>
   );

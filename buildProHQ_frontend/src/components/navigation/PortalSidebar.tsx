@@ -14,7 +14,7 @@ import { ROUTES } from "@/constants/routes";
 import { MESSAGES } from "@/constants/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { tasksApi } from "@/services/tasksApi.service";
-import { userService } from "@/services/user.service";
+import { usersApi } from "@/services/usersApi.service";
 import { appToast } from "@/utils/toast";
 
 type NavItem = {
@@ -24,6 +24,7 @@ type NavItem = {
     | "actionItems"
     | "addActionItem"
     | "completedItems"
+    | "analytics"
     | "manageFilters"
     | "users"
     | "addUser"
@@ -106,9 +107,14 @@ export function PortalSidebar({ role }: PortalSidebarProps) {
           badgeClass: "blue",
         },
         {
+          href: ROUTES.MANAGER_ANALYTICS,
+          label: "Analytics",
+          section: "Management",
+          icon: "analytics",
+        },
+        {
           href: ROUTES.MANAGER_FILTERS,
           label: "Manage Filters",
-          section: "Management",
           icon: "manageFilters",
         },
         { href: ROUTES.MANAGER_USERS, label: "Users", icon: "users", badge: badges.users },
@@ -139,7 +145,9 @@ export function PortalSidebar({ role }: PortalSidebarProps) {
   useEffect(() => {
     const loadBadges = async () => {
       try {
-        const [stats, users] = await Promise.all([tasksApi.getStats(), userService.getUsers()]);
+        const statsPromise = tasksApi.getStats();
+        const usersPromise = role === ROLES.MANAGER ? usersApi.list() : Promise.resolve([]);
+        const [stats, users] = await Promise.all([statsPromise, usersPromise]);
         setBadges({
           openTasks: stats.totalOpen,
           completedTasks: stats.totalCompleted,
@@ -163,7 +171,7 @@ export function PortalSidebar({ role }: PortalSidebarProps) {
     const onTasksChanged = () => void loadBadges();
     window.addEventListener("buildprohq:tasksChanged", onTasksChanged);
     return () => window.removeEventListener("buildprohq:tasksChanged", onTasksChanged);
-  }, [user]);
+  }, [user, role]);
 
   return (
     <Box
@@ -229,23 +237,27 @@ export function PortalSidebar({ role }: PortalSidebarProps) {
       <Box sx={{ flex: 1, padding: "12px 8px" }}>
         {navItems.map((item, index) => {
           const previous = navItems[index - 1];
-          const showSection = Boolean(item.section && item.section !== previous?.section);
-          const active = pathname === item.href;
+          // HTML reference always shows a "Main" header and a "Management" header for managers.
+          const currentSection = item.section ?? (index === 0 ? "Main" : undefined);
+          const previousSection = previous?.section ?? (index - 1 === 0 ? "Main" : undefined);
+          const showSection = Boolean(currentSection && currentSection !== previousSection);
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
             <Box key={item.href}>
               {showSection ? (
                 <Typography
                   sx={{
-                    fontSize: "10px",
+                    fontSize: "11px",
                     fontWeight: 700,
-                    color: "#4B5563",
+                    // Ensure section headers are visible on dark sidebars (esp. Manager role).
+                    color: role === ROLES.MANAGER ? "#9CA3AF" : "#4B5563",
                     textTransform: "uppercase",
                     letterSpacing: "1.2px",
                     padding: "12px 12px 6px",
                   }}
                 >
-                  {item.section}
+                  {currentSection}
                 </Typography>
               ) : null}
               <Box

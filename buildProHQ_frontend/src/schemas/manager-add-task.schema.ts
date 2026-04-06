@@ -3,7 +3,7 @@ import { MESSAGES } from "@/constants/messages";
 import { htmlToPlainText } from "@/utils/richText";
 
 export const managerAddTaskSchema = z.object({
-  desc: z.string().superRefine((val, ctx) => {
+  description: z.string().superRefine((val, ctx) => {
     const plain = htmlToPlainText(val);
     if (!plain) {
       ctx.addIssue({ code: "custom", message: MESSAGES.validation.taskDescriptionRequired });
@@ -11,8 +11,18 @@ export const managerAddTaskSchema = z.object({
       ctx.addIssue({ code: "custom", message: MESSAGES.validation.taskDescriptionMin });
     }
   }),
-  level: z.string().trim().min(1, MESSAGES.validation.selectLevel),
-  trade: z.string().trim().min(1, MESSAGES.validation.selectTrade),
+  levelId: z
+    .string()
+    .min(1, MESSAGES.validation.selectLevel)
+    .uuid(MESSAGES.validation.selectLevel),
+  tradeId: z
+    .string()
+    .min(1, MESSAGES.validation.selectTrade)
+    .uuid(MESSAGES.validation.selectTrade),
+  priorityId: z
+    .string()
+    .min(1, MESSAGES.validation.selectPriority)
+    .uuid(MESSAGES.validation.selectPriority),
 });
 
 export type ManagerAddTaskFormValues = z.infer<typeof managerAddTaskSchema>;

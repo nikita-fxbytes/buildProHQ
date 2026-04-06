@@ -1,98 +1,119 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MESSAGES } from "@/constants/messages";
 import { UI_DEFAULTS } from "@/constants/ui";
-import { taskService } from "@/services/task.service";
-import type { CompletedTask } from "@/types/domain";
-import { htmlToPlainText } from "@/utils/richText";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { lookupsApi } from "@/services/lookupsApi.service";
+import { tasksApi, type CompletedTaskListItem, type ListCompletedTasksBody } from "@/services/tasksApi.service";
+import { usersApi } from "@/services/usersApi.service";
 import { appToast } from "@/utils/toast";
+import { formatShortDate } from "@/utils/date";
 
-type ManagerCompletedRow = CompletedTask & {
-  userLabel: string;
-  durationLabel: string;
-};
+type SortKey = "level" | "trade" | "user" | "description" | "date" | "duration";
 
 const toggleFilterValue = (values: string[], value: string) =>
   values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
 
+function mapRow(task: CompletedTaskListItem) {
+  const initials =
+    task.completed_by_initials ??
+    task.completed_by_full_name
+      ?.split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join("") ??
+    null;
+  return {
+    id: task.id,
+    level: task.level_name ?? "–",
+    trade: task.trade_name ?? "–",
+    user: initials ?? "–",
+    desc: task.description,
+    date: formatShortDate(task.closed_at),
+    durationDays: task.days_open,
+  };
+}
+
 export function useManagerCompletedController() {
   const [loading, setLoading] = useState(true);
-  const [allRows, setAllRows] = useState<CompletedTask[]>([]);
+  const [rows, setRows] = useState<Array<ReturnType<typeof mapRow>>>([]);
+  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [tradeFilters, setTradeFilters] = useState<string[]>([]);
   const [levelFilters, setLevelFilters] = useState<string[]>([]);
   const [userFilters, setUserFilters] = useState<string[]>([]);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(UI_DEFAULTS.COMPLETED_PAGE_SIZE);
+  const pageSize = UI_DEFAULTS.COMPLETED_PAGE_SIZE;
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const { sortKey, sortDirection, toggleSort } = useTableSort<SortKey>("date");
+
+  const [tradeOptions, setTradeOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [levelOptions, setLevelOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [userOptions, setUserOptions] = useState<Array<{ value: string; label: string }>>([]);
+
+  const loadLookups = useCallback(async () => {
     try {
-      const rows = await taskService.getManagerCompletedTasks();
-      setAllRows(rows);
+      const [trades, levels, users] = await Promise.all([
+        lookupsApi.getTrades(),
+        lookupsApi.getLevels(),
+        usersApi.list(),
+      ]);
+      setTradeOptions(trades.map((t) => ({ value: t.id, label: t.name })));
+      setLevelOptions(levels.map((l) => ({ value: l.id, label: l.name })));
+      setUserOptions(
+        users
+          .filter((u) => Boolean(u.initials))
+          .map((u) => ({ value: u.id, label: u.initials as string })),
+      );
     } catch {
-      appToast.error(MESSAGES.task.loadFailed);
-    } finally {
-      setLoading(false);
+      // Non-fatal; page can still load data.
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const tradeOptions = useMemo(
-    () => Array.from(new Set(allRows.map((task) => task.trade))),
-    [allRows],
-  );
-  const levelOptions = useMemo(
-    () => Array.from(new Set(allRows.map((task) => task.level))).sort(),
-    [allRows],
-  );
-  const userOptions = useMemo(
-    () => Array.from(new Set(allRows.map((task) => task.user))).filter(Boolean),
-    [allRows],
-  );
-
-  const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return allRows.filter((task) => {
-      if (
-        query &&
-        !`${task.level} ${task.trade} ${htmlToPlainText(task.desc)} ${task.user}`
-          .toLowerCase()
-          .includes(query)
-      ) {
-        return false;
+  const loadCompleted = useCallback(
+    async (opts?: { pageOverride?: number }) => {
+      setLoading(true);
+      try {
+        const queryPage = opts?.pageOverride ?? page;
+        const query: ListCompletedTasksBody = {
+          page: queryPage,
+          limit: pageSize,
+          search: search.trim() || undefined,
+          sortBy: sortKey ?? undefined,
+          sortOrder: sortDirection ?? undefined,
+          filters: {
+            tradeIds: tradeFilters,
+            levelIds: levelFilters,
+            completedByUserIds: userFilters,
+          } satisfies NonNullable<ListCompletedTasksBody["filters"]>,
+        };
+        const res = await tasksApi.listCompleted(query);
+        setRows(res.items.map(mapRow));
+        setTotal(res.meta.total);
+      } catch {
+        appToast.error(MESSAGES.task.loadFailed);
+      } finally {
+        setLoading(false);
       }
-      if (tradeFilters.length && !tradeFilters.includes(task.trade)) return false;
-      if (levelFilters.length && !levelFilters.includes(task.level)) return false;
-      if (userFilters.length && !userFilters.includes(task.user)) return false;
-      return true;
-    });
-  }, [allRows, search, tradeFilters, levelFilters, userFilters]);
-
-  const total = filteredRows.length;
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(Math.max(page, 1), pages);
+    },
+    [levelFilters, page, pageSize, search, sortDirection, sortKey, tradeFilters, userFilters],
+  );
 
   useEffect(() => {
-    setPage((current) => Math.min(current, pages));
-  }, [pages]);
+    loadLookups();
+  }, [loadLookups]);
 
-  const rows = useMemo<ManagerCompletedRow[]>(
-    () =>
-      filteredRows
-        .slice((safePage - 1) * pageSize, safePage * pageSize)
-        .map((task) => ({
-          ...task,
-          userLabel: task.user || "–",
-          durationLabel: `${task.duration}d`,
-        })),
-    [filteredRows, pageSize, safePage],
-  );
+  useEffect(() => {
+    void loadCompleted({ pageOverride: 1 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, tradeFilters, levelFilters, userFilters, sortKey, sortDirection, pageSize]);
+
+  useEffect(() => {
+    void loadCompleted();
+  }, [loadCompleted, page]);
 
   return {
     loading,
@@ -127,15 +148,17 @@ export function useManagerCompletedController() {
       setUserFilters([]);
       setPage(1);
     },
-    page: safePage,
-    setPage,
+    page,
+    setPage: (p: number) => setPage(p),
     pageSize,
-    setPageSize: (value: number) => {
-      setPageSize(value);
-      setPage(1);
-    },
     total,
     rows,
+    sortKey,
+    sortDirection,
+    onSortColumn: (key: SortKey) => {
+      toggleSort(key);
+      setPage(1);
+    },
   };
 }
 

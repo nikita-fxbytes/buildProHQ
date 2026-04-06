@@ -2,12 +2,15 @@
 
 import Box from "@mui/material/Box";
 import Checkbox from "@mui/material/Checkbox";
+import Paper from "@mui/material/Paper";
+import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
 import { DaysBadge } from "@/components/common/badges/DaysBadge";
 import { InitialsBadge } from "@/components/common/badges/InitialsBadge";
+import { PriorityBadge } from "@/components/common/badges/PriorityBadge";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { FilterChipGroup } from "@/components/common/filters/FilterChipGroup";
 import { FilterPanel } from "@/components/common/filters/FilterPanel";
@@ -21,7 +24,6 @@ import { PageToolbar } from "@/components/common/toolbar/PageToolbar";
 import { SearchInput } from "@/components/common/SearchInput";
 import { StatCard } from "@/components/common/StatCard";
 import { htmlToPlainText } from "@/utils/richText";
-import type { Task } from "@/types/domain";
 
 type Props = {
   loading: boolean;
@@ -29,9 +31,9 @@ type Props = {
   setSearch: (value: string) => void;
   showFilters: boolean;
   setShowFilters: (value: boolean) => void;
-  tradeOptions: string[];
-  levelOptions: string[];
-  userOptions: string[];
+  tradeOptions: Array<string | { value: string; label: string }>;
+  levelOptions: Array<string | { value: string; label: string }>;
+  userOptions: Array<string | { value: string; label: string }>;
   tradeFilters: string[];
   levelFilters: string[];
   userFilters: string[];
@@ -40,13 +42,16 @@ type Props = {
   setUserFilters: (value: string) => void;
   clearFilters: () => void;
   sortDays: "asc" | "desc" | null;
-  toggleSort: (dir: "asc" | "desc") => void;
-  selectedIds: number[];
-  toggleSelected: (id: number) => void;
+  setSortDays: (dir: "asc" | "desc") => void;
+  sortKey?: "level" | "trade" | "user" | "priority" | "description" | "daysOpen" | "createdAt" | null;
+  sortDirection?: "asc" | "desc";
+  onSortColumn?: (key: "level" | "trade" | "user" | "priority" | "description" | "daysOpen" | "createdAt") => void;
+  selectedIds: string[];
+  toggleSelected: (id: string) => void;
   clearSelected: () => void;
   openCompleteSelectedConfirm: () => void;
   openDeleteSelectedConfirm: () => void;
-  openDeleteSingleConfirm: (task: Task) => void;
+  openDeleteSingleConfirm: (task: { id: string; level: string; trade: string; user: string; priority: string; desc: string; days: number }) => void;
   confirmOpen: boolean;
   confirmTitle: string;
   confirmMessage: string;
@@ -54,7 +59,7 @@ type Props = {
   confirmColor: "error" | "success" | "primary";
   closeConfirm: () => void;
   onConfirm: () => void;
-  rows: Task[];
+  rows: Array<{ id: string; level: string; trade: string; user: string; priority: string; desc: string; days: number }>;
   page: number;
   pageSize: number;
   total: number;
@@ -73,14 +78,26 @@ export function ManagerTasksView(props: Props) {
     props.levelFilters.length +
     props.userFilters.length +
     (props.sortDays ? 1 : 0);
+  const initialLoading = props.loading && props.rows.length === 0;
 
   return (
     <Stack spacing={2}>
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px" }}>
-        <StatCard value={props.stats.totalOpen} label="Total Open Tasks" accentColor="#F5A623" />
-        <StatCard value={props.stats.overdue} label="Overdue (10+ days)" accentColor="#EF4444" />
-        <StatCard value={props.stats.completedStub} label="Completed" accentColor="#22C55E" />
-        <StatCard value={props.stats.activeUsers} label="Active Users" accentColor="#3BB0D8" />
+        {initialLoading ? (
+          <>
+            <StatCardSkeleton accentColor="#F5A623" />
+            <StatCardSkeleton accentColor="#EF4444" />
+            <StatCardSkeleton accentColor="#22C55E" />
+            <StatCardSkeleton accentColor="#3BB0D8" />
+          </>
+        ) : (
+          <>
+            <StatCard value={props.stats.totalOpen} label="Total Open Tasks" accentColor="#F5A623" />
+            <StatCard value={props.stats.overdue} label="Overdue (10+ days)" accentColor="#EF4444" />
+            <StatCard value={props.stats.completedStub} label="Completed" accentColor="#22C55E" />
+            <StatCard value={props.stats.activeUsers} label="Active Users" accentColor="#3BB0D8" />
+          </>
+        )}
       </Box>
 
       <PageToolbar>
@@ -148,7 +165,7 @@ export function ManagerTasksView(props: Props) {
                   type="button"
                   size="small"
                   variant="outlined"
-                  onClick={() => props.toggleSort("asc")}
+                  onClick={() => props.setSortDays("asc")}
                   sx={{
                     borderColor: "#E4E8F0",
                     background: props.sortDays === "asc" ? "#F5A623" : "#fff",
@@ -162,7 +179,7 @@ export function ManagerTasksView(props: Props) {
                   type="button"
                   size="small"
                   variant="outlined"
-                  onClick={() => props.toggleSort("desc")}
+                  onClick={() => props.setSortDays("desc")}
                   sx={{
                     borderColor: "#E4E8F0",
                     background: props.sortDays === "desc" ? "#F5A623" : "#fff",
@@ -224,14 +241,26 @@ export function ManagerTasksView(props: Props) {
         ) : null}
 
         <AppTableHeader
-          columnsTemplate="36px 80px 130px 50px 1fr 100px 36px"
-          cells={["", "Level", "Trade", "User", "Description", "Days Open", ""]}
+          columnsTemplate="36px 80px 130px 50px 80px 1fr 100px 36px"
+          columns={[
+            { key: "select", label: "" },
+            { key: "level", label: "Level", sortable: true, sortKey: "level" },
+            { key: "trade", label: "Trade", sortable: true, sortKey: "trade" },
+            { key: "user", label: "User", sortable: true, sortKey: "user" },
+            { key: "priority", label: "Priority", sortable: true, sortKey: "priority" },
+            { key: "description", label: "Description", sortable: true, sortKey: "description" },
+            { key: "daysOpen", label: "Days Open", sortable: true, sortKey: "daysOpen" },
+            { key: "actions", label: "" },
+          ]}
+          sortKey={props.sortKey ?? null}
+          sortDirection={props.sortDirection ?? "asc"}
+          onSort={(key) => props.onSortColumn?.(key as any)}
           className="table-head mgmt"
         />
 
         {props.loading ? (
-          <Box sx={{ p: 3 }}>
-            <Typography sx={{ fontSize: 13, color: "#7B89A8" }}>Loading tasks...</Typography>
+          <Box sx={{ px: "20px", py: 1.25 }}>
+            <TableRowsSkeleton />
           </Box>
         ) : props.rows.length === 0 ? (
           <AppTableEmptyState icon={<AppIcon name="folder" size={36} />} message="No tasks match your filters." />
@@ -239,7 +268,7 @@ export function ManagerTasksView(props: Props) {
           props.rows.map((task) => (
             <AppTableRow
               key={task.id}
-              columnsTemplate="36px 80px 130px 50px 1fr 100px 36px"
+              columnsTemplate="36px 80px 130px 50px 80px 1fr 100px 36px"
               className="task-row-item mgmt"
             >
               <Box>
@@ -253,6 +282,9 @@ export function ManagerTasksView(props: Props) {
               <AppTableCell variant="level">{task.level}</AppTableCell>
               <AppTableCell variant="trade">{task.trade}</AppTableCell>
               <InitialsBadge initials={task.user} />
+              <AppTableCell variant="default">
+                <PriorityBadge label={task.priority} />
+              </AppTableCell>
               <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
               <DaysBadge days={task.days} />
               <AppButton
@@ -277,12 +309,18 @@ export function ManagerTasksView(props: Props) {
           ))
         )}
 
-        <AppTablePagination
-          page={props.page}
-          pageSize={props.pageSize}
-          total={props.total}
-          onChange={props.onPageChange}
-        />
+        {props.total > props.pageSize ? (
+          <AppTablePagination
+            page={props.page}
+            pageSize={props.pageSize}
+            total={props.total}
+            onChange={props.onPageChange}
+          />
+        ) : initialLoading ? (
+          <Box sx={{ px: "20px", py: "14px", borderTop: "1px solid #E4E8F0", background: "#FAFBFC" }}>
+            <Skeleton variant="rounded" height={20} width="35%" />
+          </Box>
+        ) : null}
       </AppTableShell>
 
       <ConfirmModal
@@ -294,6 +332,51 @@ export function ManagerTasksView(props: Props) {
         onClose={props.closeConfirm}
         onConfirm={props.onConfirm}
       />
+    </Stack>
+  );
+}
+
+function StatCardSkeleton({ accentColor }: { accentColor: string }) {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        padding: "18px 20px",
+        borderRadius: "12px",
+        borderLeft: `4px solid ${accentColor}`,
+        boxShadow: "0 2px 16px rgba(0,0,0,0.08)",
+      }}
+    >
+      <Skeleton variant="text" width="40%" sx={{ fontSize: 32, lineHeight: 1.2 }} />
+      <Skeleton variant="text" width="65%" sx={{ mt: 0.5, fontSize: 12 }} />
+    </Paper>
+  );
+}
+
+function TableRowsSkeleton() {
+  return (
+    <Stack spacing={1.25} sx={{ py: 0.5 }}>
+      {Array.from({ length: 6 }).map((_, idx) => (
+        <Box
+          key={idx}
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "36px 80px 130px 50px 80px 1fr 100px 36px",
+            alignItems: "center",
+            columnGap: "8px",
+            py: "6px",
+          }}
+        >
+          <Skeleton variant="rounded" width={16} height={16} />
+          <Skeleton variant="text" width={34} />
+          <Skeleton variant="text" width={90} />
+          <Skeleton variant="rounded" width={34} height={18} />
+          <Skeleton variant="rounded" width={62} height={22} />
+          <Skeleton variant="text" width="92%" />
+          <Skeleton variant="rounded" width={78} height={22} />
+          <Skeleton variant="rounded" width={28} height={24} />
+        </Box>
+      ))}
     </Stack>
   );
 }

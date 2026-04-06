@@ -223,7 +223,112 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"description\": \"Inspect site A\",\n  \"status_id\": 1,\n  \"priority_id\": 2,\n  \"site_id\": 1\n}"
+              "raw": "{\n  \"statusId\": \"{{openStatusId}}\",\n  \"priorityId\": \"{{priorityMediumId}}\",\n  \"levelId\": \"{{levelId}}\",\n  \"tradeId\": \"{{tradeId}}\",\n  \"description\": \"Inspect site A\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Open Tasks (POST body)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tasks/open",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tasks", "open"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"limit\": 10,\n  \"search\": \"painting\",\n  \"sortBy\": \"priority\",\n  \"sortOrder\": \"desc\",\n  \"filters\": {\n    \"createdByUserIds\": [\"{{managerUserId}}\"],\n    \"tradeIds\": [\"{{tradeId}}\"],\n    \"levelIds\": [\"{{levelId}}\"],\n    \"priorityIds\": [\"{{priorityMediumId}}\"],\n    \"statusIds\": [\"{{openStatusId}}\"]\n  }\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Completed Tasks (POST body)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tasks/completed",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tasks", "completed"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"limit\": 10,\n  \"search\": \"drywall\",\n  \"sortBy\": \"date\",\n  \"sortOrder\": \"desc\",\n  \"filters\": {\n    \"completedByUserIds\": [\"{{managerUserId}}\"],\n    \"tradeIds\": [\"{{tradeId}}\"],\n    \"levelIds\": [\"{{levelId}}\"]\n  }\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Analytics (Manager)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tasks/analytics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tasks", "analytics"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Task Attachment (metadata)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tasks/{{taskId}}/attachments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tasks", "{{taskId}}", "attachments"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileUrl\": \"{{fileUrl}}\",\n  \"fileName\": \"photo.jpg\",\n  \"fileType\": \"jpg\",\n  \"mimeType\": \"image/jpeg\",\n  \"fileSize\": 245678,\n  \"isBefore\": true,\n  \"isAfter\": false\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Files",
+      "item": [
+        {
+          "name": "Upload Image (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/files/upload",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "files", "upload"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "{{uploadFilePath}}"
+                }
+              ]
             }
           },
           "response": []
@@ -257,10 +362,58 @@
           "name": "List Trades",
           "request": {
             "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
             "url": {
-              "raw": "{{base_url}}/api/v1/trades",
+              "raw": "{{base_url}}/api/v1/lookups/trades",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "trades"]
+              "path": ["api", "v1", "lookups", "trades"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Levels",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/lookups/levels",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "lookups", "levels"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Task Statuses",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/lookups/task-statuses",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "lookups", "task-statuses"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Task Priorities",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/lookups/task-priorities",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "lookups", "task-priorities"]
             }
           },
           "response": []
@@ -271,6 +424,14 @@
   "event": [],
   "variable": [
     { "key": "base_url", "value": "http://localhost:3001" },
-    { "key": "jwt_token", "value": "" }
+    { "key": "jwt_token", "value": "" },
+    { "key": "taskId", "value": "" },
+    { "key": "fileUrl", "value": "" },
+    { "key": "uploadFilePath", "value": "" },
+    { "key": "tradeId", "value": "" },
+    { "key": "levelId", "value": "" },
+    { "key": "openStatusId", "value": "" },
+    { "key": "priorityMediumId", "value": "" },
+    { "key": "managerUserId", "value": "" }
   ]
 }

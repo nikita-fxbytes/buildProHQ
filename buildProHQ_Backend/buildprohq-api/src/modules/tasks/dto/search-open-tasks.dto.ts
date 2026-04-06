@@ -40,6 +40,11 @@ export class OpenTasksFiltersDto {
   @IsUUID('4', { each: true })
   levelIds?: string[];
 
+  @ApiPropertyOptional({ type: [String], description: 'Created-by user UUIDs (manager filter)' })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  createdByUserIds?: string[];
+
   @ApiPropertyOptional({ type: [String], description: 'Task status UUIDs' })
   @IsOptional()
   @IsUUID('4', { each: true })
@@ -80,11 +85,11 @@ export class SearchOpenTasksDto {
 
   @ApiPropertyOptional({
     description: 'Sort column',
-    enum: ['createdAt', 'daysOpen', 'level', 'trade', 'priority', 'description'],
+    enum: ['createdAt', 'daysOpen', 'level', 'trade', 'priority', 'description', 'user'],
   })
   @IsOptional()
-  @IsIn(['createdAt', 'daysOpen', 'level', 'trade', 'priority', 'description'])
-  sortBy?: 'createdAt' | 'daysOpen' | 'level' | 'trade' | 'priority' | 'description';
+  @IsIn(['createdAt', 'daysOpen', 'level', 'trade', 'priority', 'description', 'user'])
+  sortBy?: 'createdAt' | 'daysOpen' | 'level' | 'trade' | 'priority' | 'description' | 'user';
 
   @ApiPropertyOptional({ description: 'Sort order', enum: ['asc', 'desc'] })
   @IsOptional()

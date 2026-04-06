@@ -13,6 +13,7 @@ import Typography from "@mui/material/Typography";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { MESSAGES } from "@/constants/messages";
 import { ImageLightbox } from "@/components/common/ImageLightbox";
+import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { validateBeforePhotos } from "@/schemas/field-add-task.schema";
 
 /** Same extension/MIME idea as validateBeforePhotos — must run before empty-MIME files are dropped. */
@@ -74,6 +75,7 @@ export function FormUploadField({
   const [dragOver, setDragOver] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const effectiveMaxFiles = useMemo(() => {
@@ -206,6 +208,20 @@ export function FormUploadField({
         ...sx,
       }}
     >
+      <ConfirmModal
+        open={!!confirmRemoveId}
+        title={MESSAGES.taskForm.removePhotoConfirmTitle}
+        message={MESSAGES.taskForm.removePhotoConfirmMessage}
+        confirmLabel={MESSAGES.taskForm.removePhotoConfirmAction}
+        confirmColor="error"
+        onClose={() => setConfirmRemoveId(null)}
+        onConfirm={() => {
+          if (!confirmRemoveId) return;
+          handleRemove(confirmRemoveId);
+          setConfirmRemoveId(null);
+        }}
+      />
+
       <Box
         component={disabled ? "div" : "label"}
         id={`${inputId}-dropzone`}
@@ -345,7 +361,7 @@ export function FormUploadField({
                 disabled={disabled}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleRemove(item.id);
+                  setConfirmRemoveId(item.id);
                 }}
                 aria-label={MESSAGES.taskForm.removePhotoButton}
                 className="photo-remove"

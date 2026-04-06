@@ -19,7 +19,6 @@ export function PageSizeSelect({ value, onChange, options = [10, 20, 50] }: Page
         color: TOOLBAR_TOKENS.pageSize.color,
       }}
     >
-      <span>Per page:</span>
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}

@@ -1,25 +1,26 @@
-import { taskService } from "@/services/task.service";
-import type { Task } from "@/types/domain";
-import { sanitizeRichHtml } from "@/utils/richText";
+import { loadAddTaskLookups, type AddTaskLookups } from "@/services/addTaskLookups.service";
+import { createTaskWithOptionalPhotos } from "@/services/taskCreateWithPhotos.service";
 
-export type ManagerAddTaskOptions = {
-  levels: string[];
-  trades: string[];
+export type ManagerAddTaskLookups = {
+  levels: AddTaskLookups["levels"];
+  trades: AddTaskLookups["trades"];
+  priorities: AddTaskLookups["priorities"];
+  openStatusId: AddTaskLookups["openStatusId"];
+  defaultPriorityId: AddTaskLookups["defaultPriorityId"];
 };
 
 export const managerAddTaskService = {
-  async getOptions(): Promise<ManagerAddTaskOptions> {
-    const tasks = await taskService.getTasks();
-    const levels = [...new Set(tasks.map((task) => task.level))].sort();
-    const trades = [...new Set(tasks.map((task) => task.trade))].sort();
-    return { levels, trades };
+  async loadLookups(): Promise<ManagerAddTaskLookups> {
+    return loadAddTaskLookups();
   },
-  async createTask(input: Pick<Task, "desc" | "level" | "trade">): Promise<void> {
-    await taskService.createTask({
-      ...input,
-      desc: sanitizeRichHtml(input.desc),
-      user: "MGR",
-    });
+  async createTaskWithOptionalPhotos(values: {
+    statusId: string;
+    levelId: string;
+    tradeId: string;
+    priorityId: string;
+    description: string;
+  }, files: File[]): Promise<{ id: string }> {
+    return createTaskWithOptionalPhotos(values, files);
   },
 };
 

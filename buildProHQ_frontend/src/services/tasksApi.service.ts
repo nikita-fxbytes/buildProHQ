@@ -17,6 +17,8 @@ export type TaskListItem = {
   closed_at: string | null;
   assigned_to_user_id: string | null;
   created_by_user_id: string;
+  created_by_initials?: string | null;
+  created_by_full_name?: string | null;
   status_id: string;
   status_code: string;
   status_name: string;
@@ -43,6 +45,7 @@ export type ListTasksResponseMeta = {
 export type OpenTasksFilters = {
   tradeIds?: string[];
   levelIds?: string[];
+  createdByUserIds?: string[];
   statusIds?: string[];
   priorityIds?: string[];
   dateRange?: {
@@ -55,9 +58,36 @@ export type ListOpenTasksBody = {
   page: number;
   limit: number;
   search?: string;
-  sortBy?: "createdAt" | "daysOpen" | "level" | "trade" | "priority" | "description";
+  sortBy?: "createdAt" | "daysOpen" | "level" | "trade" | "priority" | "description" | "user";
   sortOrder?: "asc" | "desc";
   filters?: OpenTasksFilters;
+};
+
+export type CompletedTasksFilters = {
+  tradeIds?: string[];
+  levelIds?: string[];
+  completedByUserIds?: string[];
+};
+
+export type ListCompletedTasksBody = {
+  page: number;
+  limit: number;
+  search?: string;
+  sortBy?: "level" | "trade" | "user" | "description" | "date" | "duration";
+  sortOrder?: "asc" | "desc";
+  filters?: CompletedTasksFilters;
+};
+
+export type CompletedTaskListItem = {
+  id: string;
+  description: string;
+  closed_at: string;
+  days_open: number;
+  trade_name: string | null;
+  level_name: string | null;
+  completed_by_user_id: string | null;
+  completed_by_initials?: string | null;
+  completed_by_full_name?: string | null;
 };
 
 export type TaskStats = {
@@ -69,6 +99,16 @@ export type TaskStats = {
   midRange7to10: number;
   fresh0to6: number;
   tradesActive: number;
+};
+
+export type ManagerAnalytics = {
+  openTasks: number;
+  completedTotal: number;
+  avgCompletionDays: number;
+  byTrade: Array<{ trade: string; count: number }>;
+  byLevel: Array<{ level: string; count: number }>;
+  overdueTop: Array<{ daysOpen: number; level: string | null; description: string; user: string | null }>;
+  byUser: Array<{ user: string; completed: number }>;
 };
 
 export type CreateTaskPayload = {
@@ -103,11 +143,27 @@ export const tasksApi = {
     return data.data;
   },
 
+  async getAnalytics(): Promise<ManagerAnalytics> {
+    const { data } = await apiClient.get<ApiEnvelope<ManagerAnalytics>>("/v1/tasks/analytics");
+    return data.data;
+  },
+
   async listOpen(
     body: ListOpenTasksBody,
   ): Promise<{ items: TaskListItem[]; meta: ListTasksResponseMeta }> {
     const { data } = await apiClient.post<ApiEnvelope<TaskListItem[]>>(
       "/v1/tasks/open",
+      body,
+    );
+    const meta = (data.meta || {}) as ListTasksResponseMeta;
+    return { items: data.data, meta };
+  },
+
+  async listCompleted(
+    body: ListCompletedTasksBody,
+  ): Promise<{ items: CompletedTaskListItem[]; meta: ListTasksResponseMeta }> {
+    const { data } = await apiClient.post<ApiEnvelope<CompletedTaskListItem[]>>(
+      "/v1/tasks/completed",
       body,
     );
     const meta = (data.meta || {}) as ListTasksResponseMeta;

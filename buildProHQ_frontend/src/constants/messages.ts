@@ -38,6 +38,9 @@ export const MESSAGES = {
     lightboxImageAlt: "Full size photo preview",
     voiceListeningLine: "Listening... speak your action item",
     removePhotoButton: "Remove photo",
+    removePhotoConfirmTitle: "Remove photo?",
+    removePhotoConfirmMessage: "This will remove the photo from this action item.",
+    removePhotoConfirmAction: "Remove",
   },
   task: {
     created: "Task created successfully",

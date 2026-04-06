@@ -10,6 +10,11 @@ export function ManagerAddTaskContainer() {
       form={controller.form}
       levels={controller.levels}
       trades={controller.trades}
+      priorities={controller.priorities}
+      photos={controller.photos}
+      setPhotos={controller.setPhotos}
+      loadingLookups={controller.loadingLookups}
+      submitting={controller.submitting}
       onSubmit={controller.onSubmit}
       onCancel={controller.onCancel}
       onPaste={controller.onPaste}

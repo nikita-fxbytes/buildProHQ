@@ -22,6 +22,7 @@ const PAGE_MAP: Record<string, PageMeta> = {
   "/manager/tasks": { role: ROLES.MANAGER, title: "Action Items (Management)", breadcrumb: "Management" },
   "/manager/tasks/add": { role: ROLES.MANAGER, title: "Add Action Item", breadcrumb: "Management" },
   "/manager/completed": { role: ROLES.MANAGER, title: "Completed Items", breadcrumb: "Management" },
+  "/manager/analytics": { role: ROLES.MANAGER, title: "Analytics Dashboard", breadcrumb: "Management" },
   "/manager/filters": { role: ROLES.MANAGER, title: "Manage Filters", breadcrumb: "Management" },
   "/manager/users": { role: ROLES.MANAGER, title: "Users", breadcrumb: "Management" },
   "/manager/users/add": { role: ROLES.MANAGER, title: "Add User", breadcrumb: "Management" },

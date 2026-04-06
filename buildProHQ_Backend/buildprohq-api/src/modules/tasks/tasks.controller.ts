@@ -33,6 +33,7 @@ import { CommentTaskDto } from './dto/comment-task.dto';
 import { AddAttachmentDto } from './dto/add-attachment.dto';
 import { BulkTasksDto } from './dto/bulk-tasks.dto';
 import { SearchOpenTasksDto } from './dto/search-open-tasks.dto';
+import { SearchCompletedTasksDto } from './dto/search-completed-tasks.dto';
 
 @ApiTags('tasks')
 @ApiBearerAuth()
@@ -71,6 +72,29 @@ export class TasksController {
   @Get('analytics')
   @Roles('manager')
   @ApiOperation({ summary: 'Get grouped analytics for manager dashboard' })
+  @ApiOkResponse({
+    description: 'Analytics fetched successfully',
+    schema: {
+      example: {
+        success: true,
+        statusCode: 200,
+        message: 'Success',
+        data: {
+          openTasks: 12,
+          completedTotal: 42,
+          avgCompletionDays: 6,
+          byTrade: [{ trade: 'Painter', count: 4 }],
+          byLevel: [{ level: 'L2', count: 3 }],
+          overdueTop: [
+            { daysOpen: 11, level: 'L10', description: 'Finish wall painting – north side', user: 'RG' },
+          ],
+          byUser: [{ user: 'RG', completed: 10 }],
+          completionRate: [{ month: '2026-03', total: '20', completed: '12' }],
+        },
+        meta: null,
+      },
+    },
+  })
   getAnalytics(@CurrentUser() user: AuthUser) {
     return this.tasksService.getAnalytics(user);
   }
@@ -79,7 +103,26 @@ export class TasksController {
   @ApiOperation({
     summary: 'List/search open tasks with filters (POST body)',
   })
-  @ApiBody({ type: SearchOpenTasksDto })
+  @ApiBody({
+    type: SearchOpenTasksDto,
+    examples: {
+      managerList: {
+        summary: 'Manager tasks list (search + sort + filters)',
+        value: {
+          page: 1,
+          limit: 10,
+          search: 'painting',
+          sortBy: 'priority',
+          sortOrder: 'desc',
+          filters: {
+            createdByUserIds: ['9b7fdb4c-2c3a-4518-8e64-16412cb27f0c'],
+            tradeIds: ['8c2d41e3-5f5a-4b2d-9c6b-6e2d7c9b1a11'],
+            levelIds: ['0f1a2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b'],
+          },
+        },
+      },
+    },
+  })
   @ApiOkResponse({
     description: 'Action items fetched successfully',
     schema: {
@@ -97,6 +140,8 @@ export class TasksController {
             closed_at: null,
             assigned_to_user_id: null,
             created_by_user_id: '9b7fdb4c-2c3a-4518-8e64-16412cb27f0c',
+            created_by_initials: 'RG',
+            created_by_full_name: 'Rob Gar',
             status_id: '1b6a0fb1-2d3f-4f05-8c7f-5c9fdb1e3d42',
             priority_id: null,
             status_code: 'open',
@@ -137,6 +182,37 @@ export class TasksController {
   })
   listCompleted(@CurrentUser() user: AuthUser, @Query() query: QueryTasksDto) {
     return this.tasksService.listCompleted(user, query);
+  }
+
+  @Post('completed')
+  @Roles('manager', 'field_user', 'trade_user')
+  @ApiOperation({
+    summary: 'List/search completed tasks with filters (POST body)',
+    description:
+      'Completed tasks listing with pagination, search, sorting, and manager filters (trade/level/completed-by user).',
+  })
+  @ApiBody({
+    type: SearchCompletedTasksDto,
+    examples: {
+      managerList: {
+        summary: 'Manager completed list (search + sort + filters)',
+        value: {
+          page: 1,
+          limit: 10,
+          search: 'drywall',
+          sortBy: 'date',
+          sortOrder: 'desc',
+          filters: {
+            completedByUserIds: ['9b7fdb4c-2c3a-4518-8e64-16412cb27f0c'],
+            tradeIds: ['8c2d41e3-5f5a-4b2d-9c6b-6e2d7c9b1a11'],
+            levelIds: ['0f1a2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b'],
+          },
+        },
+      },
+    },
+  })
+  searchCompleted(@CurrentUser() user: AuthUser, @Body() dto: SearchCompletedTasksDto) {
+    return this.tasksService.searchCompleted(user, dto);
   }
 
   @Post('bulk-complete')
@@ -257,6 +333,7 @@ export class TasksController {
   @Post(':id/attachments')
   @Roles('manager', 'field_user', 'trade_user')
   @ApiOperation({ summary: 'Attach file metadata to task' })
+  @ApiBody({ type: AddAttachmentDto })
   addAttachment(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: AddAttachmentDto,

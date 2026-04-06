@@ -7,74 +7,97 @@ import { useForm } from "react-hook-form";
 import { MESSAGES } from "@/constants/messages";
 import { ROUTES } from "@/constants/routes";
 import { managerAddTaskSchema, type ManagerAddTaskFormValues } from "@/schemas/manager-add-task.schema";
-import { managerAddTaskService } from "@/services/managerAddTask.service";
-import { appendPlainTextToRichHtml } from "@/utils/richText";
+import { getApiErrorMessage } from "@/services/apiError";
+import { managerAddTaskService, type ManagerAddTaskLookups } from "@/services/managerAddTask.service";
 import { appToast } from "@/utils/toast";
+import type { UploadItem } from "@/components/common/FormUploadField";
+import { revokeBlobUrls } from "@/utils/uploadItems";
+import { useTaskDescriptionTools } from "@/hooks/useTaskDescriptionTools";
 
 export function useManagerAddTaskController() {
   const router = useRouter();
-  const [levels, setLevels] = useState<string[]>([]);
-  const [trades, setTrades] = useState<string[]>([]);
-  const [voiceActive, setVoiceActive] = useState(false);
+  const [lookups, setLookups] = useState<ManagerAddTaskLookups | null>(null);
+  const [loadingLookups, setLoadingLookups] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [photos, setPhotos] = useState<UploadItem[]>([]);
 
   const form = useForm<ManagerAddTaskFormValues>({
     resolver: zodResolver(managerAddTaskSchema),
     defaultValues: {
-      desc: "",
-      level: "",
-      trade: "",
+      description: "",
+      levelId: "",
+      tradeId: "",
+      priorityId: "",
     },
   });
+
+  const { voiceActive, toggleVoice, onPaste } = useTaskDescriptionTools(form);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const options = await managerAddTaskService.getOptions();
-        setLevels(options.levels);
-        setTrades(options.trades);
-      } catch {
-        appToast.error(MESSAGES.task.loadFailed);
+        const data = await managerAddTaskService.loadLookups();
+        setLookups(data);
+        form.setValue("priorityId", data.defaultPriorityId);
+      } catch (e) {
+        appToast.error(getApiErrorMessage(e, MESSAGES.task.loadFailed));
+      } finally {
+        setLoadingLookups(false);
       }
     };
     void load();
-  }, []);
+  }, [form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    if (!lookups) {
+      appToast.error(MESSAGES.task.loadFailed);
+      return;
+    }
+    setSubmitting(true);
     try {
-      await managerAddTaskService.createTask(values);
+      const files = photos
+        .filter((p) => p.status !== "toDelete" && p.file)
+        .map((p) => p.file as File);
+      await managerAddTaskService.createTaskWithOptionalPhotos(
+        {
+          statusId: lookups.openStatusId,
+          levelId: values.levelId,
+          tradeId: values.tradeId,
+          priorityId: values.priorityId,
+          description: values.description,
+        },
+        files,
+      );
       appToast.success(MESSAGES.task.created);
+      setPhotos((prev) => {
+        revokeBlobUrls(prev);
+        return [];
+      });
+      window.dispatchEvent(new Event("buildprohq:tasksChanged"));
       router.push(ROUTES.MANAGER_TASKS);
-    } catch {
-      appToast.error(MESSAGES.common.saveFailed);
+    } catch (e) {
+      const msg =
+        e instanceof Error && e.message
+          ? e.message
+          : getApiErrorMessage(e, MESSAGES.common.saveFailed);
+      appToast.error(msg);
+    } finally {
+      setSubmitting(false);
     }
   });
 
   const onCancel = () => router.push(ROUTES.MANAGER_TASKS);
 
-  const onPaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      const current = form.getValues("desc");
-      form.setValue("desc", appendPlainTextToRichHtml(current, text), { shouldValidate: true });
-      appToast.info(MESSAGES.validation.clipboardPasted);
-    } catch {
-      appToast.error(MESSAGES.validation.clipboardDenied);
-    }
-  };
-
-  const toggleVoice = () => {
-    setVoiceActive((prev) => !prev);
-    if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
-      appToast.error("Voice input not supported in this browser.");
-      return;
-    }
-    appToast.info("Voice input is placeholder for this step.");
-  };
-
   return {
     form,
-    levels,
-    trades,
+    lookups,
+    loadingLookups,
+    submitting,
+    levels: lookups?.levels ?? [],
+    trades: lookups?.trades ?? [],
+    priorities: lookups?.priorities ?? [],
+    photos,
+    setPhotos,
     onSubmit,
     onCancel,
     onPaste,

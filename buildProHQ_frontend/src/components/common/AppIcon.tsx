@@ -53,6 +53,7 @@ type IconName =
   | "actionItems"
   | "addActionItem"
   | "completedItems"
+  | "analytics"
   | "manageFilters"
   | "users"
   | "addUser"
@@ -84,6 +85,7 @@ const ICON_MAP = {
   actionItems: AssignmentOutlinedIcon,
   addActionItem: AddCircleOutlineIcon,
   completedItems: TaskAltOutlinedIcon,
+  analytics: GraphicEqIcon,
   manageFilters: TuneIcon,
   users: GroupOutlinedIcon,
   addUser: PersonAddAltOutlinedIcon,

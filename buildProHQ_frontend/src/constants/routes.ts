@@ -18,6 +18,7 @@ export const ROUTES = {
   MANAGER_TASKS: "/manager/tasks",
   MANAGER_ADD_TASK: "/manager/tasks/add",
   MANAGER_COMPLETED: "/manager/completed",
+  MANAGER_ANALYTICS: "/manager/analytics",
   MANAGER_FILTERS: "/manager/filters",
   MANAGER_USERS: "/manager/users",
   MANAGER_ADD_USER: "/manager/users/add",
