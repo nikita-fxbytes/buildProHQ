@@ -7,7 +7,6 @@ import { AppIcon } from "@/components/common/AppIcon";
 import { DoneBadge } from "@/components/common/badges/DoneBadge";
 import { FilterChipGroup } from "@/components/common/filters/FilterChipGroup";
 import { FilterPanel } from "@/components/common/filters/FilterPanel";
-import { PageSizeSelect } from "@/components/common/PageSizeSelect";
 import { AppTableCell } from "@/components/common/table/AppTableCell";
 import { AppTableEmptyState } from "@/components/common/table/AppTableEmptyState";
 import { AppTableHeader } from "@/components/common/table/AppTableHeader";
@@ -31,7 +30,6 @@ type Props = {
   page: number;
   setPage: (page: number) => void;
   pageSize: number;
-  setPageSize: (size: number) => void;
   total: number;
   rows: FieldCompletedTaskRow[];
   tradeOptions: Array<string | { value: string; label: string }>;
@@ -98,7 +96,6 @@ export function UserCompletedView(props: Props) {
             </Box>
           ) : null}
         </AppButton>
-        <PageSizeSelect value={props.pageSize} onChange={props.setPageSize} />
       </PageToolbar>
 
       <FilterPanel open={props.showFilters}>

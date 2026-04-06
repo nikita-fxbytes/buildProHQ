@@ -33,7 +33,7 @@ export function useUserCompletedController() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(UI_DEFAULTS.COMPLETED_PAGE_SIZE);
+  const pageSize = UI_DEFAULTS.COMPLETED_PAGE_SIZE;
   const [showFilters, setShowFilters] = useState(false);
   const [tradeFilters, setTradeFilters] = useState<string[]>([]);
   const [levelFilters, setLevelFilters] = useState<string[]>([]);
@@ -83,7 +83,7 @@ export function useUserCompletedController() {
         setLoading(false);
       }
     },
-    [levelFilters, page, pageSize, search, sortDirection, sortKey, tradeFilters],
+    [levelFilters, page, search, sortDirection, sortKey, tradeFilters],
   );
 
   useEffect(() => {
@@ -102,7 +102,7 @@ export function useUserCompletedController() {
   useEffect(() => {
     loadTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
+  }, [page]);
 
   const toggleFilterValue = (current: string[], value: string) =>
     current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
@@ -124,10 +124,6 @@ export function useUserCompletedController() {
     page,
     setPage,
     pageSize,
-    setPageSize: (size: number) => {
-      setPageSize(size);
-      setPage(1);
-    },
     total,
     rows,
     tradeOptions,
