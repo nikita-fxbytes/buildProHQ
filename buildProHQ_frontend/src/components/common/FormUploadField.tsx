@@ -20,6 +20,24 @@ import { validateBeforePhotos } from "@/schemas/field-add-task.schema";
 /** Same extension/MIME idea as validateBeforePhotos — must run before empty-MIME files are dropped. */
 const IMAGE_EXT = /\.(jpe?g|png|webp|heic|heif)$/i;
 
+function isHeicLike(file: File): boolean {
+  const t = (file.type || "").toLowerCase();
+  if (t === "image/heic" || t === "image/heif") return true;
+  const n = file.name.toLowerCase();
+  return n.endsWith(".heic") || n.endsWith(".heif");
+}
+
+async function normalizeImageFile(file: File): Promise<File> {
+  if (!isHeicLike(file)) return file;
+  const mod = await import("heic2any");
+  const heic2any = (
+    mod as unknown as { default?: (args: unknown) => Promise<Blob> }
+  ).default ?? (mod as unknown as (args: unknown) => Promise<Blob>);
+  const converted: Blob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+  const outName = file.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
+  return new File([converted], outName, { type: "image/jpeg" });
+}
+
 function fileLooksLikeAllowedImage(file: File, accept: string[] | undefined): boolean {
   if (accept?.length) {
     const okType = accept.some((t) => file.type === t);
@@ -84,16 +102,24 @@ export function FormUploadField({
     return maxFiles && maxFiles > 0 ? maxFiles : undefined;
   }, [mode, maxFiles]);
 
-  const handleFiles = (files: FileList | File[]) => {
+  const handleFiles = async (files: FileList | File[]) => {
     if (disabled) return;
     const arr = Array.from(files);
     if (!arr.length) return;
 
     const existing = [...value];
 
-    const images = arr.filter((file) => fileLooksLikeAllowedImage(file, accept));
+    const imagesRaw = arr.filter((file) => fileLooksLikeAllowedImage(file, accept));
 
-    if (!images.length) {
+    if (!imagesRaw.length) {
+      setClientError(MESSAGES.validation.photoInvalidType);
+      return;
+    }
+
+    let images: File[] = imagesRaw;
+    try {
+      images = await Promise.all(imagesRaw.map((f) => normalizeImageFile(f)));
+    } catch {
       setClientError(MESSAGES.validation.photoInvalidType);
       return;
     }
@@ -238,7 +264,7 @@ export function FormUploadField({
           setDragOver(false);
           if (disabled) return;
           if (e.dataTransfer.files?.length) {
-            handleFiles(e.dataTransfer.files);
+            void handleFiles(e.dataTransfer.files);
           }
         }}
         sx={dropzoneSx}
@@ -252,7 +278,7 @@ export function FormUploadField({
           tabIndex={-1}
           style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", border: 0, whiteSpace: "nowrap" }}
           onChange={(e) => {
-            if (e.target.files?.length) handleFiles(e.target.files);
+            if (e.target.files?.length) void handleFiles(e.target.files);
             e.target.value = "";
           }}
         />

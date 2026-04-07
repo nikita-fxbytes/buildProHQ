@@ -16,7 +16,13 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.use(cookieParser());
-  app.use(helmet());
+  app.use(
+    helmet({
+      // Allow images/files to be embedded by the frontend running on a different origin
+      // (e.g. http://localhost:3000 -> http://localhost:3001).
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
   app.enableCors({
     origin:
       corsOrigin === '*' ? true : corsOrigin.split(',').map((o) => o.trim()),

@@ -74,6 +74,7 @@ type Props = {
 };
 
 export function ManagerTasksView(props: Props) {
+  type SortKey = NonNullable<Props["sortKey"]>;
   const filterCount =
     props.tradeFilters.length +
     props.levelFilters.length +
@@ -250,7 +251,7 @@ export function ManagerTasksView(props: Props) {
           ]}
           sortKey={props.sortKey ?? null}
           sortDirection={props.sortDirection ?? "asc"}
-          onSort={(key) => props.onSortColumn?.(key as any)}
+          onSort={(key) => props.onSortColumn?.(key as SortKey)}
           className="table-head mgmt"
         />
 

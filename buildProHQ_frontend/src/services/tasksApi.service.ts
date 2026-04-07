@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/apiClient";
+import { resolvePublicUrl } from "@/utils/urls";
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -219,7 +220,7 @@ export const tasksApi = {
     const { data } = await apiClient.get<ApiEnvelope<TaskAttachmentItem[]>>(
       `/v1/tasks/${taskId}/attachments`,
     );
-    return data.data;
+    return data.data.map((a) => ({ ...a, fileUrl: resolvePublicUrl(a.fileUrl) }));
   },
 
   async completeTask(

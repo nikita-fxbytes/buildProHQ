@@ -7,7 +7,9 @@ import { useTableSort } from "@/hooks/use-table-sort";
 import { usersApi, type SearchUsersBody } from "@/services/usersApi.service";
 import type { ManagerUsersListItem } from "@/types/domain";
 import { appToast } from "@/utils/toast";
+import { getApiErrorMessage } from "@/services/apiError";
 import { mapListItemToManagerRow } from "@/features/users/userMappers";
+import { emitUsersChanged } from "@/utils/taskEvents";
 
 type RoleFilter = "" | "User" | "Trade" | "Management";
 type SortKey = NonNullable<SearchUsersBody["sortBy"]>;
@@ -79,10 +81,11 @@ export function useManagerUsersListController() {
     async (id: string) => {
       try {
         await usersApi.remove(id);
+        emitUsersChanged();
         appToast.success(MESSAGES.user.removed);
         await loadUsers();
-      } catch {
-        appToast.error(MESSAGES.common.saveFailed);
+      } catch (e) {
+        appToast.error(getApiErrorMessage(e, MESSAGES.common.saveFailed));
       }
     },
     [loadUsers],

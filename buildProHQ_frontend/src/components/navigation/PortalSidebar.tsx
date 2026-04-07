@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { tasksApi } from "@/services/tasksApi.service";
 import { usersApi } from "@/services/usersApi.service";
 import { appToast } from "@/utils/toast";
-import { TASKS_CHANGED_EVENT } from "@/utils/taskEvents";
+import { TASKS_CHANGED_EVENT, USERS_CHANGED_EVENT } from "@/utils/taskEvents";
 import { getPortalNavSections, type SidebarBadgeState } from "@/navigation/portalNavConfig";
 import type { AppIconProps } from "@/components/common/AppIcon";
 
@@ -88,7 +88,12 @@ export function PortalSidebar({ role }: PortalSidebarProps) {
 
     const onTasksChanged = () => void loadBadges();
     window.addEventListener(TASKS_CHANGED_EVENT, onTasksChanged);
-    return () => window.removeEventListener(TASKS_CHANGED_EVENT, onTasksChanged);
+    const onUsersChanged = () => void loadBadges();
+    window.addEventListener(USERS_CHANGED_EVENT, onUsersChanged);
+    return () => {
+      window.removeEventListener(TASKS_CHANGED_EVENT, onTasksChanged);
+      window.removeEventListener(USERS_CHANGED_EVENT, onUsersChanged);
+    };
   }, [user, role]);
 
   return (

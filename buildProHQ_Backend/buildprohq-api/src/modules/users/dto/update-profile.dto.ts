@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength, MinLength, IsUrl } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  IsUrl,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateProfileDto {
   @ApiProperty({ required: false })
@@ -12,7 +19,8 @@ export class UpdateProfileDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  @IsUrl({ require_protocol: true }, { message: 'avatarUrl must be a valid URL' })
+  @ValidateIf((o) => typeof o.avatarUrl === 'string' && o.avatarUrl.trim().length > 0)
+  @IsUrl({ require_protocol: true, require_tld: false }, { message: 'avatarUrl must be a valid URL' })
   @MaxLength(1024)
   avatarUrl?: string;
 }

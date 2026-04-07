@@ -75,6 +75,7 @@ export function ManagerUsersListView({
   onPageChange,
   removeUser,
 }: ManagerUsersListViewProps) {
+  type SortKey = NonNullable<ManagerUsersListViewProps["sortKey"]>;
   const roleOptionValue = ROLE_OPTIONS.find((o) => o.value === roleFilter) ?? ROLE_OPTIONS[0];
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<{ id: string; name: string } | null>(null);
@@ -127,8 +128,8 @@ export function ManagerUsersListView({
             { key: "actions", label: "" },
           ]}
           sortKey={sortKey ?? null}
-          sortDirection={(sortDirection as any) ?? "asc"}
-          onSort={(key) => onSortColumn?.(key as any)}
+          sortDirection={sortDirection ?? "asc"}
+          onSort={(key) => onSortColumn?.(key as SortKey)}
           className="mgmt"
         />
 

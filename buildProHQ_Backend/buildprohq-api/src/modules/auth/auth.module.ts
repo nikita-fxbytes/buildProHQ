@@ -6,17 +6,29 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
+import { InvitationsService } from './invitations.service';
 import {
+  InvitationStatus,
   Role,
   User,
+  UserInvitation,
   UserRole,
   UserType,
 } from '../../infrastructure/persistence/typeorm/entities';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, UserType, UserRole, Role]),
+    TypeOrmModule.forFeature([
+      User,
+      UserType,
+      UserRole,
+      Role,
+      UserInvitation,
+      InvitationStatus,
+    ]),
     PassportModule,
+    MailModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -28,7 +40,7 @@ import {
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, InvitationsService],
+  exports: [AuthService, InvitationsService],
 })
 export class AuthModule {}

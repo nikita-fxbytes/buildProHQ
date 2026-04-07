@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/apiClient";
+import { resolvePublicUrl } from "@/utils/urls";
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -23,6 +24,6 @@ export const uploadsApi = {
       "/v1/files/upload",
       formData,
     );
-    return data.data;
+    return { ...data.data, fileUrl: resolvePublicUrl(data.data.fileUrl) };
   },
 };

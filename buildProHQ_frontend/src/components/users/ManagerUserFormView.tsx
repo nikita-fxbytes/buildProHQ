@@ -5,6 +5,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { AppPasswordField } from "@/components/common/AppPasswordField";
 import { Controller, type UseFormReturn } from "react-hook-form";
 import { AppAutocomplete } from "@/components/common/AppAutocomplete";
 import { AppButton } from "@/components/common/AppButton";
@@ -175,9 +176,8 @@ export function ManagerUserFormView({
                 <Box>
                   <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                     <FormFieldLabel>Password</FormFieldLabel>
-                    <FormTextField
+                    <AppPasswordField
                       {...field}
-                      type="password"
                       label=""
                       placeholder={mode === "edit" ? "Set password" : "Set password"}
                       error={!!fieldState.error}
@@ -194,22 +194,6 @@ export function ManagerUserFormView({
             <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <FormFieldLabel>Profile Photo</FormFieldLabel>
               <FormUploadField mode="single" value={avatarItems} onChange={onAvatarItemsChange} maxSizeBytes={10 * 1024 * 1024} />
-              {avatarUrl ? (
-                <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 0.75 }}>
-                  <Box
-                    component="img"
-                    src={avatarUrl}
-                    alt="Profile photo preview"
-                    sx={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                      border: "2px solid #E4E8F0",
-                    }}
-                  />
-                </Box>
-              ) : null}
             </Box>
           </Stack>
 

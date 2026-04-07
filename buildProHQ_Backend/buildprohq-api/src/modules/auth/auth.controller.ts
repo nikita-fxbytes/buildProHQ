@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Res, UseGuards } from '@nestjs/common';
 import * as express from 'express';
 import {
   ApiBearerAuth,
@@ -14,11 +14,17 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from '../../infrastructure/common/decorators/current-user.decorator';
 import type { AuthUser } from '../../infrastructure/common/interfaces/auth-user.interface';
+import { Public } from '../../infrastructure/common/decorators/public.decorator';
+import { AcceptInviteDto } from './dto/accept-invite.dto';
+import { InvitationsService } from './invitations.service';
 
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly invitationsService: InvitationsService,
+  ) {}
 
   @Post('login')
   @ApiOperation({ summary: 'Authenticate user and set JWT in HttpOnly cookie' })
@@ -140,5 +146,20 @@ export class AuthController {
   })
   me(@CurrentUser() user: AuthUser) {
     return user;
+  }
+
+  @Post('invite/accept')
+  @Public()
+  @ApiOperation({ summary: 'Accept invite and set initial password' })
+  @ApiBody({ type: AcceptInviteDto })
+  async acceptInvite(@Body() dto: AcceptInviteDto) {
+    return await this.invitationsService.acceptInvite(dto.token, dto.password);
+  }
+
+  @Get('invite/validate')
+  @Public()
+  @ApiOperation({ summary: 'Validate invite token' })
+  async validateInvite(@Query('token') token: string) {
+    return await this.invitationsService.validateToken(token);
   }
 }

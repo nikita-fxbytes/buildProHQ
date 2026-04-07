@@ -11,6 +11,8 @@ import {
   FilesModule,
   HealthModule,
   LookupsModule,
+  MailModule,
+  FiltersModule,
   TasksModule,
   UsersModule,
   NotificationsModule,
@@ -36,7 +38,26 @@ import { ALL_TYPEORM_ENTITIES } from './infrastructure/persistence/typeorm/entit
         THROTTLER_LIMIT: Joi.number().default(120),
         SWAGGER_PATH: Joi.string().default('api/docs'),
         MAX_FILE_SIZE_MB: Joi.number().default(10),
-      }),
+        FRONTEND_BASE_URL: Joi.string().uri({ scheme: ['http', 'https'] }).required(),
+        INVITE_TOKEN_SECRET: Joi.string()
+          .min(16)
+          .invalid('replace_with_a_long_random_secret')
+          .required(),
+        INVITE_EXPIRES_HOURS: Joi.number().default(48),
+        SMTP_HOST: Joi.string().allow('').default(''),
+        SMTP_PORT: Joi.number().default(587),
+        SMTP_USER: Joi.string().allow('').default(''),
+        SMTP_PASS: Joi.string().allow('').default(''),
+        SMTP_FROM: Joi.string().allow('').default(''),
+      })
+        // If SMTP_HOST is set, require the rest.
+        .when(Joi.object({ SMTP_HOST: Joi.string().min(1) }).unknown(), {
+          then: Joi.object({
+            SMTP_USER: Joi.string().min(1).required(),
+            SMTP_PASS: Joi.string().min(1).required(),
+            SMTP_FROM: Joi.string().min(1).required(),
+          }),
+        }),
     }),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
@@ -67,10 +88,12 @@ import { ALL_TYPEORM_ENTITIES } from './infrastructure/persistence/typeorm/entit
     AuditModule,
     HealthModule,
     FilesModule,
+    MailModule,
     AuthModule,
     UsersModule,
     TasksModule,
     LookupsModule,
+    FiltersModule,
     NotificationsModule,
   ],
 

@@ -565,6 +565,102 @@
         }
       ]
     }
+    ,
+    {
+      "name": "Filters (Manager)",
+      "item": [
+        {
+          "name": "Save Filter Category + Options",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/filters",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "filters"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryName\": \"Zone\",\n  \"optionsCsv\": \"North, South, East, West\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Quick Add Level",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/filters/levels",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "filters", "levels"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"L11\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Quick Add Trade",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/filters/trades",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "filters", "trades"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tiler\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Filter Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/filters/categories/{{filterCategoryId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "filters", "categories", "{{filterCategoryId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Filter Option",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/filters/options/{{filterOptionId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "filters", "options", "{{filterOptionId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
   ],
   "event": [],
   "variable": [
@@ -582,5 +678,8 @@
     { "key": "userTypeFieldId", "value": "" },
     { "key": "userStatusActiveId", "value": "" },
     { "key": "roleFieldUserId", "value": "" }
+    ,
+    { "key": "filterCategoryId", "value": "" },
+    { "key": "filterOptionId", "value": "" }
   ]
 }

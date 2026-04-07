@@ -9,6 +9,7 @@ import { IsNull, Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuditService } from '../audit/audit.service';
+import { InvitationsService } from '../auth/invitations.service';
 import {
   User,
   UserRole,
@@ -29,6 +30,7 @@ export class UsersService {
     @InjectRepository(Task)
     private readonly taskRepository: Repository<Task>,
     private readonly auditService: AuditService,
+    private readonly invitationsService: InvitationsService,
   ) {}
 
   async list(actorId: string) {
@@ -273,9 +275,7 @@ export class UsersService {
       .slice(0, 4)
       .toUpperCase();
 
-    const passwordHash = dto.password
-      ? await bcrypt.hash(dto.password, 10)
-      : null;
+    const passwordHash = dto.password ? await bcrypt.hash(dto.password, 10) : null;
     const user = this.userRepository.create({
       userTypeId: dto.userTypeId,
       userStatusId: dto.userStatusId,
@@ -308,11 +308,41 @@ export class UsersService {
       performedBy: actorId,
     });
 
+    // If no password is set, send an invite email with a set-password link.
+    if (!dto.password) {
+      await this.invitationsService.createAndSendInvite({
+        invitedUserId: userId,
+        invitedEmail: dto.email,
+        invitedByUserId: actorId,
+        fullName: dto.fullName,
+      });
+    }
+
     return this.getById(userId);
   }
 
   async update(id: string, dto: UpdateUserDto, actorId: string) {
-    await this.getById(id);
+    const current = await this.userRepository.findOne({
+      where: { id, deletedAt: IsNull() },
+      select: { id: true, email: true },
+    });
+    if (!current) {
+      throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
+    }
+
+    if (dto.email !== undefined) {
+      const nextEmail = dto.email.toLowerCase();
+      if (nextEmail !== current.email) {
+        const existing = await this.userRepository.findOne({
+          where: { email: nextEmail, deletedAt: IsNull() },
+          select: { id: true },
+        });
+        if (existing && existing.id !== id) {
+          throw new ConflictException('Email already exists');
+        }
+      }
+    }
+
     const updatePayload: Partial<User> = {
       updatedBy: actorId,
     };
@@ -331,6 +361,10 @@ export class UsersService {
     }
     if (dto.password !== undefined) {
       updatePayload.passwordHash = await bcrypt.hash(dto.password, 10);
+    }
+    if (dto.avatarUrl !== undefined) {
+      const v = dto.avatarUrl.trim();
+      updatePayload.avatarUrl = v.length ? v : null;
     }
 
     await this.userRepository.update(id, updatePayload);

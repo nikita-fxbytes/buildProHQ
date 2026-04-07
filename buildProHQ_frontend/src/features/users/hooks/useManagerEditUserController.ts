@@ -15,8 +15,11 @@ import { lookupsApi } from "@/services/lookupsApi.service";
 import { usersApi, type UserListItem } from "@/services/usersApi.service";
 import { userSchema, type UserFormValues } from "@/schemas/user.schema";
 import { appToast } from "@/utils/toast";
+import { getApiErrorMessage } from "@/services/apiError";
 import { uploadsApi } from "@/services/uploadsApi.service";
 import type { UploadItem } from "@/components/common/FormUploadField";
+import { resolvePublicUrl } from "@/utils/urls";
+import { emitUsersChanged } from "@/utils/taskEvents";
 
 export function useManagerEditUserController() {
   const params = useParams<{ id: string }>();
@@ -66,11 +69,11 @@ export function useManagerEditUserController() {
           name: user.full_name,
           email: user.email,
           role: mapUserTypeCodeToFormRole(user.user_type_code),
-          avatarUrl: user.avatar_url ?? "",
+          avatarUrl: user.avatar_url ? resolvePublicUrl(user.avatar_url) : "",
           password: "",
         });
         if (user.avatar_url) {
-          setAvatarItems([{ id: `avatar-${user.id}`, url: user.avatar_url, status: "uploaded" }]);
+          setAvatarItems([{ id: `avatar-${user.id}`, url: resolvePublicUrl(user.avatar_url), status: "uploaded" }]);
         } else {
           setAvatarItems([]);
         }
@@ -106,13 +109,15 @@ export function useManagerEditUserController() {
         userTypeId: ids.userTypeId,
         userStatusId: statusId,
         roleId: ids.roleId,
-        avatarUrl: values.avatarUrl?.trim() || undefined,
+        // If user removed the avatar, send empty string so backend can clear it.
+        avatarUrl: values.avatarUrl?.trim(),
         password: values.password?.trim() || undefined,
       });
+      emitUsersChanged();
       appToast.success(MESSAGES.user.updated);
       router.push(ROUTES.MANAGER_USERS);
-    } catch {
-      appToast.error(MESSAGES.common.saveFailed);
+    } catch (e) {
+      appToast.error(getApiErrorMessage(e, MESSAGES.common.saveFailed));
     } finally {
       setSubmitting(false);
     }
@@ -156,8 +161,8 @@ export function useManagerEditUserController() {
       setPendingAvatarId(null);
       if (cropDraftItem?.status === "new") {
         if (cropDraftItem.url?.startsWith("blob:")) URL.revokeObjectURL(cropDraftItem.url);
-        setAvatarItems(loadedUser?.avatar_url ? [{ id: `avatar-${loadedUser.id}`, url: loadedUser.avatar_url, status: "uploaded" }] : []);
-        form.setValue("avatarUrl", loadedUser?.avatar_url ?? "", { shouldDirty: true, shouldValidate: true });
+        setAvatarItems(loadedUser?.avatar_url ? [{ id: `avatar-${loadedUser.id}`, url: resolvePublicUrl(loadedUser.avatar_url), status: "uploaded" }] : []);
+        form.setValue("avatarUrl", loadedUser?.avatar_url ? resolvePublicUrl(loadedUser.avatar_url) : "", { shouldDirty: true, shouldValidate: true });
       }
       setCropDraftItem(null);
     },
@@ -171,7 +176,7 @@ export function useManagerEditUserController() {
         setAvatarItems([{ id, url: uploaded.fileUrl, status: "uploaded" }]);
         setPendingAvatarId(null);
         setCropDraftItem(null);
-        form.setValue("avatarUrl", uploaded.fileUrl, {
+        form.setValue("avatarUrl", resolvePublicUrl(uploaded.fileUrl), {
           shouldDirty: true,
           shouldValidate: true,
         });

@@ -29,6 +29,7 @@ async function cropToSquareBlob(
   zoom: number,
   panXNorm: number,
   panYNorm: number,
+  previewSize: number,
   outSize = 512,
 ): Promise<Blob> {
   const img = await loadImage(imageUrl);
@@ -40,7 +41,6 @@ async function cropToSquareBlob(
 
   // Match the preview: object-fit: cover + translate(panPx) + scale(zoom)
   // We model the "cover" scale into the crop mapping so saved output matches what user sees.
-  const previewSize = 220;
   const baseCoverScale = Math.max(previewSize / img.naturalWidth, previewSize / img.naturalHeight);
   const scale = baseCoverScale * zoom;
 
@@ -83,6 +83,7 @@ export function AvatarCropDialog({ open, file, onClose, onCropped }: AvatarCropD
   const [zoom, setZoom] = useState(1.2);
   // pan in pixels inside the preview circle
   const [panPx, setPanPx] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [imgNatural, setImgNatural] = useState<{ w: number; h: number } | null>(null);
   const dragRef = useRef<{
     startX: number;
     startY: number;
@@ -94,18 +95,46 @@ export function AvatarCropDialog({ open, file, onClose, onCropped }: AvatarCropD
 
   const PREVIEW_SIZE = 220;
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!objectUrl) {
+        setImgNatural(null);
+        return;
+      }
+      try {
+        const img = await loadImage(objectUrl);
+        if (!cancelled) setImgNatural({ w: img.naturalWidth, h: img.naturalHeight });
+      } catch {
+        if (!cancelled) setImgNatural(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [objectUrl]);
+
+  const baseCoverScale = useMemo(() => {
+    if (!imgNatural) return null;
+    return Math.max(PREVIEW_SIZE / imgNatural.w, PREVIEW_SIZE / imgNatural.h);
+  }, [imgNatural, PREVIEW_SIZE]);
+
   const maxPanPx = useMemo(() => {
-    // As zoom increases, allow more panning. This keeps panning + crop math consistent.
-    // When zoom=1, no panning should be possible.
-    const m = ((zoom - 1) * PREVIEW_SIZE) / 2;
-    return Math.max(0, m);
-  }, [zoom]);
+    if (!imgNatural || !baseCoverScale) return { x: 0, y: 0 };
+    const scaledW = imgNatural.w * baseCoverScale * zoom;
+    const scaledH = imgNatural.h * baseCoverScale * zoom;
+    // Keep image covering the whole preview: constrain pan per-axis.
+    return {
+      x: Math.max(0, (scaledW - PREVIEW_SIZE) / 2),
+      y: Math.max(0, (scaledH - PREVIEW_SIZE) / 2),
+    };
+  }, [imgNatural, baseCoverScale, zoom, PREVIEW_SIZE]);
 
   const panNorm = useMemo(() => {
-    if (maxPanPx <= 0) return { x: 0, y: 0 };
+    if (maxPanPx.x <= 0 && maxPanPx.y <= 0) return { x: 0, y: 0 };
     return {
-      x: clamp(panPx.x / maxPanPx, -1, 1),
-      y: clamp(panPx.y / maxPanPx, -1, 1),
+      x: maxPanPx.x <= 0 ? 0 : clamp(panPx.x / maxPanPx.x, -1, 1),
+      y: maxPanPx.y <= 0 ? 0 : clamp(panPx.y / maxPanPx.y, -1, 1),
     };
   }, [maxPanPx, panPx.x, panPx.y]);
 
@@ -115,12 +144,15 @@ export function AvatarCropDialog({ open, file, onClose, onCropped }: AvatarCropD
     };
   }, [objectUrl]);
 
-  useEffect(() => {
-    if (open) {
-      setZoom(1.2);
-      setPanPx({ x: 0, y: 0 });
-    }
-  }, [open]);
+  // Reset crop state on open without using an effect (avoids setState-in-effect lint rule).
+  const [lastOpen, setLastOpen] = useState(false);
+  if (open && !lastOpen) {
+    setLastOpen(true);
+    setZoom(1.2);
+    setPanPx({ x: 0, y: 0 });
+  } else if (!open && lastOpen) {
+    setLastOpen(false);
+  }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -163,8 +195,8 @@ export function AvatarCropDialog({ open, file, onClose, onCropped }: AvatarCropD
                   if (!d?.dragging) return;
                   const dx = e.clientX - d.startX;
                   const dy = e.clientY - d.startY;
-                  const nx = clamp(d.panX + dx, -maxPanPx, maxPanPx);
-                  const ny = clamp(d.panY + dy, -maxPanPx, maxPanPx);
+                  const nx = clamp(d.panX + dx, -maxPanPx.x, maxPanPx.x);
+                  const ny = clamp(d.panY + dy, -maxPanPx.y, maxPanPx.y);
                   setPanPx({ x: nx, y: ny });
                 }}
                 onPointerUp={() => {
@@ -181,6 +213,9 @@ export function AvatarCropDialog({ open, file, onClose, onCropped }: AvatarCropD
                     objectFit: "cover",
                     transform: `translate(${panPx.x}px, ${panPx.y}px) scale(${zoom})`,
                     transformOrigin: "center",
+                    display: "block",
+                    userSelect: "none",
+                    pointerEvents: "none",
                   }}
                 />
               </Box>
@@ -209,7 +244,7 @@ export function AvatarCropDialog({ open, file, onClose, onCropped }: AvatarCropD
         <Button
           onClick={async () => {
             if (!objectUrl || !file) return;
-            const blob = await cropToSquareBlob(objectUrl, zoom, panNorm.x, panNorm.y, 512);
+            const blob = await cropToSquareBlob(objectUrl, zoom, panNorm.x, panNorm.y, PREVIEW_SIZE, 512);
             const cropped = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
               type: "image/jpeg",
             });

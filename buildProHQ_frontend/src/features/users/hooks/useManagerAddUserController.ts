@@ -11,8 +11,11 @@ import { lookupsApi } from "@/services/lookupsApi.service";
 import { usersApi } from "@/services/usersApi.service";
 import { userSchema, type UserFormValues } from "@/schemas/user.schema";
 import { appToast } from "@/utils/toast";
+import { getApiErrorMessage } from "@/services/apiError";
 import { uploadsApi } from "@/services/uploadsApi.service";
 import type { UploadItem } from "@/components/common/FormUploadField";
+import { resolvePublicUrl } from "@/utils/urls";
+import { emitUsersChanged } from "@/utils/taskEvents";
 
 export function useManagerAddUserController() {
   const router = useRouter();
@@ -83,10 +86,11 @@ export function useManagerAddUserController() {
         password: values.password?.trim() || undefined,
         roleId: ids.roleId,
       });
+      emitUsersChanged();
       appToast.success(MESSAGES.user.created);
       router.push(ROUTES.MANAGER_USERS);
-    } catch {
-      appToast.error(MESSAGES.common.saveFailed);
+    } catch (e) {
+      appToast.error(getApiErrorMessage(e, MESSAGES.common.saveFailed));
     } finally {
       setSubmitting(false);
     }
@@ -152,7 +156,7 @@ export function useManagerAddUserController() {
         setAvatarItems([{ id, url: uploaded.fileUrl, status: "uploaded" }]);
         setPendingAvatarId(null);
         setCropDraftItem(null);
-        form.setValue("avatarUrl", uploaded.fileUrl, {
+        form.setValue("avatarUrl", resolvePublicUrl(uploaded.fileUrl), {
           shouldDirty: true,
           shouldValidate: true,
         });

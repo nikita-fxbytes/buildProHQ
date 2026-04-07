@@ -37,6 +37,7 @@ export function AppTableHeader({
       return (
         <Box
           component="span"
+          key={effectiveKey}
           onClick={() => onSort?.(effectiveKey)}
           sx={{
             display: "inline-flex",

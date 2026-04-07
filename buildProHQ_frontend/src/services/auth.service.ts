@@ -84,4 +84,12 @@ export const authService = {
   async logout(): Promise<void> {
     await apiClient.post("/v1/auth/logout");
   },
+
+  async validateInvite(token: string): Promise<void> {
+    await apiClient.get("/v1/auth/invite/validate", { params: { token } });
+  },
+
+  async acceptInvite(token: string, password: string): Promise<void> {
+    await apiClient.post("/v1/auth/invite/accept", { token, password });
+  },
 };
