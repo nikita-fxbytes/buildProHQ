@@ -1,105 +1,108 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MESSAGES } from "@/constants/messages";
 import { UI_DEFAULTS } from "@/constants/ui";
 import { useTableSort } from "@/hooks/use-table-sort";
-import { userTasksService } from "@/services/userTasks.service";
-import type { CompletedTask } from "@/types/domain";
-import { htmlToPlainText } from "@/utils/richText";
+import { lookupsApi } from "@/services/lookupsApi.service";
+import {
+  tasksApi,
+  type CompletedTaskListItem,
+  type ListCompletedTasksBody,
+} from "@/services/tasksApi.service";
+import type { FieldCompletedTaskRow } from "@/types/domain";
+import { formatIndianLongDate } from "@/utils/date";
 import { appToast } from "@/utils/toast";
 
-type CompletedSortKey = "level" | "trade" | "desc" | "date" | "duration";
+type CompletedSortKey = NonNullable<ListCompletedTasksBody["sortBy"]>;
+
+function mapCompletedRow(row: CompletedTaskListItem): FieldCompletedTaskRow {
+  return {
+    id: row.id,
+    level: row.level_name ?? "—",
+    trade: row.trade_name ?? "—",
+    desc: row.description,
+    date: formatIndianLongDate(row.closed_at),
+    duration: row.days_open ?? 0,
+  };
+}
 
 export function useUserCompletedController() {
   const [loading, setLoading] = useState(true);
-  const [allRows, setAllRows] = useState<CompletedTask[]>([]);
+  const [rows, setRows] = useState<FieldCompletedTaskRow[]>([]);
+  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const pageSize = UI_DEFAULTS.COMPLETED_PAGE_SIZE;
+  const [showFilters, setShowFilters] = useState(false);
   const [tradeFilters, setTradeFilters] = useState<string[]>([]);
   const [levelFilters, setLevelFilters] = useState<string[]>([]);
-  const [pageSize, setPageSize] = useState<number>(UI_DEFAULTS.COMPLETED_PAGE_SIZE);
-  const { sortKey, sortDirection, toggleSort } = useTableSort<CompletedSortKey>();
+  const [tradeOptions, setTradeOptions] = useState<Array<{ value: string; label: string }>>(
+    [],
+  );
+  const [levelOptions, setLevelOptions] = useState<Array<{ value: string; label: string }>>(
+    [],
+  );
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const { sortKey, sortDirection, toggleSort, setSortKey, setSortDirection } =
+    useTableSort<CompletedSortKey>("date", "desc");
+
+  const loadLookups = useCallback(async () => {
     try {
-      const rows = await userTasksService.getCompletedTasks();
-      setAllRows(rows);
+      const [trades, levels] = await Promise.all([lookupsApi.getTrades(), lookupsApi.getLevels()]);
+      setTradeOptions(trades.map((t) => ({ value: t.id, label: t.name })));
+      setLevelOptions(levels.map((l) => ({ value: l.id, label: l.name })));
     } catch {
-      appToast.error(MESSAGES.task.loadFailed);
-    } finally {
-      setLoading(false);
+      // Non-fatal; filter chips stay empty until retries / navigation.
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const tradeOptions = useMemo(
-    () => Array.from(new Set(allRows.map((t) => t.trade))).sort(),
-    [allRows],
-  );
-  const levelOptions = useMemo(
-    () => Array.from(new Set(allRows.map((t) => t.level))).sort(),
-    [allRows],
-  );
-
-  const filteredRows = useMemo(() => {
-    let rows = allRows;
-    const term = search.trim().toLowerCase();
-    if (term) {
-      rows = rows.filter(
-        (task) =>
-          task.level.toLowerCase().includes(term) ||
-          task.trade.toLowerCase().includes(term) ||
-          htmlToPlainText(task.desc).toLowerCase().includes(term),
-      );
-    }
-    if (tradeFilters.length) {
-      rows = rows.filter((task) => tradeFilters.includes(task.trade));
-    }
-    if (levelFilters.length) {
-      rows = rows.filter((task) => levelFilters.includes(task.level));
-    }
-    return rows;
-  }, [allRows, search, tradeFilters, levelFilters]);
-
-  const sortedRows = useMemo(() => {
-    if (!sortKey) return filteredRows;
-    const rows = [...filteredRows];
-    const getSortValue = (row: CompletedTask) => {
-      if (sortKey === "duration") return row.duration;
-      if (sortKey === "date") {
-        const [day, month, year] = row.date.split(".").map(Number);
-        return new Date((year ?? 0) + 2000, (month ?? 1) - 1, day ?? 1).getTime();
+  const loadTasks = useCallback(
+    async (opts?: { pageOverride?: number; searchOverride?: string }) => {
+      setLoading(true);
+      try {
+        const queryPage = opts?.pageOverride ?? page;
+        const querySearch = (opts?.searchOverride ?? search).trim() || undefined;
+        const body: ListCompletedTasksBody = {
+          page: queryPage,
+          limit: pageSize,
+          search: querySearch,
+          sortBy: sortKey ?? undefined,
+          sortOrder: sortDirection ?? undefined,
+          filters: {
+            tradeIds: tradeFilters,
+            levelIds: levelFilters,
+          },
+        };
+        const res = await tasksApi.listCompleted(body);
+        setRows(res.items.map(mapCompletedRow));
+        setTotal(res.meta.total);
+      } catch {
+        appToast.error(MESSAGES.task.loadFailed);
+      } finally {
+        setLoading(false);
       }
-      if (sortKey === "desc") return htmlToPlainText(row.desc).toLowerCase();
-      return row[sortKey].toString().toLowerCase();
-    };
-    rows.sort((a, b) => {
-      const left = getSortValue(a);
-      const right = getSortValue(b);
-      if (left < right) return sortDirection === "asc" ? -1 : 1;
-      if (left > right) return sortDirection === "asc" ? 1 : -1;
-      return 0;
-    });
-    return rows;
-  }, [filteredRows, sortKey, sortDirection]);
-
-  const total = sortedRows.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(page, totalPages);
+    },
+    [levelFilters, page, search, sortDirection, sortKey, tradeFilters],
+  );
 
   useEffect(() => {
-    setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+    loadLookups();
+  }, [loadLookups]);
 
-  const rows = useMemo(
-    () => sortedRows.slice((safePage - 1) * pageSize, safePage * pageSize),
-    [sortedRows, safePage, pageSize],
-  );
+  useEffect(() => {
+    const t = setTimeout(() => {
+      loadTasks({ pageOverride: 1 });
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, tradeFilters, levelFilters, sortKey, sortDirection]);
+
+  useEffect(() => {
+    loadTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const toggleFilterValue = (current: string[], value: string) =>
     current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
@@ -107,6 +110,8 @@ export function useUserCompletedController() {
   const clearFilters = () => {
     setTradeFilters([]);
     setLevelFilters([]);
+    setSortKey("date");
+    setSortDirection("desc");
   };
 
   return {
@@ -116,13 +121,9 @@ export function useUserCompletedController() {
       setSearch(value);
       setPage(1);
     },
-    page: safePage,
+    page,
     setPage,
     pageSize,
-    setPageSize: (size: number) => {
-      setPageSize(size);
-      setPage(1);
-    },
     total,
     rows,
     tradeOptions,
@@ -136,10 +137,11 @@ export function useUserCompletedController() {
     clearFilters,
     sortKey,
     sortDirection,
+    showFilters,
+    setShowFilters,
     onSortColumn: (key: CompletedSortKey) => {
       toggleSort(key);
       setPage(1);
     },
   };
 }
-

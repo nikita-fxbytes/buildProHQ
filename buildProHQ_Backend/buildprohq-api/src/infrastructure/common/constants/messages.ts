@@ -54,6 +54,8 @@ export const MESSAGES = {
     DELETE_SCOPE_DENIED: 'You do not have permission to delete this task',
     COMPLETE_SCOPE_DENIED: 'You do not have permission to complete this task',
     BULK_ITEM_FAILED: 'Unable to process this task',
+    OPEN_LIST_FETCHED: 'Action items fetched successfully',
+    COMPLETED_LIST_FETCHED: 'Completed tasks fetched successfully',
   },
   USERS: {
     CREATED: 'User created successfully',

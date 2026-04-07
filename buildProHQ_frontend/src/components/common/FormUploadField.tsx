@@ -12,8 +12,9 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { MESSAGES } from "@/constants/messages";
-import { ImageLightbox } from "@/components/common/ImageLightbox";
+import { AppIcon } from "@/components/common/AppIcon";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
+import { ImageLightbox } from "@/components/common/ImageLightbox";
 import { validateBeforePhotos } from "@/schemas/field-add-task.schema";
 
 /** Same extension/MIME idea as validateBeforePhotos — must run before empty-MIME files are dropped. */
@@ -74,8 +75,8 @@ export function FormUploadField({
   const inputId = useId();
   const [dragOver, setDragOver] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
-  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const effectiveMaxFiles = useMemo(() => {
@@ -208,20 +209,6 @@ export function FormUploadField({
         ...sx,
       }}
     >
-      <ConfirmModal
-        open={!!confirmRemoveId}
-        title={MESSAGES.taskForm.removePhotoConfirmTitle}
-        message={MESSAGES.taskForm.removePhotoConfirmMessage}
-        confirmLabel={MESSAGES.taskForm.removePhotoConfirmAction}
-        confirmColor="error"
-        onClose={() => setConfirmRemoveId(null)}
-        onConfirm={() => {
-          if (!confirmRemoveId) return;
-          handleRemove(confirmRemoveId);
-          setConfirmRemoveId(null);
-        }}
-      />
-
       <Box
         component={disabled ? "div" : "label"}
         id={`${inputId}-dropzone`}
@@ -361,7 +348,7 @@ export function FormUploadField({
                 disabled={disabled}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setConfirmRemoveId(item.id);
+                  setPendingRemoveId(item.id);
                 }}
                 aria-label={MESSAGES.taskForm.removePhotoButton}
                 className="photo-remove"
@@ -427,6 +414,24 @@ export function FormUploadField({
           {clientError ?? helperText}
         </Typography>
       ) : null}
+
+      <ConfirmModal
+        open={pendingRemoveId !== null}
+        title={MESSAGES.taskForm.removePhotoConfirmTitle}
+        message={MESSAGES.taskForm.removePhotoConfirmMessage}
+        confirmLabel={MESSAGES.taskForm.removePhotoConfirmLabel}
+        confirmColor="error"
+        icon={<AppIcon name="delete" size={28} />}
+        onClose={() => setPendingRemoveId(null)}
+        onConfirm={() => {
+          const idToRemove = pendingRemoveId;
+          setPendingRemoveId(null);
+          if (!idToRemove) return;
+          const item = value.find((i) => i.id === idToRemove);
+          if (item && lightboxSrc === item.url) setLightboxSrc(null);
+          handleRemove(idToRemove);
+        }}
+      />
 
       <ImageLightbox open={!!lightboxSrc} src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
     </Box>

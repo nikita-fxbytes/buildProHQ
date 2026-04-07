@@ -21,6 +21,7 @@ import { appToast } from "@/utils/toast";
 import type { UploadItem } from "@/components/common/FormUploadField";
 import { revokeBlobUrls } from "@/utils/uploadItems";
 import { useTaskDescriptionTools } from "@/hooks/useTaskDescriptionTools";
+import { emitTasksChanged } from "@/utils/taskEvents";
 
 export function useFieldAddTaskController() {
   const router = useRouter();
@@ -78,6 +79,7 @@ export function useFieldAddTaskController() {
         files,
       );
       appToast.success(MESSAGES.task.created);
+      emitTasksChanged();
       setPhotos((prev) => {
         revokeBlobUrls(prev);
         return [];

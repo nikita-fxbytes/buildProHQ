@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Validate } from 'class-validator';
 import { MESSAGES } from '../../../infrastructure/common/constants/messages';
+import { IsRichTaskDescriptionConstraint } from '../../../infrastructure/common/validators/rich-description.constraint';
 
 export class CreateTaskDto {
   @ApiProperty({
@@ -39,11 +40,12 @@ export class CreateTaskDto {
   assignedToUserId?: string;
 
   @ApiProperty({
-    example: 'Patch drywall in unit 12B',
-    description: 'Action item description (min 3 characters).',
+    example: '<p>Patch drywall in unit 12B</p>',
+    description:
+      'Action item description as safe HTML (subset: p, br, strong/b, em/i, ul/ol/li). Must contain at least 3 non-whitespace characters of visible text after stripping tags.',
   })
   @IsString({ message: MESSAGES.TASK_VALIDATION.DESCRIPTION_REQUIRED })
-  @MinLength(3, { message: MESSAGES.TASK_VALIDATION.DESCRIPTION_MIN })
+  @Validate(IsRichTaskDescriptionConstraint)
   description!: string;
 
   @ApiPropertyOptional({ description: 'Internal notes (optional).' })

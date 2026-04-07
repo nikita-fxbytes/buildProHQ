@@ -26,6 +26,16 @@ export type CompletedTask = Task & {
   duration: number;
 };
 
+/** Field portal completed table row (API-backed UUID id). */
+export type FieldCompletedTaskRow = {
+  id: string;
+  level: string;
+  trade: string;
+  desc: string;
+  date: string;
+  duration: number;
+};
+
 export type FilterCategory = {
   name: string;
   subs: string[];

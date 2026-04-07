@@ -13,7 +13,10 @@ export class CompletedTasksFiltersDto {
   @IsUUID('4', { each: true })
   levelIds?: string[];
 
-  @ApiPropertyOptional({ type: [String], description: 'Completed-by user UUIDs (manager filter)' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Completed-by user UUIDs (manager filter)',
+  })
   @IsOptional()
   @IsUUID('4', { each: true })
   completedByUserIds?: string[];
@@ -35,7 +38,9 @@ export class SearchCompletedTasksDto {
   @Max(100)
   limit = 20;
 
-  @ApiPropertyOptional({ description: 'Search term (description/trade/level/completed user)' })
+  @ApiPropertyOptional({
+    description: 'Search term (description/trade/level/completed user)',
+  })
   @IsOptional()
   @IsString()
   search?: string;
@@ -57,4 +62,3 @@ export class SearchCompletedTasksDto {
   @IsOptional()
   filters?: CompletedTasksFiltersDto;
 }
-

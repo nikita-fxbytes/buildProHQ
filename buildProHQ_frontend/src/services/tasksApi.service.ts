@@ -137,6 +137,17 @@ export type AddTaskAttachmentPayload = {
   isAfter?: boolean;
 };
 
+/** Matches Attachment entity fields returned by GET /v1/tasks/:id/attachments */
+export type TaskAttachmentItem = {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  mimeType?: string | null;
+  isBefore: boolean;
+  isAfter: boolean;
+};
+
 export const tasksApi = {
   async getStats(): Promise<TaskStats> {
     const { data } = await apiClient.get<ApiEnvelope<TaskStats>>("/v1/tasks/stats");
@@ -200,6 +211,13 @@ export const tasksApi = {
     const { data } = await apiClient.post<ApiEnvelope<{ id: string }>>(
       `/v1/tasks/${taskId}/attachments`,
       payload,
+    );
+    return data.data;
+  },
+
+  async listTaskAttachments(taskId: string): Promise<TaskAttachmentItem[]> {
+    const { data } = await apiClient.get<ApiEnvelope<TaskAttachmentItem[]>>(
+      `/v1/tasks/${taskId}/attachments`,
     );
     return data.data;
   },

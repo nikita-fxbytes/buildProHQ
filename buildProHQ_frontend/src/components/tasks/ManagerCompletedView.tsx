@@ -2,13 +2,13 @@
 
 import Box from "@mui/material/Box";
 import Skeleton from "@mui/material/Skeleton";
-import Typography from "@mui/material/Typography";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
 import { DoneBadge } from "@/components/common/badges/DoneBadge";
 import { InitialsBadge } from "@/components/common/badges/InitialsBadge";
 import { FilterChipGroup } from "@/components/common/filters/FilterChipGroup";
 import { FilterPanel } from "@/components/common/filters/FilterPanel";
+import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTableSkeleton";
 import { AppTableCell } from "@/components/common/table/AppTableCell";
 import { AppTableEmptyState } from "@/components/common/table/AppTableEmptyState";
 import { AppTableHeader } from "@/components/common/table/AppTableHeader";
@@ -54,33 +54,6 @@ type Props = {
   sortDirection: "asc" | "desc";
   onSortColumn: (key: "level" | "trade" | "user" | "description" | "date" | "duration") => void;
 };
-
-function TableRowsSkeleton() {
-  return (
-    <Box sx={{ px: "20px", py: "14px" }}>
-      {Array.from({ length: 6 }).map((_, idx) => (
-        <Box
-          key={idx}
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "80px 130px 50px 1fr 80px 100px",
-            alignItems: "center",
-            gap: 0,
-            py: "13px",
-            borderBottom: "1px solid #E4E8F0",
-          }}
-        >
-          <Skeleton variant="text" width={46} />
-          <Skeleton variant="text" width={90} />
-          <Skeleton variant="circular" width={28} height={28} />
-          <Skeleton variant="text" width="92%" />
-          <Skeleton variant="text" width={64} />
-          <Skeleton variant="rounded" width={62} height={22} />
-        </Box>
-      ))}
-    </Box>
-  );
-}
 
 export function ManagerCompletedView(props: Props) {
   const filterCount =
@@ -198,7 +171,7 @@ export function ManagerCompletedView(props: Props) {
 
         <Box id="mgr-completed-rows">
           {initialLoading ? (
-            <TableRowsSkeleton />
+            <AppGridTableSkeleton columnsTemplate="80px 130px 50px 1fr 80px 100px" rowCount={8} />
           ) : props.rows.length === 0 ? (
             <AppTableEmptyState icon={<AppIcon name="complete" size={36} />} message="No completed tasks yet." />
           ) : (

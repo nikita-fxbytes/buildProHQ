@@ -20,7 +20,12 @@ import { AppTableShell } from "@/components/common/table/AppTableShell";
 import { htmlToPlainText } from "@/utils/richText";
 import { PageToolbar } from "@/components/common/toolbar/PageToolbar";
 import { SearchInput } from "@/components/common/SearchInput";
+import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTableSkeleton";
+import { AppStatCardsSkeleton } from "@/components/common/skeletons/AppStatCardsSkeleton";
 import { StatCard } from "@/components/common/StatCard";
+import { FieldTaskDetailDrawer } from "@/components/user/FieldTaskDetailDrawer";
+import { MESSAGES } from "@/constants/messages";
+import type { TaskAttachmentItem } from "@/services/tasksApi.service";
 
 type ActionItemRow = {
   id: string;
@@ -34,7 +39,8 @@ type ActionItemRow = {
 type SortKey = "level" | "trade" | "priority" | "description" | "daysOpen" | "createdAt";
 
 type Props = {
-  loading: boolean;
+  statsLoading: boolean;
+  tableLoading: boolean;
   search: string;
   setSearch: (value: string) => void;
   page: number;
@@ -68,6 +74,12 @@ type Props = {
   openCompleteSelectedConfirm: () => void;
   openDeleteSelectedConfirm: () => void;
   openDeleteSingleConfirm: (task: ActionItemRow) => void;
+  detailOpen: boolean;
+  detailTask: ActionItemRow | null;
+  detailAttachments: TaskAttachmentItem[];
+  detailAttachmentsLoading: boolean;
+  openTaskDetail: (task: ActionItemRow) => void;
+  closeTaskDetail: () => void;
   confirmOpen: boolean;
   confirmTitle: string;
   confirmMessage: string;
@@ -83,12 +95,16 @@ export function UserTasksView(props: Props) {
 
   return (
     <Stack spacing={2}>
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px" }}>
-        <StatCard value={props.stats.openTasks} label="Open Tasks" accentColor="#F5A623" />
-        <StatCard value={props.stats.overdue10} label="Overdue (10+ days)" accentColor="#EF4444" />
-        <StatCard value={props.stats.completed} label="Completed" accentColor="#22C55E" />
-        <StatCard value={props.stats.tradesActive} label="Trades Active" accentColor="#3BB0D8" />
-      </Box>
+      {props.statsLoading ? (
+        <AppStatCardsSkeleton count={4} />
+      ) : (
+        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px" }}>
+          <StatCard value={props.stats.openTasks} label="Open Tasks" accentColor="#F5A623" />
+          <StatCard value={props.stats.overdue10} label="Overdue (10+ days)" accentColor="#EF4444" />
+          <StatCard value={props.stats.completed} label="Completed" accentColor="#22C55E" />
+          <StatCard value={props.stats.tradesActive} label="Trades Active" accentColor="#3BB0D8" />
+        </Box>
+      )}
 
       <PageToolbar>
         <Box sx={{ flex: 1, minWidth: 220 }}>
@@ -234,7 +250,7 @@ export function UserTasksView(props: Props) {
         ) : null}
 
         <AppTableHeader
-          columnsTemplate="36px 80px 130px 80px 1fr 100px 36px"
+          columnsTemplate="36px 80px 130px 80px 1fr 100px 84px"
           columns={[
             { key: "select", label: "" },
             { key: "level", label: "Level", sortable: true, sortKey: "level" },
@@ -249,17 +265,15 @@ export function UserTasksView(props: Props) {
           onSort={(key) => props.onSortColumn?.(key as SortKey)}
         />
 
-        {props.loading ? (
-          <Box sx={{ p: 3 }}>
-            <Typography sx={{ fontSize: 13, color: "#7B89A8" }}>Loading tasks...</Typography>
-          </Box>
+        {props.tableLoading ? (
+          <AppGridTableSkeleton columnsTemplate="36px 80px 130px 80px 1fr 100px 84px" rowCount={8} />
         ) : props.rows.length === 0 ? (
           <AppTableEmptyState icon={<AppIcon name="folder" size={36} />} message="No action items match your filters." />
         ) : (
           props.rows.map((task) => (
             <AppTableRow
               key={task.id}
-              columnsTemplate="36px 80px 130px 80px 1fr 100px 36px"
+              columnsTemplate="36px 80px 130px 80px 1fr 100px 84px"
               className="task-row-item"
             >
               <Box>
@@ -277,36 +291,54 @@ export function UserTasksView(props: Props) {
               </AppTableCell>
               <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
               <DaysBadge days={task.days} />
-              <AppButton
-                type="button"
-                size="small"
-                variant="contained"
-                color="error"
-                onClick={() => props.openDeleteSingleConfirm(task)}
-                sx={{
-                  padding: "4px 10px",
-                  fontSize: 12,
-                  minWidth: 0,
-                  background: "#FEE2E2",
-                  color: "#EF4444",
-                  boxShadow: "none",
-                  "&:hover": { background: "#EF4444", color: "#fff", boxShadow: "none" },
-                }}
-              >
-                <AppIcon name="delete" size={14} />
-              </AppButton>
+              <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", alignItems: "center" }}>
+                <AppButton
+                  type="button"
+                  size="small"
+                  variant="outlined"
+                  onClick={() => props.openTaskDetail(task)}
+                  aria-label={MESSAGES.task.viewTaskDetailAria}
+                  sx={{
+                    padding: "4px 8px",
+                    fontSize: 12,
+                    minWidth: 0,
+                    borderColor: "#E4E8F0",
+                    color: "#1A2035",
+                    boxShadow: "none",
+                    "&:hover": { borderColor: "#F5A623", color: "#F5A623", boxShadow: "none" },
+                  }}
+                >
+                  <AppIcon name="photos" size={14} />
+                </AppButton>
+                <AppButton
+                  type="button"
+                  size="small"
+                  variant="contained"
+                  color="error"
+                  onClick={() => props.openDeleteSingleConfirm(task)}
+                  sx={{
+                    padding: "4px 10px",
+                    fontSize: 12,
+                    minWidth: 0,
+                    background: "#FEE2E2",
+                    color: "#EF4444",
+                    boxShadow: "none",
+                    "&:hover": { background: "#EF4444", color: "#fff", boxShadow: "none" },
+                  }}
+                >
+                  <AppIcon name="delete" size={14} />
+                </AppButton>
+              </Box>
             </AppTableRow>
           ))
         )}
 
-        {props.total > props.pageSize ? (
-          <AppTablePagination
-            page={props.page}
-            pageSize={props.pageSize}
-            total={props.total}
-            onChange={props.setPage}
-          />
-        ) : null}
+        <AppTablePagination
+          page={props.page}
+          pageSize={props.pageSize}
+          total={props.total}
+          onChange={props.setPage}
+        />
       </AppTableShell>
 
       <ConfirmModal
@@ -317,6 +349,14 @@ export function UserTasksView(props: Props) {
         confirmColor={props.confirmColor}
         onClose={props.closeConfirm}
         onConfirm={props.onConfirm}
+      />
+
+      <FieldTaskDetailDrawer
+        open={props.detailOpen}
+        onClose={props.closeTaskDetail}
+        task={props.detailTask}
+        attachments={props.detailAttachments}
+        attachmentsLoading={props.detailAttachmentsLoading}
       />
     </Stack>
   );

@@ -2,7 +2,6 @@
 
 import Box from "@mui/material/Box";
 import Checkbox from "@mui/material/Checkbox";
-import Paper from "@mui/material/Paper";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -21,6 +20,8 @@ import { AppTablePagination } from "@/components/common/table/AppTablePagination
 import { AppTableRow } from "@/components/common/table/AppTableRow";
 import { AppTableShell } from "@/components/common/table/AppTableShell";
 import { PageToolbar } from "@/components/common/toolbar/PageToolbar";
+import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTableSkeleton";
+import { AppStatCardsSkeleton } from "@/components/common/skeletons/AppStatCardsSkeleton";
 import { SearchInput } from "@/components/common/SearchInput";
 import { StatCard } from "@/components/common/StatCard";
 import { htmlToPlainText } from "@/utils/richText";
@@ -84,12 +85,7 @@ export function ManagerTasksView(props: Props) {
     <Stack spacing={2}>
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px" }}>
         {initialLoading ? (
-          <>
-            <StatCardSkeleton accentColor="#F5A623" />
-            <StatCardSkeleton accentColor="#EF4444" />
-            <StatCardSkeleton accentColor="#22C55E" />
-            <StatCardSkeleton accentColor="#3BB0D8" />
-          </>
+          <AppStatCardsSkeleton count={4} />
         ) : (
           <>
             <StatCard value={props.stats.totalOpen} label="Total Open Tasks" accentColor="#F5A623" />
@@ -259,9 +255,10 @@ export function ManagerTasksView(props: Props) {
         />
 
         {props.loading ? (
-          <Box sx={{ px: "20px", py: 1.25 }}>
-            <TableRowsSkeleton />
-          </Box>
+          <AppGridTableSkeleton
+            columnsTemplate="36px 80px 130px 50px 80px 1fr 100px 36px"
+            rowCount={8}
+          />
         ) : props.rows.length === 0 ? (
           <AppTableEmptyState icon={<AppIcon name="folder" size={36} />} message="No tasks match your filters." />
         ) : (
@@ -335,49 +332,3 @@ export function ManagerTasksView(props: Props) {
     </Stack>
   );
 }
-
-function StatCardSkeleton({ accentColor }: { accentColor: string }) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        padding: "18px 20px",
-        borderRadius: "12px",
-        borderLeft: `4px solid ${accentColor}`,
-        boxShadow: "0 2px 16px rgba(0,0,0,0.08)",
-      }}
-    >
-      <Skeleton variant="text" width="40%" sx={{ fontSize: 32, lineHeight: 1.2 }} />
-      <Skeleton variant="text" width="65%" sx={{ mt: 0.5, fontSize: 12 }} />
-    </Paper>
-  );
-}
-
-function TableRowsSkeleton() {
-  return (
-    <Stack spacing={1.25} sx={{ py: 0.5 }}>
-      {Array.from({ length: 6 }).map((_, idx) => (
-        <Box
-          key={idx}
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "36px 80px 130px 50px 80px 1fr 100px 36px",
-            alignItems: "center",
-            columnGap: "8px",
-            py: "6px",
-          }}
-        >
-          <Skeleton variant="rounded" width={16} height={16} />
-          <Skeleton variant="text" width={34} />
-          <Skeleton variant="text" width={90} />
-          <Skeleton variant="rounded" width={34} height={18} />
-          <Skeleton variant="rounded" width={62} height={22} />
-          <Skeleton variant="text" width="92%" />
-          <Skeleton variant="rounded" width={78} height={22} />
-          <Skeleton variant="rounded" width={28} height={24} />
-        </Box>
-      ))}
-    </Stack>
-  );
-}
-

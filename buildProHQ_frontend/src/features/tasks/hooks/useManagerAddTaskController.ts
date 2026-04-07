@@ -13,6 +13,7 @@ import { appToast } from "@/utils/toast";
 import type { UploadItem } from "@/components/common/FormUploadField";
 import { revokeBlobUrls } from "@/utils/uploadItems";
 import { useTaskDescriptionTools } from "@/hooks/useTaskDescriptionTools";
+import { emitTasksChanged } from "@/utils/taskEvents";
 
 export function useManagerAddTaskController() {
   const router = useRouter();
@@ -73,7 +74,7 @@ export function useManagerAddTaskController() {
         revokeBlobUrls(prev);
         return [];
       });
-      window.dispatchEvent(new Event("buildprohq:tasksChanged"));
+      emitTasksChanged();
       router.push(ROUTES.MANAGER_TASKS);
     } catch (e) {
       const msg =

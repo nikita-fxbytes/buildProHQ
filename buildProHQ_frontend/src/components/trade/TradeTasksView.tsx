@@ -2,7 +2,6 @@
 
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
 import { DaysBadge } from "@/components/common/badges/DaysBadge";
@@ -13,6 +12,8 @@ import { AppTableHeader } from "@/components/common/table/AppTableHeader";
 import { AppTablePagination } from "@/components/common/table/AppTablePagination";
 import { AppTableRow } from "@/components/common/table/AppTableRow";
 import { AppTableShell } from "@/components/common/table/AppTableShell";
+import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTableSkeleton";
+import { AppStatCardsSkeleton } from "@/components/common/skeletons/AppStatCardsSkeleton";
 import { SearchInput } from "@/components/common/SearchInput";
 import { StatCard } from "@/components/common/StatCard";
 import type { Task } from "@/types/domain";
@@ -42,11 +43,15 @@ type Props = {
 export function TradeTasksView(props: Props) {
   return (
     <Stack spacing={2}>
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "16px" }}>
-        <StatCard value={props.stats.assigned} label="Assigned Tasks" accentColor="#F5A623" />
-        <StatCard value={props.stats.overdue} label="Overdue (10+ days)" accentColor="#EF4444" />
-        <StatCard value={props.stats.completed} label="Completed" accentColor="#22C55E" />
-      </Box>
+      {props.loading ? (
+        <AppStatCardsSkeleton count={3} />
+      ) : (
+        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "16px" }}>
+          <StatCard value={props.stats.assigned} label="Assigned Tasks" accentColor="#F5A623" />
+          <StatCard value={props.stats.overdue} label="Overdue (10+ days)" accentColor="#EF4444" />
+          <StatCard value={props.stats.completed} label="Completed" accentColor="#22C55E" />
+        </Box>
+      )}
 
       <Box sx={{ width: "100%", maxWidth: 360 }}>
         <SearchInput
@@ -63,9 +68,7 @@ export function TradeTasksView(props: Props) {
         />
 
         {props.loading ? (
-          <Box sx={{ p: 3 }}>
-            <Typography sx={{ fontSize: 13, color: "#7B89A8" }}>Loading tasks...</Typography>
-          </Box>
+          <AppGridTableSkeleton columnsTemplate="80px 130px 1fr 110px 130px" rowCount={8} />
         ) : props.rows.length === 0 ? (
           <AppTableEmptyState icon={<AppIcon name="folder" size={36} />} message="No assigned tasks found." />
         ) : (

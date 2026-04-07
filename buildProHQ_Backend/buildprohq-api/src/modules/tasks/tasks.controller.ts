@@ -178,7 +178,39 @@ export class TasksController {
 
   @Get('completed')
   @ApiOperation({
-    summary: 'List completed tasks with pagination/filter/search',
+    summary: 'List completed tasks with pagination/filter/search (query string)',
+    description:
+      'Prefer POST /tasks/completed when sending many filter IDs. This endpoint remains for simple clients.',
+  })
+  @ApiOkResponse({
+    description: 'Completed tasks fetched successfully',
+    schema: {
+      example: {
+        success: true,
+        statusCode: 200,
+        message: 'Completed tasks fetched successfully',
+        data: [
+          {
+            id: '0b2f6a2d-4c79-4b52-9b5a-0b873ad58a52',
+            description: 'Finish wall painting – north side',
+            days_open: 11,
+            created_at: '2026-03-10T08:00:00.000Z',
+            opened_at: '2026-03-10T08:00:00.000Z',
+            closed_at: '2026-04-01T16:00:00.000Z',
+            status_code: 'completed',
+            status_name: 'Completed',
+            trade_name: 'Painter',
+            level_name: 'L10',
+          },
+        ],
+        meta: {
+          page: 1,
+          limit: 20,
+          total: 25,
+          totalPages: 2,
+        },
+      },
+    },
   })
   listCompleted(@CurrentUser() user: AuthUser, @Query() query: QueryTasksDto) {
     return this.tasksService.listCompleted(user, query);
@@ -208,6 +240,46 @@ export class TasksController {
             levelIds: ['0f1a2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b'],
           },
         },
+      },
+    },
+  })
+  @ApiOkResponse({
+    description: 'Completed tasks fetched successfully',
+    schema: {
+      example: {
+        success: true,
+        statusCode: 200,
+        message: 'Completed tasks fetched successfully',
+        data: [
+          {
+            id: '0b2f6a2d-4c79-4b52-9b5a-0b873ad58a52',
+            description: 'Finish wall painting – north side',
+            days_open: 11,
+            closed_at: '2026-04-01T16:00:00.000Z',
+            trade_name: 'Painter',
+            level_name: 'L10',
+            completed_by_user_id: null,
+            completed_by_initials: null,
+            completed_by_full_name: null,
+          },
+        ],
+        meta: {
+          page: 1,
+          limit: 20,
+          total: 25,
+          totalPages: 2,
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request body',
+    schema: {
+      example: {
+        success: false,
+        statusCode: 400,
+        message: 'Validation failed',
+        error: { code: 'BAD_REQUEST', details: [] },
       },
     },
   })
