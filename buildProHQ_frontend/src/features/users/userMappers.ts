@@ -17,7 +17,9 @@ export function mapListItemToManagerRow(item: UserListItem): ManagerUsersListIte
     name: item.full_name,
     email: item.email,
     initials: item.initials ?? "—",
+    avatarUrl: item.avatar_url ?? undefined,
     role: mapUserTypeCodeToFormRole(item.user_type_code),
+    openTasks: typeof item.open_tasks_count === "number" ? item.open_tasks_count : undefined,
   };
 }
 

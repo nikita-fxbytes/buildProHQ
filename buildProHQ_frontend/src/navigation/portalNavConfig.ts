@@ -110,7 +110,6 @@ const MANAGER_SECTIONS: PortalNavSectionConfig[] = [
       { href: ROUTES.MANAGER_ANALYTICS, label: "Analytics", icon: "analytics" },
       { href: ROUTES.MANAGER_FILTERS, label: "Manage Filters", icon: "manageFilters" },
       { href: ROUTES.MANAGER_USERS, label: "Users", icon: "users", badge: "users" },
-      { href: ROUTES.MANAGER_ADD_USER, label: "Add User", icon: "addUser" },
     ],
   },
 ];

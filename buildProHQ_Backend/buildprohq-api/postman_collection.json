@@ -79,7 +79,7 @@
           "response": []
         },
         {
-          "name": "Create User",
+          "name": "List/Search Users (POST table)",
           "request": {
             "method": "POST",
             "header": [
@@ -90,6 +90,26 @@
               "raw": "{{base_url}}/api/v1/users",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "users"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"limit\": 10,\n  \"search\": \"john\",\n  \"role\": \"User\",\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"desc\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/create",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users", "create"]
             },
             "body": {
               "mode": "raw",
@@ -372,6 +392,36 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Mark All Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/read-all",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notifications", "read-all"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark One Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/{{notificationId}}/read",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notifications", "{{notificationId}}", "read"]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -528,6 +578,7 @@
     { "key": "openStatusId", "value": "" },
     { "key": "priorityMediumId", "value": "" },
     { "key": "managerUserId", "value": "" },
+    { "key": "notificationId", "value": "" },
     { "key": "userTypeFieldId", "value": "" },
     { "key": "userStatusActiveId", "value": "" },
     { "key": "roleFieldUserId", "value": "" }

@@ -15,6 +15,8 @@ import { lookupsApi } from "@/services/lookupsApi.service";
 import { usersApi, type UserListItem } from "@/services/usersApi.service";
 import { userSchema, type UserFormValues } from "@/schemas/user.schema";
 import { appToast } from "@/utils/toast";
+import { uploadsApi } from "@/services/uploadsApi.service";
+import type { UploadItem } from "@/components/common/FormUploadField";
 
 export function useManagerEditUserController() {
   const params = useParams<{ id: string }>();
@@ -23,6 +25,13 @@ export function useManagerEditUserController() {
   const [lookups, setLookups] = useState<UserCreateLookups | null>(null);
   const [loadedUser, setLoadedUser] = useState<UserListItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [avatarItems, setAvatarItems] = useState<UploadItem[]>([]);
+  const [pendingAvatarId, setPendingAvatarId] = useState<string | null>(null);
+  const [cropDraftItem, setCropDraftItem] = useState<UploadItem | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -30,9 +39,14 @@ export function useManagerEditUserController() {
       name: "",
       email: "",
       role: "User",
+      avatarUrl: "",
       password: "",
     },
   });
+
+  useEffect(() => {
+    if (pendingFile) setCropOpen(true);
+  }, [pendingFile]);
 
   useEffect(() => {
     if (!id) return;
@@ -52,8 +66,14 @@ export function useManagerEditUserController() {
           name: user.full_name,
           email: user.email,
           role: mapUserTypeCodeToFormRole(user.user_type_code),
+          avatarUrl: user.avatar_url ?? "",
           password: "",
         });
+        if (user.avatar_url) {
+          setAvatarItems([{ id: `avatar-${user.id}`, url: user.avatar_url, status: "uploaded" }]);
+        } else {
+          setAvatarItems([]);
+        }
       } catch {
         appToast.error(MESSAGES.common.somethingWrong);
         router.push(ROUTES.MANAGER_USERS);
@@ -79,18 +99,22 @@ export function useManagerEditUserController() {
     const statusId =
       lookups.statuses.find((s) => s.code === loadedUser?.user_status_code)?.id ?? ids.userStatusId;
     try {
+      setSubmitting(true);
       await usersApi.update(id, {
         fullName: values.name,
         email: values.email,
         userTypeId: ids.userTypeId,
         userStatusId: statusId,
         roleId: ids.roleId,
+        avatarUrl: values.avatarUrl?.trim() || undefined,
         password: values.password?.trim() || undefined,
       });
       appToast.success(MESSAGES.user.updated);
       router.push(ROUTES.MANAGER_USERS);
     } catch {
       appToast.error(MESSAGES.common.saveFailed);
+    } finally {
+      setSubmitting(false);
     }
   });
 
@@ -102,6 +126,58 @@ export function useManagerEditUserController() {
     form,
     onSubmit,
     onCancel,
-    loading,
+    loading: loading || uploadingAvatar || submitting,
+    cropOpen,
+    pendingFile,
+    avatarItems,
+    onAvatarItemsChange: (items: UploadItem[]) => {
+      const next = items.filter((i) => i.status !== "toDelete");
+      if (!next.length) {
+        setAvatarItems([]);
+        setPendingAvatarId(null);
+        setCropDraftItem(null);
+        form.setValue("avatarUrl", "", { shouldDirty: true, shouldValidate: true });
+        return;
+      }
+      const item = next[0];
+      if (item.file) {
+        setPendingAvatarId(item.id);
+        setPendingFile(item.file);
+        setCropOpen(true);
+        setAvatarItems([item]);
+        setCropDraftItem(item);
+        return;
+      }
+      setAvatarItems([item]);
+    },
+    onCloseCrop: () => {
+      setCropOpen(false);
+      setPendingFile(null);
+      setPendingAvatarId(null);
+      if (cropDraftItem?.status === "new") {
+        if (cropDraftItem.url?.startsWith("blob:")) URL.revokeObjectURL(cropDraftItem.url);
+        setAvatarItems(loadedUser?.avatar_url ? [{ id: `avatar-${loadedUser.id}`, url: loadedUser.avatar_url, status: "uploaded" }] : []);
+        form.setValue("avatarUrl", loadedUser?.avatar_url ?? "", { shouldDirty: true, shouldValidate: true });
+      }
+      setCropDraftItem(null);
+    },
+    onCropped: async (file: File) => {
+      setCropOpen(false);
+      setPendingFile(null);
+      setUploadingAvatar(true);
+      try {
+        const uploaded = await uploadsApi.uploadImage(file);
+        const id = pendingAvatarId ?? `${file.name}-${file.size}-${file.lastModified}`;
+        setAvatarItems([{ id, url: uploaded.fileUrl, status: "uploaded" }]);
+        setPendingAvatarId(null);
+        setCropDraftItem(null);
+        form.setValue("avatarUrl", uploaded.fileUrl, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      } finally {
+        setUploadingAvatar(false);
+      }
+    },
   };
 }

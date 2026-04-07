@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class QueryNotificationsDto {
@@ -19,6 +19,6 @@ export class QueryNotificationsDto {
 
   @ApiPropertyOptional({ description: 'Filter by read status' })
   @IsOptional()
-  @IsString()
-  isRead?: string; // 'true' or 'false'
+  @IsIn(['true', 'false'])
+  isRead?: 'true' | 'false';
 }

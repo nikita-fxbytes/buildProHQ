@@ -46,6 +46,9 @@ export class User extends SoftDeleteTimestamps {
   @Column({ type: 'varchar', length: 8, nullable: true })
   initials?: string | null;
 
+  @Column({ type: 'varchar', name: 'avatar_url', length: 1024, nullable: true })
+  avatarUrl?: string | null;
+
   @Index('uq_users_email', { unique: true })
   @Column({ type: 'varchar', length: 255 })
   email!: string;

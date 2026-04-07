@@ -58,12 +58,18 @@ export function PortalSidebar({ role }: PortalSidebarProps) {
     const loadBadges = async () => {
       try {
         const statsPromise = tasksApi.getStats();
-        const usersPromise = role === ROLES.MANAGER ? usersApi.list() : Promise.resolve([]);
-        const [stats, users] = await Promise.all([statsPromise, usersPromise]);
+        const usersPromise =
+          role === ROLES.MANAGER
+            ? usersApi.search({
+                page: 1,
+                limit: 1,
+              })
+            : Promise.resolve(null);
+        const [stats, usersRes] = await Promise.all([statsPromise, usersPromise]);
         setBadges({
           openTasks: stats.totalOpen,
           completedTasks: stats.totalCompleted,
-          users: users.length,
+          users: usersRes?.meta?.total ?? 0,
           tradeAssigned: stats.totalOpen,
           tradeCompleted: stats.totalCompleted,
         });

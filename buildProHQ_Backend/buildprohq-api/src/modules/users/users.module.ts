@@ -5,10 +5,12 @@ import { UsersService } from './users.service';
 import {
   User,
   UserRole,
+  Task,
+  TaskStatus,
 } from '../../infrastructure/persistence/typeorm/entities';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, UserRole])],
+  imports: [TypeOrmModule.forFeature([User, UserRole, Task, TaskStatus])],
   controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],

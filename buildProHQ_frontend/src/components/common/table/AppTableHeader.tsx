@@ -56,7 +56,7 @@ export function AppTableHeader({
 
   return (
     <Box
-      className={className}
+      className={className ? `table-head ${className}` : "table-head"}
       sx={{
         display: "grid",
         gridTemplateColumns: columnsTemplate,

@@ -23,6 +23,7 @@ import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import MicNoneIcon from "@mui/icons-material/MicNone";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
+import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import SettingsIcon from "@mui/icons-material/Settings";
 import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
@@ -37,6 +38,7 @@ type IconName =
   | "complete"
   | "add"
   | "edit"
+  | "notifications"
   | "folder"
   | "quick"
   | "logout"
@@ -70,6 +72,7 @@ const ICON_MAP = {
   complete: CheckCircleOutlineIcon,
   add: AddIcon,
   edit: EditOutlinedIcon,
+  notifications: NotificationsNoneOutlinedIcon,
   folder: FolderOpenIcon,
   quick: FlashOnIcon,
   logout: ArrowBackIcon,

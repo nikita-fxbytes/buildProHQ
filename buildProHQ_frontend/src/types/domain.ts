@@ -8,6 +8,7 @@ export type User = {
   email: string;
   role: "User" | "Trade" | "Management";
   initials: string;
+  avatarUrl?: string;
   trade?: string;
   password?: string | null;
 };

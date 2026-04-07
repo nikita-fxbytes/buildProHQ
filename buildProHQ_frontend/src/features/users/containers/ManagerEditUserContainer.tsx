@@ -10,6 +10,13 @@ export function ManagerEditUserContainer() {
       form={controller.form}
       onSubmit={controller.onSubmit}
       onCancel={controller.onCancel}
+      loading={controller.loading}
+      cropOpen={controller.cropOpen}
+      pendingFile={controller.pendingFile}
+      avatarItems={controller.avatarItems}
+      onAvatarItemsChange={controller.onAvatarItemsChange}
+      onCloseCrop={controller.onCloseCrop}
+      onCropped={controller.onCropped}
     />
   );
 }

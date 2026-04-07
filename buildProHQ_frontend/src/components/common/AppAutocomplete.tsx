@@ -1,5 +1,6 @@
 import Autocomplete, { type AutocompleteProps } from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
+import type { TextFieldProps } from "@mui/material/TextField";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode } from "react";
 import {
@@ -24,6 +25,7 @@ type AppAutocompleteBaseProps<T, Multiple extends boolean | undefined> = Omit<
   helperText?: ReactNode;
   required?: boolean;
   sx?: SxProps<Theme>;
+  textFieldProps?: Partial<TextFieldProps>;
 };
 
 export type AppAutocompleteProps<T, Multiple extends boolean | undefined = false> =
@@ -49,6 +51,7 @@ export function AppAutocomplete<T, Multiple extends boolean | undefined = false>
   helperText,
   required,
   sx,
+  textFieldProps,
   getOptionLabel,
   noOptionsText = "No options",
   ...rest
@@ -71,9 +74,11 @@ export function AppAutocomplete<T, Multiple extends boolean | undefined = false>
           name={name}
           label={label}
           placeholder={placeholder}
+          size="small"
           required={required}
           error={error}
           helperText={compactHelperText(helperText)}
+          {...textFieldProps}
         />
       )}
       sx={mergeSx(autocompleteControlSx, sx)}

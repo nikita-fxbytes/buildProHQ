@@ -10,6 +10,13 @@ export function ManagerAddUserContainer() {
       form={controller.form}
       onSubmit={controller.onSubmit}
       onCancel={controller.onCancel}
+      loading={controller.loadingLookups || controller.uploadingAvatar || controller.submitting}
+      cropOpen={controller.cropOpen}
+      pendingFile={controller.pendingFile}
+      avatarItems={controller.avatarItems}
+      onAvatarItemsChange={controller.onAvatarItemsChange}
+      onCloseCrop={controller.onCloseCrop}
+      onCropped={controller.onCropped}
     />
   );
 }

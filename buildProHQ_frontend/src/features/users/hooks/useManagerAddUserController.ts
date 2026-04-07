@@ -11,11 +11,20 @@ import { lookupsApi } from "@/services/lookupsApi.service";
 import { usersApi } from "@/services/usersApi.service";
 import { userSchema, type UserFormValues } from "@/schemas/user.schema";
 import { appToast } from "@/utils/toast";
+import { uploadsApi } from "@/services/uploadsApi.service";
+import type { UploadItem } from "@/components/common/FormUploadField";
 
 export function useManagerAddUserController() {
   const router = useRouter();
   const [lookups, setLookups] = useState<UserCreateLookups | null>(null);
   const [loadingLookups, setLoadingLookups] = useState(true);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [avatarItems, setAvatarItems] = useState<UploadItem[]>([]);
+  const [pendingAvatarId, setPendingAvatarId] = useState<string | null>(null);
+  const [cropDraftItem, setCropDraftItem] = useState<UploadItem | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -23,9 +32,14 @@ export function useManagerAddUserController() {
       name: "",
       email: "",
       role: "User",
+      avatarUrl: "",
       password: "",
     },
   });
+
+  useEffect(() => {
+    if (pendingFile) setCropOpen(true);
+  }, [pendingFile]);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,11 +73,13 @@ export function useManagerAddUserController() {
       return;
     }
     try {
+      setSubmitting(true);
       await usersApi.create({
         userTypeId: ids.userTypeId,
         userStatusId: ids.userStatusId,
         fullName: values.name,
         email: values.email,
+        avatarUrl: values.avatarUrl?.trim() || undefined,
         password: values.password?.trim() || undefined,
         roleId: ids.roleId,
       });
@@ -71,6 +87,8 @@ export function useManagerAddUserController() {
       router.push(ROUTES.MANAGER_USERS);
     } catch {
       appToast.error(MESSAGES.common.saveFailed);
+    } finally {
+      setSubmitting(false);
     }
   });
 
@@ -83,5 +101,71 @@ export function useManagerAddUserController() {
     onSubmit,
     onCancel,
     loadingLookups,
+    submitting,
+    uploadingAvatar,
+    cropOpen,
+    pendingFile,
+    avatarItems,
+    onAvatarItemsChange: (items: UploadItem[]) => {
+      // Single mode: either empty or one item.
+      const next = items.filter((i) => i.status !== "toDelete");
+      if (!next.length) {
+        setAvatarItems([]);
+        setPendingAvatarId(null);
+        setCropDraftItem(null);
+        form.setValue("avatarUrl", "", { shouldDirty: true, shouldValidate: true });
+        return;
+      }
+      const item = next[0];
+      if (item.file) {
+        // Intercept freshly picked file and crop it before upload.
+        setPendingAvatarId(item.id);
+        setPendingFile(item.file);
+        setCropOpen(true);
+        // Keep local state so user sees something selected (even before upload).
+        setAvatarItems([item]);
+        setCropDraftItem(item);
+        return;
+      }
+      // Uploaded state (url only)
+      setAvatarItems([item]);
+    },
+    onCloseCrop: () => {
+      setCropOpen(false);
+      setPendingFile(null);
+      setPendingAvatarId(null);
+      // Cancel should not keep a newly selected (uncropped/unuploaded) image.
+      if (cropDraftItem?.status === "new") {
+        if (cropDraftItem.url?.startsWith("blob:")) URL.revokeObjectURL(cropDraftItem.url);
+        setAvatarItems([]);
+        form.setValue("avatarUrl", "", { shouldDirty: true, shouldValidate: true });
+      }
+      setCropDraftItem(null);
+    },
+    onCropped: async (file: File) => {
+      setCropOpen(false);
+      setPendingFile(null);
+      setUploadingAvatar(true);
+      try {
+        const uploaded = await uploadsApi.uploadImage(file);
+        const id = pendingAvatarId ?? `${file.name}-${file.size}-${file.lastModified}`;
+        setAvatarItems([{ id, url: uploaded.fileUrl, status: "uploaded" }]);
+        setPendingAvatarId(null);
+        setCropDraftItem(null);
+        form.setValue("avatarUrl", uploaded.fileUrl, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      } finally {
+        setUploadingAvatar(false);
+      }
+    },
+    onRemoveAvatar: () => {
+      form.setValue("avatarUrl", "", { shouldDirty: true, shouldValidate: true });
+      avatarItems.forEach((i) => {
+        if (i.url?.startsWith("blob:")) URL.revokeObjectURL(i.url);
+      });
+      setAvatarItems([]);
+    },
   };
 }
