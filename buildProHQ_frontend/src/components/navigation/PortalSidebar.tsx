@@ -10,42 +10,17 @@ import { AppButton } from "@/components/common/AppButton";
 import { AppLogo } from "@/components/branding/AppLogo";
 import { STYLE_TOKENS } from "@/constants/style-tokens";
 import { ROLES, type Role } from "@/constants/roles";
-import { ROUTES } from "@/constants/routes";
 import { MESSAGES } from "@/constants/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { tasksApi } from "@/services/tasksApi.service";
 import { usersApi } from "@/services/usersApi.service";
 import { appToast } from "@/utils/toast";
 import { TASKS_CHANGED_EVENT } from "@/utils/taskEvents";
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon:
-    | "actionItems"
-    | "addActionItem"
-    | "completedItems"
-    | "analytics"
-    | "manageFilters"
-    | "users"
-    | "addUser"
-    | "assignedTasks"
-    | "myCompleted";
-  section?: string;
-  badge?: number;
-  badgeClass?: "blue";
-};
+import { getPortalNavSections, type SidebarBadgeState } from "@/navigation/portalNavConfig";
+import type { AppIconProps } from "@/components/common/AppIcon";
 
 export type PortalSidebarProps = {
   role: Role;
-};
-
-type SidebarBadges = {
-  openTasks: number;
-  completedTasks: number;
-  users: number;
-  tradeAssigned: number;
-  tradeCompleted: number;
 };
 
 const ROLE_SIDEBAR_BG: Record<Role, string> = {
@@ -60,87 +35,23 @@ const ROLE_CARD_META: Record<Role, { roleLabel: string; avatarBg: string }> = {
   [ROLES.MANAGER]: { roleLabel: "Manager / Admin", avatarBg: STYLE_TOKENS.colors.blue },
 };
 
+function isNavActive(pathname: string, itemHref: string): boolean {
+  return pathname === itemHref || pathname.startsWith(`${itemHref}/`);
+}
+
 export function PortalSidebar({ role }: PortalSidebarProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
-  const [badges, setBadges] = useState<SidebarBadges>({
+  const [badges, setBadges] = useState<SidebarBadgeState>({
     openTasks: 0,
     completedTasks: 0,
     users: 0,
     tradeAssigned: 0,
     tradeCompleted: 0,
   });
-  const navItems = useMemo<NavItem[]>(() => {
-    if (role === ROLES.TRADE_USER) {
-      return [
-        {
-          href: ROUTES.TRADE_TASKS,
-          label: "My Assigned Tasks",
-          section: "Main",
-          icon: "assignedTasks",
-          badge: badges.tradeAssigned,
-        },
-        {
-          href: ROUTES.TRADE_COMPLETED,
-          label: "My Completed",
-          icon: "myCompleted",
-          badge: badges.tradeCompleted,
-          badgeClass: "blue",
-        },
-      ];
-    }
 
-    if (role === ROLES.MANAGER) {
-      return [
-        {
-          href: ROUTES.MANAGER_TASKS,
-          label: "Action Items",
-          section: "Main",
-          icon: "actionItems",
-          badge: badges.openTasks,
-        },
-        { href: ROUTES.MANAGER_ADD_TASK, label: "Add Action Item", icon: "addActionItem" },
-        {
-          href: ROUTES.MANAGER_COMPLETED,
-          label: "Completed Items",
-          icon: "completedItems",
-          badge: badges.completedTasks,
-          badgeClass: "blue",
-        },
-        {
-          href: ROUTES.MANAGER_ANALYTICS,
-          label: "Analytics",
-          section: "Management",
-          icon: "analytics",
-        },
-        {
-          href: ROUTES.MANAGER_FILTERS,
-          label: "Manage Filters",
-          icon: "manageFilters",
-        },
-        { href: ROUTES.MANAGER_USERS, label: "Users", icon: "users", badge: badges.users },
-        { href: ROUTES.MANAGER_ADD_USER, label: "Add User", icon: "addUser" },
-      ];
-    }
+  const sections = useMemo(() => getPortalNavSections(role), [role]);
 
-    return [
-      {
-        href: ROUTES.FIELD_TASKS,
-        label: "Action Items",
-        section: "Main",
-        icon: "actionItems",
-        badge: badges.openTasks,
-      },
-      { href: ROUTES.FIELD_ADD_TASK, label: "Add Action Item", icon: "addActionItem" },
-      {
-        href: ROUTES.FIELD_COMPLETED,
-        label: "Completed Items",
-        icon: "completedItems",
-        badge: badges.completedTasks,
-        badgeClass: "blue",
-      },
-    ];
-  }, [badges, role]);
   const userCard = ROLE_CARD_META[role];
 
   useEffect(() => {
@@ -236,90 +147,84 @@ export function PortalSidebar({ role }: PortalSidebarProps) {
       </Box>
 
       <Box sx={{ flex: 1, padding: "12px 8px" }}>
-        {navItems.map((item, index) => {
-          const previous = navItems[index - 1];
-          // HTML reference always shows a "Main" header and a "Management" header for managers.
-          const currentSection = item.section ?? (index === 0 ? "Main" : undefined);
-          const previousSection = previous?.section ?? (index - 1 === 0 ? "Main" : undefined);
-          const showSection = Boolean(currentSection && currentSection !== previousSection);
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-
-          return (
-            <Box key={item.href}>
-              {showSection ? (
-                <Typography
-                  sx={{
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    // Ensure section headers are visible on dark sidebars (esp. Manager role).
-                    color: role === ROLES.MANAGER ? "#9CA3AF" : "#4B5563",
-                    textTransform: "uppercase",
-                    letterSpacing: "1.2px",
-                    padding: "12px 12px 6px",
-                  }}
-                >
-                  {currentSection}
-                </Typography>
-              ) : null}
-              <Box
-                component={Link}
-                href={item.href}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "10px 12px",
-                  borderLeft: "3px solid transparent",
-                  borderRadius: "8px",
-                  marginBottom: "2px",
-                  textDecoration: "none",
-                  color: active ? STYLE_TOKENS.colors.white : "#9CA3AF",
-                  fontSize: "13.5px",
-                  fontWeight: 500,
-                  transition: "all 0.15s",
-                  background:
-                    active && role === ROLES.TRADE_USER
-                      ? "#166534"
-                      : active
-                        ? STYLE_TOKENS.colors.sidebarActive
-                        : "transparent",
-                  borderLeftColor:
-                    active && role === ROLES.TRADE_USER ? STYLE_TOKENS.colors.green : "transparent",
-                  "&:hover": {
-                    background:
-                      role === ROLES.TRADE_USER ? "#1a3a25" : STYLE_TOKENS.colors.sidebarHover,
-                    color: STYLE_TOKENS.colors.white,
-                  },
-                }}
-              >
+        {sections.map((section) => (
+          <Box key={section.id}>
+            <Typography
+              sx={{
+                fontSize: "11px",
+                fontWeight: 700,
+                color: role === ROLES.MANAGER ? "#9CA3AF" : "#4B5563",
+                textTransform: "uppercase",
+                letterSpacing: "1.2px",
+                padding: "12px 12px 6px",
+              }}
+            >
+              {section.label}
+            </Typography>
+            {section.items.map((item) => {
+              const active = isNavActive(pathname, item.href);
+              const badgeVal = item.badge !== undefined ? badges[item.badge] : undefined;
+              return (
                 <Box
-                  className="nav-icon"
+                  key={item.href}
+                  component={Link}
+                  href={item.href}
                   sx={{
-                    fontSize: "16px",
-                    width: "20px",
-                    textAlign: "center",
-                    flexShrink: 0,
-                    color: active ? STYLE_TOKENS.colors.orange : "inherit",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "10px 12px",
+                    borderLeft: "3px solid transparent",
+                    borderRadius: "8px",
+                    marginBottom: "2px",
+                    textDecoration: "none",
+                    color: active ? STYLE_TOKENS.colors.white : "#9CA3AF",
+                    fontSize: "13.5px",
+                    fontWeight: 500,
+                    transition: "all 0.15s",
+                    background:
+                      active && role === ROLES.TRADE_USER
+                        ? "#166534"
+                        : active
+                          ? STYLE_TOKENS.colors.sidebarActive
+                          : "transparent",
+                    borderLeftColor:
+                      active && role === ROLES.TRADE_USER ? STYLE_TOKENS.colors.green : "transparent",
+                    "&:hover": {
+                      background: role === ROLES.TRADE_USER ? "#1a3a25" : STYLE_TOKENS.colors.sidebarHover,
+                      color: STYLE_TOKENS.colors.white,
+                    },
                   }}
                 >
-                  <AppIcon name={item.icon} size={16} />
-                </Box>
-                <Box component="span" sx={{ lineHeight: 1.2 }}>
-                  {item.label}
-                </Box>
-                {item.badge !== undefined ? (
                   <Box
-                    component="span"
-                    className={item.badgeClass ? `nav-count ${item.badgeClass}` : "nav-count"}
-                    sx={{ marginLeft: "auto", float: "none" }}
+                    className="nav-icon"
+                    sx={{
+                      fontSize: "16px",
+                      width: "20px",
+                      textAlign: "center",
+                      flexShrink: 0,
+                      color: active ? STYLE_TOKENS.colors.orange : "inherit",
+                    }}
                   >
-                    {item.badge}
+                    <AppIcon name={item.icon as AppIconProps["name"]} size={16} />
                   </Box>
-                ) : null}
-              </Box>
-            </Box>
-          );
-        })}
+                  <Box component="span" sx={{ lineHeight: 1.2 }}>
+                    {item.label}
+                  </Box>
+                  {badgeVal !== undefined ? (
+                    <Box
+                      component="span"
+                      className={item.badgeClass ? `nav-count ${item.badgeClass}` : "nav-count"}
+                      sx={{ marginLeft: "auto", float: "none" }}
+                    >
+                      {badgeVal}
+                    </Box>
+                  ) : null}
+                </Box>
+              );
+            })}
+          </Box>
+        ))}
       </Box>
 
       <Box sx={{ padding: "12px 8px", borderTop: `1px solid ${STYLE_TOKENS.colors.sidebarBorder}` }}>
