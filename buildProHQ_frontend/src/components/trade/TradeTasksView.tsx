@@ -16,7 +16,7 @@ import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTable
 import { AppStatCardsSkeleton } from "@/components/common/skeletons/AppStatCardsSkeleton";
 import { SearchInput } from "@/components/common/SearchInput";
 import { StatCard } from "@/components/common/StatCard";
-import type { Task } from "@/types/domain";
+import type { TradePortalTask } from "@/types/domain";
 import { htmlToPlainText, truncateRichPlainText } from "@/utils/richText";
 
 type Props = {
@@ -27,15 +27,15 @@ type Props = {
   setPage: (page: number) => void;
   pageSize: number;
   total: number;
-  rows: Task[];
+  rows: TradePortalTask[];
   stats: {
     assigned: number;
     overdue: number;
     completed: number;
   };
   confirmOpen: boolean;
-  pendingTask: Task | null;
-  askComplete: (task: Task) => void;
+  pendingTask: TradePortalTask | null;
+  askComplete: (task: TradePortalTask) => void;
   closeConfirm: () => void;
   confirmComplete: () => void;
 };

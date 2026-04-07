@@ -6,9 +6,12 @@ import {
   FilterCategory,
   FilterOption,
   Level,
+  Role,
   TaskPriority,
   TaskStatus,
   Trade,
+  UserStatus,
+  UserType,
 } from '../../infrastructure/persistence/typeorm/entities';
 
 @Module({
@@ -20,6 +23,9 @@ import {
       TaskPriority,
       FilterCategory,
       FilterOption,
+      UserType,
+      UserStatus,
+      Role,
     ]),
   ],
   controllers: [LookupsController],

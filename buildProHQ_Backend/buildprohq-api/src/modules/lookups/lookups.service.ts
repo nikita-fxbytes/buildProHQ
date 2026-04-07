@@ -5,9 +5,12 @@ import {
   FilterCategory,
   FilterOption,
   Level,
+  Role,
   TaskPriority,
   TaskStatus,
   Trade,
+  UserStatus,
+  UserType,
 } from '../../infrastructure/persistence/typeorm/entities';
 
 @Injectable()
@@ -25,6 +28,12 @@ export class LookupsService {
     private readonly filterCategoryRepository: Repository<FilterCategory>,
     @InjectRepository(FilterOption)
     private readonly filterOptionRepository: Repository<FilterOption>,
+    @InjectRepository(UserType)
+    private readonly userTypeRepository: Repository<UserType>,
+    @InjectRepository(UserStatus)
+    private readonly userStatusRepository: Repository<UserStatus>,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
   ) {}
 
   getTrades() {
@@ -64,6 +73,30 @@ export class LookupsService {
       where: { deletedAt: IsNull() },
       order: { name: 'ASC' },
       select: { id: true, code: true, name: true, isSystemCategory: true },
+    });
+  }
+
+  getUserTypes() {
+    return this.userTypeRepository.find({
+      where: { deletedAt: IsNull() },
+      order: { name: 'ASC' },
+      select: { id: true, code: true, name: true },
+    });
+  }
+
+  getUserStatuses() {
+    return this.userStatusRepository.find({
+      where: { deletedAt: IsNull() },
+      order: { name: 'ASC' },
+      select: { id: true, code: true, name: true, isActive: true },
+    });
+  }
+
+  getRoles() {
+    return this.roleRepository.find({
+      where: { deletedAt: IsNull() },
+      order: { name: 'ASC' },
+      select: { id: true, code: true, name: true, isSystemRole: true },
     });
   }
 

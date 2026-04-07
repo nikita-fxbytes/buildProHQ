@@ -13,7 +13,7 @@ import { AppTablePagination } from "@/components/common/table/AppTablePagination
 import { AppTableRow } from "@/components/common/table/AppTableRow";
 import { AppTableShell } from "@/components/common/table/AppTableShell";
 import { SearchInput } from "@/components/common/SearchInput";
-import type { CompletedTask } from "@/types/domain";
+import type { TradePortalCompletedTask } from "@/types/domain";
 import { formatIndianLongDate } from "@/utils/date";
 import { htmlToPlainText } from "@/utils/richText";
 
@@ -25,7 +25,7 @@ type Props = {
   setPage: (page: number) => void;
   pageSize: number;
   total: number;
-  rows: CompletedTask[];
+  rows: TradePortalCompletedTask[];
 };
 
 export function TradeCompletedView(props: Props) {

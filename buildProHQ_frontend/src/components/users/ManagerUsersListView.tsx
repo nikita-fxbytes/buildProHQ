@@ -7,7 +7,6 @@ import Typography from "@mui/material/Typography";
 import { AppIcon } from "@/components/common/AppIcon";
 import { AppButton } from "@/components/common/AppButton";
 import { RoleChip } from "@/components/common/badges/RoleChip";
-import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { FormSelectField } from "@/components/common/FormSelectField";
 import { SearchInput } from "@/components/common/SearchInput";
 import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTableSkeleton";
@@ -34,12 +33,6 @@ export type ManagerUsersListViewProps = {
   onSearchChange: (value: string) => void;
   onRoleFilterChange: (value: RoleFilter) => void;
   onPageChange: (page: number) => void;
-  requestDelete: (userId: number, userName: string) => void;
-  confirmOpen: boolean;
-  confirmTitle: string;
-  confirmMessage: string;
-  closeConfirm: () => void;
-  onConfirmDelete: () => void;
 };
 
 const roleChip = (role: ManagerUsersListItem["role"]) =>
@@ -60,12 +53,6 @@ export function ManagerUsersListView({
   onSearchChange,
   onRoleFilterChange,
   onPageChange,
-  requestDelete,
-  confirmOpen,
-  confirmTitle,
-  confirmMessage,
-  closeConfirm,
-  onConfirmDelete,
 }: ManagerUsersListViewProps) {
   return (
     <Stack spacing={2}>
@@ -109,12 +96,12 @@ export function ManagerUsersListView({
 
       <AppTableShell>
         <AppTableHeader
-          columnsTemplate="44px 1fr 180px 110px 100px 130px"
-          cells={["", "Name", "Email", "Role", "Tasks", "Actions"]}
+          columnsTemplate="44px 1fr 180px 110px 130px"
+          cells={["", "Name", "Email", "Role", "Actions"]}
         />
 
         {loading ? (
-          <AppGridTableSkeleton columnsTemplate="44px 1fr 180px 110px 100px 130px" rowCount={8} />
+          <AppGridTableSkeleton columnsTemplate="44px 1fr 180px 110px 130px" rowCount={8} />
         ) : rows.length === 0 ? (
           <AppTableEmptyState icon={<AppIcon name="folder" size={36} />} message="No users match your search." />
         ) : (
@@ -123,7 +110,7 @@ export function ManagerUsersListView({
             return (
               <AppTableRow
                 key={user.id}
-                columnsTemplate="44px 1fr 180px 110px 100px 130px"
+                columnsTemplate="44px 1fr 180px 110px 130px"
               >
                 <Box
                   sx={{
@@ -163,10 +150,6 @@ export function ManagerUsersListView({
 
                 <RoleChip label={chip.text} tone={chip.tone} />
 
-                <Typography className="table-cell-text" sx={{ fontWeight: 600 }}>
-                  {user.openTasks} open
-                </Typography>
-
                 <Stack direction="row" spacing={0.75}>
                   <AppButton
                     size="small"
@@ -182,22 +165,6 @@ export function ManagerUsersListView({
                   >
                     <AppIcon name="edit" size={13} /> Edit
                   </AppButton>
-                  <AppButton
-                    size="small"
-                    variant="contained"
-                    color="error"
-                    onClick={() => requestDelete(user.id, user.name)}
-                    sx={{
-                      fontSize: 13,
-                      padding: "6px 14px",
-                      background: "#FEE2E2",
-                      color: "#EF4444",
-                      boxShadow: "none",
-                      "&:hover": { background: "#EF4444", color: "#ffffff", boxShadow: "none" },
-                    }}
-                  >
-                    <AppIcon name="delete" size={13} /> Remove
-                  </AppButton>
                 </Stack>
               </AppTableRow>
             );
@@ -212,17 +179,6 @@ export function ManagerUsersListView({
           managerMode
         />
       </AppTableShell>
-
-      <ConfirmModal
-        open={confirmOpen}
-        title={confirmTitle}
-        message={confirmMessage}
-        confirmLabel="Yes, Remove"
-        confirmColor="error"
-        onClose={closeConfirm}
-        onConfirm={onConfirmDelete}
-      />
     </Stack>
   );
 }
-

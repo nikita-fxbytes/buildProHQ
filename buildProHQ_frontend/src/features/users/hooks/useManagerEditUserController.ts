@@ -1,19 +1,28 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import {
+  mapUserTypeCodeToFormRole,
+  resolveUserCreateIds,
+  type UserCreateLookups,
+} from "@/features/users/userMappers";
 import { MESSAGES } from "@/constants/messages";
 import { ROUTES } from "@/constants/routes";
-import { userService } from "@/services/user.service";
+import { lookupsApi } from "@/services/lookupsApi.service";
+import { usersApi, type UserListItem } from "@/services/usersApi.service";
 import { userSchema, type UserFormValues } from "@/schemas/user.schema";
 import { appToast } from "@/utils/toast";
 
 export function useManagerEditUserController() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const id = Number(params.id);
+  const id = params.id ?? "";
+  const [lookups, setLookups] = useState<UserCreateLookups | null>(null);
+  const [loadedUser, setLoadedUser] = useState<UserListItem | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -26,41 +35,58 @@ export function useManagerEditUserController() {
   });
 
   useEffect(() => {
-    if (!Number.isFinite(id)) return;
-    const load = async () => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
       try {
-        const user = await userService.getUserById(id);
-        if (!user) {
-          appToast.error(MESSAGES.common.somethingWrong);
-          router.push(ROUTES.MANAGER_USERS);
-          return;
-        }
+        const [user, types, statuses, roles] = await Promise.all([
+          usersApi.getById(id),
+          lookupsApi.getUserTypes(),
+          lookupsApi.getUserStatuses(),
+          lookupsApi.getRoles(),
+        ]);
+        if (cancelled) return;
+        setLoadedUser(user);
+        setLookups({ types, statuses, roles });
         form.reset({
-          name: user.name,
+          name: user.full_name,
           email: user.email,
-          role: user.role,
+          role: mapUserTypeCodeToFormRole(user.user_type_code),
           password: "",
         });
       } catch {
         appToast.error(MESSAGES.common.somethingWrong);
         router.push(ROUTES.MANAGER_USERS);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-    void load();
   }, [form, id, router]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    if (!lookups || !id) {
+      appToast.error(MESSAGES.common.somethingWrong);
+      return;
+    }
+    const ids = resolveUserCreateIds(values.role, lookups);
+    if (!ids) {
+      appToast.error(MESSAGES.common.somethingWrong);
+      return;
+    }
+    const statusId =
+      lookups.statuses.find((s) => s.code === loadedUser?.user_status_code)?.id ?? ids.userStatusId;
     try {
-      const updated = await userService.updateUser(id, {
-        name: values.name,
+      await usersApi.update(id, {
+        fullName: values.name,
         email: values.email,
-        role: values.role,
-        password: values.password?.trim() ? values.password : undefined,
+        userTypeId: ids.userTypeId,
+        userStatusId: statusId,
+        roleId: ids.roleId,
+        password: values.password?.trim() || undefined,
       });
-      if (!updated) {
-        appToast.error(MESSAGES.common.saveFailed);
-        return;
-      }
       appToast.success(MESSAGES.user.updated);
       router.push(ROUTES.MANAGER_USERS);
     } catch {
@@ -76,6 +102,6 @@ export function useManagerEditUserController() {
     form,
     onSubmit,
     onCancel,
+    loading,
   };
 }
-

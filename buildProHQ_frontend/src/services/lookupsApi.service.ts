@@ -15,6 +15,29 @@ export type LookupItem = {
   sortOrder?: number;
 };
 
+export type UserStatusLookupItem = LookupItem & {
+  isActive?: boolean;
+};
+
+export type RoleLookupItem = LookupItem & {
+  isSystemRole?: boolean;
+};
+
+export type FilterCategoryApi = {
+  id: string;
+  code: string;
+  name: string;
+  isSystemCategory: boolean;
+};
+
+export type FilterOptionApi = {
+  id: string;
+  filterCategoryId: string;
+  code: string;
+  name: string;
+  sortOrder: number;
+};
+
 export const lookupsApi = {
   async getTrades(): Promise<LookupItem[]> {
     const { data } = await apiClient.get<ApiEnvelope<LookupItem[]>>("/v1/lookups/trades");
@@ -34,5 +57,31 @@ export const lookupsApi = {
     const { data } = await apiClient.get<ApiEnvelope<LookupItem[]>>("/v1/lookups/task-statuses");
     return data.data;
   },
+  async getUserTypes(): Promise<LookupItem[]> {
+    const { data } = await apiClient.get<ApiEnvelope<LookupItem[]>>("/v1/lookups/user-types");
+    return data.data;
+  },
+  async getUserStatuses(): Promise<UserStatusLookupItem[]> {
+    const { data } = await apiClient.get<ApiEnvelope<UserStatusLookupItem[]>>(
+      "/v1/lookups/user-statuses",
+    );
+    return data.data;
+  },
+  async getRoles(): Promise<RoleLookupItem[]> {
+    const { data } = await apiClient.get<ApiEnvelope<RoleLookupItem[]>>("/v1/lookups/roles");
+    return data.data;
+  },
+  async getFilterCategories(): Promise<FilterCategoryApi[]> {
+    const { data } = await apiClient.get<ApiEnvelope<FilterCategoryApi[]>>(
+      "/v1/lookups/filter-categories",
+    );
+    return data.data;
+  },
+  async getFilterOptions(categoryId?: string): Promise<FilterOptionApi[]> {
+    const url = categoryId
+      ? `/v1/lookups/filter-options?categoryId=${encodeURIComponent(categoryId)}`
+      : "/v1/lookups/filter-options";
+    const { data } = await apiClient.get<ApiEnvelope<FilterOptionApi[]>>(url);
+    return data.data;
+  },
 };
-

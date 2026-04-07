@@ -1,5 +1,5 @@
 import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { LookupsService } from './lookups.service';
 import { isUUID } from 'class-validator';
@@ -29,6 +29,24 @@ export class LookupsController {
   @Get('task-priorities')
   getTaskPriorities() {
     return this.lookupsService.getTaskPriorities();
+  }
+
+  @Get('user-types')
+  @ApiOperation({ summary: 'List user types (field, trade, management, …)' })
+  getUserTypes() {
+    return this.lookupsService.getUserTypes();
+  }
+
+  @Get('user-statuses')
+  @ApiOperation({ summary: 'List user statuses (active, inactive, …)' })
+  getUserStatuses() {
+    return this.lookupsService.getUserStatuses();
+  }
+
+  @Get('roles')
+  @ApiOperation({ summary: 'List RBAC roles (for user create/update)' })
+  getRoles() {
+    return this.lookupsService.getRoles();
   }
 
   @Get('filter-categories')

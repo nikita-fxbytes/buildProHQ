@@ -1,64 +1,46 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MESSAGES } from "@/constants/messages";
 import { UI_DEFAULTS } from "@/constants/ui";
-import { useAuth } from "@/contexts/AuthContext";
-import { tradeCompletedService } from "@/services/tradeCompleted.service";
-import type { CompletedTask } from "@/types/domain";
-import { htmlToPlainText } from "@/utils/richText";
+import { mapCompletedToTradePortal } from "@/features/trade/tradeTaskMappers";
+import { tasksApi } from "@/services/tasksApi.service";
+import type { TradePortalCompletedTask } from "@/types/domain";
 import { appToast } from "@/utils/toast";
 
-const DEFAULT_TRADE = "Painter";
-
 export function useTradeCompletedController() {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [allRows, setAllRows] = useState<CompletedTask[]>([]);
+  const [rows, setRows] = useState<TradePortalCompletedTask[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const activeTrade = user?.trade ?? DEFAULT_TRADE;
+  const [total, setTotal] = useState(0);
+
+  const pageSize = UI_DEFAULTS.COMPLETED_PAGE_SIZE;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await tradeCompletedService.getCompletedTasks(activeTrade);
-      setAllRows(rows);
+      const res = await tasksApi.listCompleted({
+        page,
+        limit: pageSize,
+        search: search.trim() || undefined,
+        sortBy: "date",
+        sortOrder: "desc",
+      });
+      setRows(res.items.map(mapCompletedToTradePortal));
+      setTotal(res.meta.total);
     } catch {
       appToast.error(MESSAGES.task.loadFailed);
+      setRows([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [activeTrade]);
+  }, [page, pageSize, search]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
-
-  const filteredRows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return allRows;
-    return allRows.filter(
-      (task) =>
-        task.level.toLowerCase().includes(term) ||
-        task.trade.toLowerCase().includes(term) ||
-        htmlToPlainText(task.desc).toLowerCase().includes(term),
-    );
-  }, [allRows, search]);
-
-  const pageSize = UI_DEFAULTS.COMPLETED_PAGE_SIZE;
-  const total = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(page, totalPages);
-
-  useEffect(() => {
-    setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
-
-  const rows = useMemo(
-    () => filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize),
-    [filteredRows, safePage, pageSize],
-  );
 
   return {
     loading,
@@ -67,11 +49,10 @@ export function useTradeCompletedController() {
       setSearch(value);
       setPage(1);
     },
-    page: safePage,
+    page,
     setPage,
     pageSize,
     total,
     rows,
   };
 }
-

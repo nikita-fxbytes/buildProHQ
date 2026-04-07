@@ -3,7 +3,7 @@ import type { Role } from "@/constants/roles";
 export type SortDirection = "asc" | "desc" | null;
 
 export type User = {
-  id: number;
+  id: string | number;
   name: string;
   email: string;
   role: "User" | "Trade" | "Management";
@@ -67,7 +67,26 @@ export type ManagerUsersListQuery = {
 };
 
 export type ManagerUsersListItem = User & {
-  openTasks: number;
+  /** Reserved for future API aggregate; not populated from list endpoint. */
+  openTasks?: number;
+};
+
+/** Trade portal — API-backed task row (UUID id). */
+export type TradePortalTask = {
+  id: string;
+  level: string;
+  trade: string;
+  desc: string;
+  days: number;
+};
+
+export type TradePortalCompletedTask = {
+  id: string;
+  level: string;
+  trade: string;
+  desc: string;
+  date: string;
+  duration: number;
 };
 
 export type PaginatedResult<T> = {

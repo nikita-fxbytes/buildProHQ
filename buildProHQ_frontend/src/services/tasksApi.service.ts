@@ -221,5 +221,16 @@ export const tasksApi = {
     );
     return data.data;
   },
+
+  async completeTask(
+    taskId: string,
+    body?: { notes?: string; photos?: string[]; gps?: string },
+  ): Promise<TaskDetailResponse> {
+    const { data } = await apiClient.post<ApiEnvelope<TaskDetailResponse>>(
+      `/v1/tasks/${taskId}/complete`,
+      body ?? {},
+    );
+    return data.data;
+  },
 };
 

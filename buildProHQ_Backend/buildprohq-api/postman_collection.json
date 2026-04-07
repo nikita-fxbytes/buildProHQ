@@ -93,7 +93,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"full_name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"user_type_id\": 1,\n  \"user_status_id\": 1\n}"
+              "raw": "{\n  \"userTypeId\": \"{{userTypeFieldId}}\",\n  \"userStatusId\": \"{{userStatusActiveId}}\",\n  \"fullName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"Password123\",\n  \"roleId\": \"{{roleFieldUserId}}\"\n}"
             }
           },
           "response": []
@@ -224,6 +224,26 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"statusId\": \"{{openStatusId}}\",\n  \"priorityId\": \"{{priorityMediumId}}\",\n  \"levelId\": \"{{levelId}}\",\n  \"tradeId\": \"{{tradeId}}\",\n  \"description\": \"Inspect site A\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Task (single)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tasks/{{taskId}}/complete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tasks", "{{taskId}}", "complete"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
             }
           },
           "response": []
@@ -417,6 +437,81 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "List User Types",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/lookups/user-types",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "lookups", "user-types"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List User Statuses",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/lookups/user-statuses",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "lookups", "user-statuses"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Roles (RBAC)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/lookups/roles",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "lookups", "roles"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Filter Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/lookups/filter-categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "lookups", "filter-categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Filter Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/lookups/filter-options",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "lookups", "filter-options"]
+            }
+          },
+          "response": []
         }
       ]
     }
@@ -432,6 +527,9 @@
     { "key": "levelId", "value": "" },
     { "key": "openStatusId", "value": "" },
     { "key": "priorityMediumId", "value": "" },
-    { "key": "managerUserId", "value": "" }
+    { "key": "managerUserId", "value": "" },
+    { "key": "userTypeFieldId", "value": "" },
+    { "key": "userStatusActiveId", "value": "" },
+    { "key": "roleFieldUserId", "value": "" }
   ]
 }

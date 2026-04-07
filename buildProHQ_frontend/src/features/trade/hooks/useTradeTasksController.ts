@@ -3,83 +3,63 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MESSAGES } from "@/constants/messages";
 import { UI_DEFAULTS } from "@/constants/ui";
-import { useAuth } from "@/contexts/AuthContext";
-import { tradeCompletedService } from "@/services/tradeCompleted.service";
-import { tradeTasksService } from "@/services/tradeTasks.service";
-import type { Task } from "@/types/domain";
-import { htmlToPlainText } from "@/utils/richText";
+import { mapOpenToTradePortal } from "@/features/trade/tradeTaskMappers";
+import { tasksApi, type TaskStats } from "@/services/tasksApi.service";
+import type { TradePortalTask } from "@/types/domain";
 import { appToast } from "@/utils/toast";
-
-const DEFAULT_TRADE = "Painter";
-const DEFAULT_INITIALS = "SP";
+import { emitTasksChanged } from "@/utils/taskEvents";
 
 export function useTradeTasksController() {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [allRows, setAllRows] = useState<Task[]>([]);
+  const [rows, setRows] = useState<TradePortalTask[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [taskStats, setTaskStats] = useState<TaskStats | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingTask, setPendingTask] = useState<Task | null>(null);
-  const [completedCount, setCompletedCount] = useState(0);
-  const activeTrade = user?.trade ?? DEFAULT_TRADE;
-  const activeInitials = user?.initials ?? DEFAULT_INITIALS;
+  const [pendingTask, setPendingTask] = useState<TradePortalTask | null>(null);
+
+  const pageSize = UI_DEFAULTS.TASK_PAGE_SIZE;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [assigned, completed] = await Promise.all([
-        tradeTasksService.getAssignedTasks(activeTrade),
-        tradeCompletedService.getCompletedTasks(activeTrade),
+      const [openRes, stats] = await Promise.all([
+        tasksApi.listOpen({
+          page,
+          limit: pageSize,
+          search: search.trim() || undefined,
+          sortBy: "daysOpen",
+          sortOrder: "desc",
+        }),
+        tasksApi.getStats(),
       ]);
-      setAllRows(assigned);
-      setCompletedCount(completed.length);
+      setRows(openRes.items.map(mapOpenToTradePortal));
+      setTotal(openRes.meta.total);
+      setTaskStats(stats);
     } catch {
       appToast.error(MESSAGES.task.loadFailed);
+      setRows([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [activeTrade]);
+  }, [page, pageSize, search]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
-
-  const filteredRows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return allRows;
-    return allRows.filter(
-      (task) =>
-        task.level.toLowerCase().includes(term) ||
-        task.trade.toLowerCase().includes(term) ||
-        htmlToPlainText(task.desc).toLowerCase().includes(term),
-    );
-  }, [allRows, search]);
-
-  const pageSize = UI_DEFAULTS.TASK_PAGE_SIZE;
-  const total = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(page, totalPages);
-
-  useEffect(() => {
-    setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
-
-  const rows = useMemo(
-    () => filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize),
-    [filteredRows, safePage, pageSize],
-  );
 
   const stats = useMemo(
     () => ({
-      assigned: allRows.length,
-      overdue: allRows.filter((task) => task.days > 10).length,
-      completed: completedCount,
+      assigned: taskStats?.totalOpen ?? 0,
+      overdue: taskStats?.overdue10 ?? 0,
+      completed: taskStats?.totalCompleted ?? 0,
     }),
-    [allRows, completedCount],
+    [taskStats],
   );
 
-  const askComplete = (task: Task) => {
+  const askComplete = (task: TradePortalTask) => {
     setPendingTask(task);
     setConfirmOpen(true);
   };
@@ -92,8 +72,9 @@ export function useTradeTasksController() {
   const confirmComplete = async () => {
     if (!pendingTask) return;
     try {
-      await tradeTasksService.completeAssignedTask(pendingTask.id, activeInitials);
+      await tasksApi.completeTask(pendingTask.id);
       appToast.success(MESSAGES.task.completed);
+      emitTasksChanged();
       closeConfirm();
       await load();
     } catch {
@@ -108,7 +89,7 @@ export function useTradeTasksController() {
       setSearch(value);
       setPage(1);
     },
-    page: safePage,
+    page,
     setPage,
     pageSize,
     total,
@@ -121,4 +102,3 @@ export function useTradeTasksController() {
     confirmComplete,
   };
 }
-
