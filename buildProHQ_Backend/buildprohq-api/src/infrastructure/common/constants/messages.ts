@@ -61,6 +61,28 @@ export const MESSAGES = {
     CREATED: 'User created successfully',
     UPDATED: 'User updated successfully',
     DELETED: 'User deleted successfully',
+    EMAIL_EXISTS: 'Email already exists',
+  },
+  FILTERS: {
+    OPTIONS_REQUIRED: 'At least 1 sub-filter is required',
+    CATEGORY_NAME_REQUIRED:
+      'A category name is required when no existing category is selected',
+    SAVED: 'Filter saved',
+    LEVEL_ADDED: 'Level added',
+    LEVEL_EXISTS: 'Level already exists',
+    TRADE_ADDED: 'Trade added',
+    TRADE_EXISTS: 'Trade already exists',
+    DELETED: 'Filter deleted',
+    OPTION_DELETED: 'Sub-filter deleted',
+  },
+  INVITES: {
+    ALREADY_USED: 'Invite already used',
+    EXPIRED: 'Invite expired',
+    TOKEN_VALID: 'Token valid',
+    PASSWORD_SET_SUCCESS: 'Password set successfully',
+  },
+  LOOKUPS: {
+    CATEGORY_ID_INVALID: 'categoryId must be a valid UUID',
   },
   NOTIFICATIONS: {
     RETRIEVED: 'Notifications retrieved successfully',

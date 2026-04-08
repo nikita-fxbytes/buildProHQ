@@ -264,7 +264,7 @@ export class UsersService {
       select: { id: true },
     });
     if (existing) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException(MESSAGES.USERS.EMAIL_EXISTS);
     }
 
     const initials = dto.fullName
@@ -338,7 +338,7 @@ export class UsersService {
           select: { id: true },
         });
         if (existing && existing.id !== id) {
-          throw new ConflictException('Email already exists');
+          throw new ConflictException(MESSAGES.USERS.EMAIL_EXISTS);
         }
       }
     }

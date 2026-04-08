@@ -56,9 +56,9 @@ export class InvitationsService {
   async validateToken(token: string) {
     const invite = await this.findInviteByToken(token);
     if (!invite) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
-    if (invite.acceptedAt) throw new BadRequestException('Invite already used');
-    if (invite.expiresAt.getTime() < Date.now()) throw new BadRequestException('Invite expired');
-    return { message: 'Token valid' };
+    if (invite.acceptedAt) throw new BadRequestException(MESSAGES.INVITES.ALREADY_USED);
+    if (invite.expiresAt.getTime() < Date.now()) throw new BadRequestException(MESSAGES.INVITES.EXPIRED);
+    return { message: MESSAGES.INVITES.TOKEN_VALID };
   }
 
   async createAndSendInvite(params: { invitedUserId: string; invitedEmail: string; invitedByUserId: string; fullName?: string }) {
@@ -97,8 +97,8 @@ export class InvitationsService {
   async acceptInvite(token: string, password: string) {
     const match = await this.findInviteByToken(token);
     if (!match) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
-    if (match.acceptedAt) throw new BadRequestException('Invite already used');
-    if (match.expiresAt.getTime() < Date.now()) throw new BadRequestException('Invite expired');
+    if (match.acceptedAt) throw new BadRequestException(MESSAGES.INVITES.ALREADY_USED);
+    if (match.expiresAt.getTime() < Date.now()) throw new BadRequestException(MESSAGES.INVITES.EXPIRED);
 
     const acceptedStatus = await this.ensureStatus('accepted', 'Accepted');
 
@@ -117,7 +117,7 @@ export class InvitationsService {
       acceptedAt: new Date(),
     });
 
-    return { message: 'Password set successfully' };
+    return { message: MESSAGES.INVITES.PASSWORD_SET_SUCCESS };
   }
 }
 

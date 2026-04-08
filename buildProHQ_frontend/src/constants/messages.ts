@@ -4,6 +4,8 @@ export const MESSAGES = {
     emailInvalid: "Please enter a valid email address",
     emailMaxLength: "Email must be at most 255 characters",
     passwordRequired: "Password is required",
+    confirmPasswordRequired: "Confirm password is required",
+    passwordsDoNotMatch: "Passwords do not match",
     passwordMinLength: "Password must be at least 8 characters",
     passwordMaxLength: "Password must be at most 128 characters",
     passwordWhitespaceOnly: "Password cannot be only spaces",
@@ -76,11 +78,23 @@ export const MESSAGES = {
     logoutSuccess: "Logged out",
     portalUnauthorized:
       "This account does not have access to this portal. Sign in using the correct portal for your role.",
+    inviteInvalidOrExpired: "Invite link is invalid or expired",
+    passwordSetSuccess: "Password set successfully. Please log in.",
+    setPasswordFailed: "Failed to set password",
   },
   filter: {
     added: "Filter added successfully",
     updated: "Filter updated successfully",
     deleted: "Filter deleted successfully",
+    saved: "Filter saved",
+    categoryDeleted: "Filter deleted",
+    subFilterRemoved: "Sub-filter removed",
+    levelAdded: "Level added",
+    tradeAdded: "Trade added",
+    deleteConfirmTitle: "Delete Filter",
+    deleteConfirmLabel: "Yes, Delete",
+    deleteConfirmMessageTemplate:
+      'Delete filter category "{{name}}" and all its sub-filters? This cannot be undone.',
   },
   common: {
     cancel: "Cancel",

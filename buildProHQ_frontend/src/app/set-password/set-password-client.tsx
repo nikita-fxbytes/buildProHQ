@@ -17,24 +17,23 @@ import { appToast } from "@/utils/toast";
 import { getApiErrorMessage } from "@/services/apiError";
 import { authService } from "@/services/auth.service";
 import { ROUTES } from "@/constants/routes";
+import { MESSAGES } from "@/constants/messages";
 import { passwordPolicySchema } from "@/schemas/passwordPolicy";
-
-const PASSWORD_REQUIRED_MESSAGE = "Password is required";
 
 const schema = z
   .object({
     password: z
       .string()
-      .min(1, PASSWORD_REQUIRED_MESSAGE)
+      .min(1, MESSAGES.validation.passwordRequired)
       .pipe(passwordPolicySchema),
     confirmPassword: z
       .string()
-      .min(1, "Confirm password is required")
-      .min(8, "Confirm password must be at least 8 characters"),
+      .min(1, MESSAGES.validation.confirmPasswordRequired)
+      .min(8, MESSAGES.validation.passwordMinLength),
   })
   .refine((v) => v.password === v.confirmPassword, {
     path: ["confirmPassword"],
-    message: "Passwords do not match",
+    message: MESSAGES.validation.passwordsDoNotMatch,
   });
 
 type FormValues = z.infer<typeof schema>;
@@ -72,7 +71,7 @@ export function SetPasswordClient() {
       } catch (e) {
         if (!cancelled) {
           setTokenValid(false);
-          appToast.error(getApiErrorMessage(e, "Invite link is invalid or expired"));
+          appToast.error(getApiErrorMessage(e, MESSAGES.auth.inviteInvalidOrExpired));
         }
       } finally {
         if (!cancelled) setValidating(false);
@@ -86,10 +85,10 @@ export function SetPasswordClient() {
   const onSubmit = handleSubmit(async (values) => {
     try {
       await authService.acceptInvite(token, values.password);
-      appToast.success("Password set successfully. Please log in.");
+      appToast.success(MESSAGES.auth.passwordSetSuccess);
       router.push(ROUTES.LOGIN_MANAGER);
     } catch (e) {
-      appToast.error(getApiErrorMessage(e, "Failed to set password"));
+      appToast.error(getApiErrorMessage(e, MESSAGES.auth.setPasswordFailed));
     }
   });
 

@@ -46,7 +46,7 @@ export class FiltersService {
   }) {
     const options = parseCsv(params.optionsCsv);
     if (!options.length) {
-      throw new BadRequestException('At least 1 sub-filter is required');
+      throw new BadRequestException(MESSAGES.FILTERS.OPTIONS_REQUIRED);
     }
 
     let category: FilterCategory | null = null;
@@ -59,7 +59,7 @@ export class FiltersService {
     } else {
       const name = (params.categoryName ?? '').trim();
       if (!name) {
-        throw new BadRequestException('categoryName is required when categoryId is not provided');
+        throw new BadRequestException(MESSAGES.FILTERS.CATEGORY_NAME_REQUIRED);
       }
       // Reuse by name if exists.
       category =
@@ -104,29 +104,29 @@ export class FiltersService {
       );
     }
 
-    return { message: 'Filter saved' };
+    return { message: MESSAGES.FILTERS.SAVED };
   }
 
   async quickAddLevel(nameRaw: string) {
     const name = nameRaw.trim();
     if (!name) throw new BadRequestException(MESSAGES.COMMON.BAD_REQUEST);
     const existing = await this.levelRepo.findOne({ where: { name, deletedAt: IsNull() }, select: { id: true } });
-    if (existing) return { message: 'Level already exists' };
+    if (existing) return { message: MESSAGES.FILTERS.LEVEL_EXISTS };
     const max = await this.levelRepo.find({ where: { deletedAt: IsNull() }, order: { sortOrder: 'DESC' }, take: 1, select: { sortOrder: true } });
     const sortOrder = (max[0]?.sortOrder ?? 0) + 1;
     await this.levelRepo.save(this.levelRepo.create({ name, code: slugCode(name) || `level_${sortOrder}`, sortOrder }));
-    return { message: 'Level added' };
+    return { message: MESSAGES.FILTERS.LEVEL_ADDED };
   }
 
   async quickAddTrade(nameRaw: string) {
     const name = nameRaw.trim();
     if (!name) throw new BadRequestException(MESSAGES.COMMON.BAD_REQUEST);
     const existing = await this.tradeRepo.findOne({ where: { name, deletedAt: IsNull() }, select: { id: true } });
-    if (existing) return { message: 'Trade already exists' };
+    if (existing) return { message: MESSAGES.FILTERS.TRADE_EXISTS };
     const max = await this.tradeRepo.find({ where: { deletedAt: IsNull() }, order: { sortOrder: 'DESC' }, take: 1, select: { sortOrder: true } });
     const sortOrder = (max[0]?.sortOrder ?? 0) + 1;
     await this.tradeRepo.save(this.tradeRepo.create({ name, code: slugCode(name) || `trade_${sortOrder}`, sortOrder }));
-    return { message: 'Trade added' };
+    return { message: MESSAGES.FILTERS.TRADE_ADDED };
   }
 
   async deleteCategory(id: string) {
@@ -142,7 +142,7 @@ export class FiltersService {
       { deletedAt: new Date() },
     );
     await this.filterCategoryRepo.update({ id, deletedAt: IsNull() }, { deletedAt: new Date() });
-    return { message: 'Filter deleted' };
+    return { message: MESSAGES.FILTERS.DELETED };
   }
 
   async deleteOption(id: string) {
@@ -152,7 +152,7 @@ export class FiltersService {
     });
     if (!opt) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
     await this.filterOptionRepo.update({ id, deletedAt: IsNull() }, { deletedAt: new Date() });
-    return { message: 'Sub-filter deleted' };
+    return { message: MESSAGES.FILTERS.OPTION_DELETED };
   }
 }
 

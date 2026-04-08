@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MESSAGES } from "@/constants/messages";
-import type { FilterCategoryApi, FilterOptionApi, LookupItem } from "@/services/lookupsApi.service";
+import type { FilterCategoryApi, FilterOptionApi } from "@/services/lookupsApi.service";
 import { lookupsApi } from "@/services/lookupsApi.service";
 import { appToast } from "@/utils/toast";
 import { filtersApi } from "@/services/filtersApi.service";
@@ -18,8 +18,6 @@ export function useManageFiltersController() {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<FilterCategoryApi[]>([]);
   const [options, setOptions] = useState<FilterOptionApi[]>([]);
-  const [levels, setLevels] = useState<LookupItem[]>([]);
-  const [trades, setTrades] = useState<LookupItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [quickSaving, setQuickSaving] = useState<{ level: boolean; trade: boolean }>({
     level: false,
@@ -35,16 +33,12 @@ export function useManageFiltersController() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [cats, opts, lv, tr] = await Promise.all([
+      const [cats, opts] = await Promise.all([
         lookupsApi.getFilterCategories(),
         lookupsApi.getFilterOptions(),
-        lookupsApi.getLevels(),
-        lookupsApi.getTrades(),
       ]);
       setCategories(cats);
       setOptions(opts);
-      setLevels(lv);
-      setTrades(tr);
     } catch {
       appToast.error(MESSAGES.common.somethingWrong);
     } finally {
@@ -76,8 +70,6 @@ export function useManageFiltersController() {
     loading,
     saving: saving || quickSaving.level || quickSaving.trade,
     filters,
-    levels,
-    trades,
     reload: load,
     categories,
     selectedCategoryId,
@@ -103,7 +95,7 @@ export function useManageFiltersController() {
           categoryName: selectedCategoryId.trim() ? undefined : newCategoryName.trim() || undefined,
           optionsCsv: optionsCsv,
         });
-        appToast.success("Filter saved");
+        appToast.success(MESSAGES.filter.saved);
         setOptionsCsv("");
         setNewCategoryName("");
         setSelectedCategoryId("");
@@ -118,7 +110,7 @@ export function useManageFiltersController() {
       try {
         setSaving(true);
         await filtersApi.deleteCategory(id);
-        appToast.success("Filter deleted");
+        appToast.success(MESSAGES.filter.categoryDeleted);
         await load();
       } catch (e) {
         appToast.error(getApiErrorMessage(e, MESSAGES.common.saveFailed));
@@ -130,7 +122,7 @@ export function useManageFiltersController() {
       try {
         setSaving(true);
         await filtersApi.deleteOption(id);
-        appToast.success("Sub-filter removed");
+        appToast.success(MESSAGES.filter.subFilterRemoved);
         await load();
       } catch (e) {
         appToast.error(getApiErrorMessage(e, MESSAGES.common.saveFailed));
@@ -142,7 +134,7 @@ export function useManageFiltersController() {
       try {
         setQuickSaving((s) => ({ ...s, level: true }));
         await filtersApi.quickAddLevel(quickLevel);
-        appToast.success("Level added");
+        appToast.success(MESSAGES.filter.levelAdded);
         setQuickLevel("");
         await load();
       } catch (e) {
@@ -155,7 +147,7 @@ export function useManageFiltersController() {
       try {
         setQuickSaving((s) => ({ ...s, trade: true }));
         await filtersApi.quickAddTrade(quickTrade);
-        appToast.success("Trade added");
+        appToast.success(MESSAGES.filter.tradeAdded);
         setQuickTrade("");
         await load();
       } catch (e) {

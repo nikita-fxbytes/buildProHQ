@@ -2,6 +2,7 @@ import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { LookupsService } from './lookups.service';
+import { MESSAGES } from '../../infrastructure/common/constants/messages';
 import { isUUID } from 'class-validator';
 
 @ApiTags('lookups')
@@ -61,7 +62,7 @@ export class LookupsController {
       return this.lookupsService.getFilterOptions();
     }
     if (!isUUID(categoryId, 4)) {
-      throw new BadRequestException('categoryId must be a valid UUID');
+      throw new BadRequestException(MESSAGES.LOOKUPS.CATEGORY_ID_INVALID);
     }
     return this.lookupsService.getFilterOptions(categoryId);
   }

@@ -1,6 +1,5 @@
 "use client";
 
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
@@ -9,20 +8,18 @@ import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
 import { AppIcon } from "@/components/common/AppIcon";
 import { ManageFiltersListSkeleton } from "@/components/common/skeletons/ManageFiltersListSkeleton";
-import type { LookupItem } from "@/services/lookupsApi.service";
+import { MESSAGES } from "@/constants/messages";
 import { AppButton } from "@/components/common/AppButton";
 import { FormFieldLabel } from "@/components/common/FormFieldLabel";
 import { FormTextField } from "@/components/common/FormTextField";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ManageFilterCard } from "@/features/filters/hooks/useManageFiltersController";
 
 export type ManageFiltersViewProps = {
   loading: boolean;
   saving: boolean;
   filters: ManageFilterCard[];
-  levels: LookupItem[];
-  trades: LookupItem[];
   categories: Array<{ id: string; name: string }>;
   selectedCategoryId: string;
   setSelectedCategoryId: (id: string) => void;
@@ -48,8 +45,6 @@ export function ManageFiltersView({
   loading,
   saving,
   filters,
-  levels,
-  trades,
   categories,
   selectedCategoryId,
   setSelectedCategoryId,
@@ -69,11 +64,10 @@ export function ManageFiltersView({
   onQuickAddTrade,
 }: ManageFiltersViewProps) {
   const [confirm, setConfirm] = useState<null | { id: string; name: string }>(null);
-  const deletingCategoryName = confirm?.name ?? "";
-  const deleteMessage = useMemo(() => {
-    if (!deletingCategoryName) return "";
-    return `Delete filter category "${deletingCategoryName}" and all its sub-filters? This cannot be undone.`;
-  }, [deletingCategoryName]);
+  const deleteMessage =
+    confirm?.name != null && confirm.name !== ""
+      ? MESSAGES.filter.deleteConfirmMessageTemplate.replace("{{name}}", confirm.name)
+      : "";
 
   return (
     <Stack spacing={2}>
@@ -289,9 +283,9 @@ export function ManageFiltersView({
 
       <ConfirmModal
         open={Boolean(confirm)}
-        title="Delete Filter"
+        title={MESSAGES.filter.deleteConfirmTitle}
         message={deleteMessage}
-        confirmLabel="Yes, Delete"
+        confirmLabel={MESSAGES.filter.deleteConfirmLabel}
         confirmColor="error"
         onClose={() => setConfirm(null)}
         onConfirm={() => {
