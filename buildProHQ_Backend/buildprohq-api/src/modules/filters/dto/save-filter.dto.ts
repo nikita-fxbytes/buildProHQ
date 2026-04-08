@@ -1,33 +1,46 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class SaveFilterDto {
   @ApiProperty({
     required: false,
-    description: 'Existing filter category id. If provided, new options are added to this category.',
+    description: 'Existing filter category id. Sub-filters are appended under this category.',
   })
   @IsOptional()
   @IsUUID('4')
-  categoryId?: string;
+  filterCategoryId?: string;
 
   @ApiProperty({
     required: false,
-    description: 'New filter category name. Used when creating a new category.',
+    description: 'Display name for a new category, or to resolve an existing one by name.',
     example: 'Zone',
   })
   @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(100)
-  categoryName?: string;
+  filterCategoryName?: string;
 
   @ApiProperty({
-    description: 'Comma separated list of option names',
-    example: 'North, South, East, West',
+    required: false,
+    type: [String],
+    description:
+      'Labels for sub-filters to create under the category. Omit or [] to save the category only.',
+    example: ['North', 'South', 'East', 'West'],
   })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(2000)
-  optionsCsv!: string;
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  @MinLength(1, { each: true })
+  @MaxLength(100, { each: true })
+  subFilterNames?: string[];
 }
-

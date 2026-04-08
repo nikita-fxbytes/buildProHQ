@@ -21,16 +21,16 @@ export type ManageFiltersViewProps = {
   saving: boolean;
   filters: ManageFilterCard[];
   categories: Array<{ id: string; name: string }>;
-  selectedCategoryId: string;
-  setSelectedCategoryId: (id: string) => void;
-  newCategoryName: string;
-  setNewCategoryName: (v: string) => void;
-  optionsCsv: string;
-  setOptionsCsv: (v: string) => void;
-  quickLevel: string;
-  setQuickLevel: (v: string) => void;
-  quickTrade: string;
-  setQuickTrade: (v: string) => void;
+  selectedFilterCategoryId: string;
+  setSelectedFilterCategoryId: (id: string) => void;
+  filterCategoryNameInput: string;
+  setFilterCategoryNameInput: (v: string) => void;
+  subFiltersCommaSeparatedInput: string;
+  setSubFiltersCommaSeparatedInput: (v: string) => void;
+  quickLevelNameInput: string;
+  setQuickLevelNameInput: (v: string) => void;
+  quickTradeNameInput: string;
+  setQuickTradeNameInput: (v: string) => void;
   setSelectedForAddSubFilter: (categoryId: string) => void;
   onSaveFilter: () => void;
   onDeleteCategory: (id: string) => void;
@@ -46,16 +46,16 @@ export function ManageFiltersView({
   saving,
   filters,
   categories,
-  selectedCategoryId,
-  setSelectedCategoryId,
-  newCategoryName,
-  setNewCategoryName,
-  optionsCsv,
-  setOptionsCsv,
-  quickLevel,
-  setQuickLevel,
-  quickTrade,
-  setQuickTrade,
+  selectedFilterCategoryId,
+  setSelectedFilterCategoryId,
+  filterCategoryNameInput,
+  setFilterCategoryNameInput,
+  subFiltersCommaSeparatedInput,
+  setSubFiltersCommaSeparatedInput,
+  quickLevelNameInput,
+  setQuickLevelNameInput,
+  quickTradeNameInput,
+  setQuickTradeNameInput,
   setSelectedForAddSubFilter,
   onSaveFilter,
   onDeleteCategory,
@@ -83,19 +83,19 @@ export function ManageFiltersView({
               <Box sx={{ fontSize: 13, color: "#7B89A8", padding: "10px 2px" }}>No filter data.</Box>
             ) : (
               filters.map((filter) => (
-                <Box key={filter.id} className="filter-manage-card" sx={filterCardSx}>
+                <Box key={filter.filterCategoryId} className="filter-manage-card" sx={filterCardSx}>
                   <Box className="filter-manage-head" sx={filterHeadSx}>
                     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 1 }}>
                       <Typography component="h3" sx={filterHeadTitleSx}>
                         <AppIcon name="folder" size={16} sx={{ mr: 0.5 }} />
-                        {filter.name}
+                        {filter.filterCategoryName}
                       </Typography>
                       <Box sx={{ display: "flex", gap: 1 }}>
                         <AppButton
                           variant="contained"
                           size="small"
                           disabled={saving}
-                          onClick={() => setSelectedForAddSubFilter(filter.id)}
+                          onClick={() => setSelectedForAddSubFilter(filter.filterCategoryId)}
                           sx={{
                             padding: "6px 14px",
                             fontSize: "13px",
@@ -109,7 +109,9 @@ export function ManageFiltersView({
                           variant="contained"
                           size="small"
                           disabled={saving}
-                          onClick={() => setConfirm({ id: filter.id, name: filter.name })}
+                          onClick={() =>
+                            setConfirm({ id: filter.filterCategoryId, name: filter.filterCategoryName })
+                          }
                           sx={{
                             padding: "6px 14px",
                             fontSize: "13px",
@@ -125,17 +127,17 @@ export function ManageFiltersView({
                   </Box>
                   <Box className="filter-item-row" sx={filterRowSx}>
                     <Box className="filter-sub-chips" sx={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
-                      {filter.subs.length ? (
-                        filter.subs.map((sub) => (
+                      {filter.subFilters.length ? (
+                        filter.subFilters.map((sub) => (
                           <Chip
-                            key={sub.id}
+                            key={sub.filterOptionId}
                             label={
                               <Box sx={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                <span>{sub.name}</span>
+                                <span>{sub.label}</span>
                                 <span style={{ fontSize: 10, fontWeight: 700, marginLeft: 2 }}>✕</span>
                               </Box>
                             }
-                            onClick={() => onDeleteOption(sub.id)}
+                            onClick={() => onDeleteOption(sub.filterOptionId)}
                             disabled={saving}
                             size="small"
                             sx={{
@@ -168,25 +170,25 @@ export function ManageFiltersView({
           <Box sx={formCardSx}>
             <Stack spacing={1.5}>
               <Box>
-                <FormFieldLabel>Filter Category Name</FormFieldLabel>
+                <FormFieldLabel htmlFor="filterCategoryName">Filter category name</FormFieldLabel>
                 <Autocomplete<CategoryOpt, false, false, true>
                   freeSolo
                   options={categories}
-                  value={categories.find((c) => c.id === selectedCategoryId) ?? null}
+                  value={categories.find((c) => c.id === selectedFilterCategoryId) ?? null}
                   onChange={(_, opt) => {
                     if (typeof opt === "string") {
-                      setSelectedCategoryId("");
-                      setNewCategoryName(opt);
+                      setSelectedFilterCategoryId("");
+                      setFilterCategoryNameInput(opt);
                       return;
                     }
-                    setSelectedCategoryId(opt?.id ?? "");
-                    setNewCategoryName(opt?.name ?? "");
+                    setSelectedFilterCategoryId(opt?.id ?? "");
+                    setFilterCategoryNameInput(opt?.name ?? "");
                   }}
-                  inputValue={newCategoryName}
+                  inputValue={filterCategoryNameInput}
                   onInputChange={(_, nextValue) => {
-                    setNewCategoryName(nextValue);
+                    setFilterCategoryNameInput(nextValue);
                     // If user is typing, we treat it as "new" until they pick an option.
-                    setSelectedCategoryId("");
+                    setSelectedFilterCategoryId("");
                   }}
                   getOptionLabel={(o) => (typeof o === "string" ? o : o.name)}
                   isOptionEqualToValue={(a, b) => a.id === b.id}
@@ -194,8 +196,10 @@ export function ManageFiltersView({
                   renderInput={(params) => (
                     <TextField
                       {...params}
+                      name="filterCategoryName"
                       placeholder="e.g. Zone, Floor, Area..."
                       size="small"
+                      inputProps={{ ...params.inputProps, id: "filterCategoryName" }}
                     />
                   )}
                 />
@@ -205,10 +209,12 @@ export function ManageFiltersView({
               </Box>
 
               <Box>
-                <FormFieldLabel>Sub-filters (comma separated)</FormFieldLabel>
+                <FormFieldLabel htmlFor="subFiltersCommaSeparated">Sub-filters (comma-separated)</FormFieldLabel>
                 <FormTextField
-                  value={optionsCsv}
-                  onChange={(e) => setOptionsCsv(e.target.value)}
+                  id="subFiltersCommaSeparated"
+                  name="subFiltersCommaSeparated"
+                  value={subFiltersCommaSeparatedInput}
+                  onChange={(e) => setSubFiltersCommaSeparatedInput(e.target.value)}
                   placeholder="e.g. North, South, East, West"
                   disabled={saving}
                 />
@@ -218,7 +224,11 @@ export function ManageFiltersView({
                 <AppButton
                   variant="contained"
                   onClick={onSaveFilter}
-                  disabled={saving || loading}
+                  disabled={
+                    saving ||
+                    loading ||
+                    (!selectedCategoryId.trim() && !filterCategoryNameInput.trim())
+                  }
                   sx={{ background: "#F5A623", "&:hover": { background: "#E09010" } }}
                 >
                   Save Filter
@@ -233,10 +243,14 @@ export function ManageFiltersView({
             </Box>
             <Box sx={formCardSx}>
               <Stack spacing={1.5}>
-                <Box sx={{ display: "flex", gap: 1 }}>
+                <Box sx={{ display: "flex", gap: 1, flexDirection: "column" }}>
+                  <FormFieldLabel htmlFor="quickLevelName">Quick add level</FormFieldLabel>
+                  <Box sx={{ display: "flex", gap: 1 }}>
                   <FormTextField
-                    value={quickLevel}
-                    onChange={(e) => setQuickLevel(e.target.value)}
+                    id="quickLevelName"
+                    name="quickLevelName"
+                    value={quickLevelNameInput}
+                    onChange={(e) => setQuickLevelNameInput(e.target.value)}
                     placeholder="New Level (e.g. L11)"
                     disabled={saving}
                     sx={{ flex: 1 }}
@@ -244,7 +258,7 @@ export function ManageFiltersView({
                   <AppButton
                     variant="contained"
                     onClick={onQuickAddLevel}
-                    disabled={saving || !quickLevel.trim()}
+                    disabled={saving || !quickLevelNameInput.trim()}
                     sx={{
                       width: 120,
                       background: "#F5A623",
@@ -253,11 +267,16 @@ export function ManageFiltersView({
                   >
                     + Add Level
                   </AppButton>
+                  </Box>
                 </Box>
-                <Box sx={{ display: "flex", gap: 1 }}>
+                <Box sx={{ display: "flex", gap: 1, flexDirection: "column" }}>
+                  <FormFieldLabel htmlFor="quickTradeName">Quick add trade</FormFieldLabel>
+                  <Box sx={{ display: "flex", gap: 1 }}>
                   <FormTextField
-                    value={quickTrade}
-                    onChange={(e) => setQuickTrade(e.target.value)}
+                    id="quickTradeName"
+                    name="quickTradeName"
+                    value={quickTradeNameInput}
+                    onChange={(e) => setQuickTradeNameInput(e.target.value)}
                     placeholder="New Trade (e.g. Tiler)"
                     disabled={saving}
                     sx={{ flex: 1 }}
@@ -265,7 +284,7 @@ export function ManageFiltersView({
                   <AppButton
                     variant="contained"
                     onClick={onQuickAddTrade}
-                    disabled={saving || !quickTrade.trim()}
+                    disabled={saving || !quickTradeNameInput.trim()}
                     sx={{
                       width: 120,
                       background: "#3BB0D8",
@@ -274,6 +293,7 @@ export function ManageFiltersView({
                   >
                     + Add Trade
                   </AppButton>
+                  </Box>
                 </Box>
               </Stack>
             </Box>
@@ -346,16 +366,4 @@ const filterRowSx = {
   padding: "12px 20px",
   borderBottom: "1px solid #E4E8F0",
   gap: "10px",
-};
-
-const filterChipSx = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "4px",
-  padding: "2px 10px",
-  borderRadius: "20px",
-  fontSize: "11px",
-  fontWeight: 600,
-  background: "#FFF3D4",
-  color: "#E09010",
 };

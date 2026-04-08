@@ -56,14 +56,19 @@ export class LookupsController {
   }
 
   @Get('filter-options')
-  @ApiQuery({ name: 'categoryId', required: false, type: String })
-  getFilterOptions(@Query('categoryId') categoryId?: string) {
-    if (!categoryId) {
+  @ApiQuery({
+    name: 'filterCategoryId',
+    required: false,
+    type: String,
+    description: 'When set, returns options for this filter category only.',
+  })
+  getFilterOptions(@Query('filterCategoryId') filterCategoryId?: string) {
+    if (!filterCategoryId) {
       return this.lookupsService.getFilterOptions();
     }
-    if (!isUUID(categoryId, 4)) {
-      throw new BadRequestException(MESSAGES.LOOKUPS.CATEGORY_ID_INVALID);
+    if (!isUUID(filterCategoryId, 4)) {
+      throw new BadRequestException(MESSAGES.LOOKUPS.FILTER_CATEGORY_ID_INVALID);
     }
-    return this.lookupsService.getFilterOptions(categoryId);
+    return this.lookupsService.getFilterOptions(filterCategoryId);
   }
 }

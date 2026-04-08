@@ -7,17 +7,23 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
+export type SaveFilterCategoryPayload = {
+  filterCategoryId?: string;
+  filterCategoryName?: string;
+  subFilterNames?: string[];
+};
+
 export const filtersApi = {
-  async saveFilter(body: { categoryId?: string; categoryName?: string; optionsCsv: string }): Promise<void> {
+  async saveFilter(body: SaveFilterCategoryPayload): Promise<void> {
     await apiClient.post<ApiEnvelope<{ message: string }>>("/v1/filters", body);
   },
 
-  async quickAddLevel(name: string): Promise<void> {
-    await apiClient.post<ApiEnvelope<{ message: string }>>("/v1/filters/levels", { name });
+  async quickAddLevel(levelName: string): Promise<void> {
+    await apiClient.post<ApiEnvelope<{ message: string }>>("/v1/filters/levels", { levelName });
   },
 
-  async quickAddTrade(name: string): Promise<void> {
-    await apiClient.post<ApiEnvelope<{ message: string }>>("/v1/filters/trades", { name });
+  async quickAddTrade(tradeName: string): Promise<void> {
+    await apiClient.post<ApiEnvelope<{ message: string }>>("/v1/filters/trades", { tradeName });
   },
 
   async deleteCategory(id: string): Promise<void> {
@@ -28,4 +34,3 @@ export const filtersApi = {
     await apiClient.delete<ApiEnvelope<{ message: string }>>(`/v1/filters/options/${encodeURIComponent(id)}`);
   },
 };
-

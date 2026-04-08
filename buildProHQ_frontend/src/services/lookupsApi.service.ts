@@ -77,9 +77,9 @@ export const lookupsApi = {
     );
     return data.data;
   },
-  async getFilterOptions(categoryId?: string): Promise<FilterOptionApi[]> {
-    const url = categoryId
-      ? `/v1/lookups/filter-options?categoryId=${encodeURIComponent(categoryId)}`
+  async getFilterOptions(filterCategoryId?: string): Promise<FilterOptionApi[]> {
+    const url = filterCategoryId
+      ? `/v1/lookups/filter-options?filterCategoryId=${encodeURIComponent(filterCategoryId)}`
       : "/v1/lookups/filter-options";
     const { data } = await apiClient.get<ApiEnvelope<FilterOptionApi[]>>(url);
     return data.data;

@@ -13,7 +13,8 @@ import { RolesGuard } from '../../infrastructure/common/guards/roles.guard';
 import { Roles } from '../../infrastructure/common/decorators/roles.decorator';
 import { FiltersService } from './filters.service';
 import { SaveFilterDto } from './dto/save-filter.dto';
-import { QuickAddDto } from './dto/quick-add.dto';
+import { QuickAddLevelDto } from './dto/quick-add-level.dto';
+import { QuickAddTradeDto } from './dto/quick-add-trade.dto';
 
 @ApiTags('filters')
 @ApiBearerAuth()
@@ -33,17 +34,17 @@ export class FiltersController {
   @Post('levels')
   @Roles('manager')
   @ApiOperation({ summary: 'Quick add a level (manager)' })
-  @ApiBody({ type: QuickAddDto })
-  addLevel(@Body() dto: QuickAddDto) {
-    return this.filtersService.quickAddLevel(dto.name);
+  @ApiBody({ type: QuickAddLevelDto })
+  addLevel(@Body() dto: QuickAddLevelDto) {
+    return this.filtersService.quickAddLevel(dto.levelName);
   }
 
   @Post('trades')
   @Roles('manager')
   @ApiOperation({ summary: 'Quick add a trade (manager)' })
-  @ApiBody({ type: QuickAddDto })
-  addTrade(@Body() dto: QuickAddDto) {
-    return this.filtersService.quickAddTrade(dto.name);
+  @ApiBody({ type: QuickAddTradeDto })
+  addTrade(@Body() dto: QuickAddTradeDto) {
+    return this.filtersService.quickAddTrade(dto.tradeName);
   }
 
   @Delete('categories/:id')

@@ -9,9 +9,9 @@ import { filtersApi } from "@/services/filtersApi.service";
 import { getApiErrorMessage } from "@/services/apiError";
 
 export type ManageFilterCard = {
-  id: string;
-  name: string;
-  subs: Array<{ id: string; name: string }>;
+  filterCategoryId: string;
+  filterCategoryName: string;
+  subFilters: Array<{ filterOptionId: string; label: string }>;
 };
 
 export function useManageFiltersController() {
@@ -24,11 +24,11 @@ export function useManageFiltersController() {
     trade: false,
   });
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [optionsCsv, setOptionsCsv] = useState("");
-  const [quickLevel, setQuickLevel] = useState("");
-  const [quickTrade, setQuickTrade] = useState("");
+  const [selectedFilterCategoryId, setSelectedFilterCategoryId] = useState<string>("");
+  const [filterCategoryNameInput, setFilterCategoryNameInput] = useState("");
+  const [subFiltersCommaSeparatedInput, setSubFiltersCommaSeparatedInput] = useState("");
+  const [quickLevelNameInput, setQuickLevelNameInput] = useState("");
+  const [quickTradeNameInput, setQuickTradeNameInput] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,18 +51,18 @@ export function useManageFiltersController() {
   }, [load]);
 
   const filters: ManageFilterCard[] = useMemo(() => {
-    const byCat = new Map<string, Array<{ id: string; name: string }>>();
+    const byCat = new Map<string, Array<{ filterOptionId: string; label: string }>>();
     for (const c of categories) {
       byCat.set(c.id, []);
     }
     for (const o of options) {
       const list = byCat.get(o.filterCategoryId);
-      if (list) list.push({ id: o.id, name: o.name });
+      if (list) list.push({ filterOptionId: o.id, label: o.name });
     }
     return categories.map((c) => ({
-      id: c.id,
-      name: c.name,
-      subs: byCat.get(c.id) ?? [],
+      filterCategoryId: c.id,
+      filterCategoryName: c.name,
+      subFilters: byCat.get(c.id) ?? [],
     }));
   }, [categories, options]);
 
@@ -72,33 +72,38 @@ export function useManageFiltersController() {
     filters,
     reload: load,
     categories,
-    selectedCategoryId,
-    setSelectedCategoryId,
-    newCategoryName,
-    setNewCategoryName,
-    optionsCsv,
-    setOptionsCsv,
-    quickLevel,
-    setQuickLevel,
-    quickTrade,
-    setQuickTrade,
+    selectedFilterCategoryId,
+    setSelectedFilterCategoryId,
+    subFiltersCommaSeparatedInput,
+    setSubFiltersCommaSeparatedInput,
+    filterCategoryNameInput,
+    setFilterCategoryNameInput,
+    quickLevelNameInput,
+    setQuickLevelNameInput,
+    quickTradeNameInput,
+    setQuickTradeNameInput,
     setSelectedForAddSubFilter: (categoryId: string) => {
       const cat = categories.find((c) => c.id === categoryId);
-      setSelectedCategoryId(categoryId);
-      setNewCategoryName(cat?.name ?? "");
+      setSelectedFilterCategoryId(categoryId);
+      setFilterCategoryNameInput(cat?.name ?? "");
     },
     onSaveFilter: async () => {
       try {
         setSaving(true);
+        const subFilterNames = subFiltersCommaSeparatedInput
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const categoryId = selectedFilterCategoryId.trim();
         await filtersApi.saveFilter({
-          categoryId: selectedCategoryId.trim() || undefined,
-          categoryName: selectedCategoryId.trim() ? undefined : newCategoryName.trim() || undefined,
-          optionsCsv: optionsCsv,
+          filterCategoryId: categoryId || undefined,
+          filterCategoryName: categoryId ? undefined : filterCategoryNameInput.trim() || undefined,
+          subFilterNames: subFilterNames.length > 0 ? subFilterNames : undefined,
         });
         appToast.success(MESSAGES.filter.saved);
-        setOptionsCsv("");
-        setNewCategoryName("");
-        setSelectedCategoryId("");
+        setSubFiltersCommaSeparatedInput("");
+        setFilterCategoryNameInput("");
+        setSelectedFilterCategoryId("");
         await load();
       } catch (e) {
         appToast.error(getApiErrorMessage(e, MESSAGES.common.saveFailed));
@@ -133,9 +138,9 @@ export function useManageFiltersController() {
     onQuickAddLevel: async () => {
       try {
         setQuickSaving((s) => ({ ...s, level: true }));
-        await filtersApi.quickAddLevel(quickLevel);
+        await filtersApi.quickAddLevel(quickLevelNameInput);
         appToast.success(MESSAGES.filter.levelAdded);
-        setQuickLevel("");
+        setQuickLevelNameInput("");
         await load();
       } catch (e) {
         appToast.error(getApiErrorMessage(e, MESSAGES.common.saveFailed));
@@ -146,9 +151,9 @@ export function useManageFiltersController() {
     onQuickAddTrade: async () => {
       try {
         setQuickSaving((s) => ({ ...s, trade: true }));
-        await filtersApi.quickAddTrade(quickTrade);
+        await filtersApi.quickAddTrade(quickTradeNameInput);
         appToast.success(MESSAGES.filter.tradeAdded);
-        setQuickTrade("");
+        setQuickTradeNameInput("");
         await load();
       } catch (e) {
         appToast.error(getApiErrorMessage(e, MESSAGES.common.saveFailed));

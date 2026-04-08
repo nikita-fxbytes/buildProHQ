@@ -64,7 +64,10 @@ export const MESSAGES = {
     EMAIL_EXISTS: 'Email already exists',
   },
   FILTERS: {
-    OPTIONS_REQUIRED: 'At least 1 sub-filter is required',
+    CATEGORY_OR_SUBS:
+      'Provide filterCategoryId or filterCategoryName. subFilterNames is optional.',
+    CATEGORY_NAME_OR_ID_FOR_OPTIONS:
+      'Provide filterCategoryId or filterCategoryName when sending subFilterNames.',
     CATEGORY_NAME_REQUIRED:
       'A category name is required when no existing category is selected',
     SAVED: 'Filter saved',
@@ -82,7 +85,7 @@ export const MESSAGES = {
     PASSWORD_SET_SUCCESS: 'Password set successfully',
   },
   LOOKUPS: {
-    CATEGORY_ID_INVALID: 'categoryId must be a valid UUID',
+    FILTER_CATEGORY_ID_INVALID: 'filterCategoryId must be a valid UUID',
   },
   NOTIFICATIONS: {
     RETRIEVED: 'Notifications retrieved successfully',

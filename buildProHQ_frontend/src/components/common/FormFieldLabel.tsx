@@ -4,12 +4,15 @@ import type { SxProps, Theme } from "@mui/material/styles";
 type FormFieldLabelProps = {
   children: React.ReactNode;
   required?: boolean;
+  htmlFor?: string;
   sx?: SxProps<Theme>;
 };
 
-export function FormFieldLabel({ children, required, sx }: FormFieldLabelProps) {
+export function FormFieldLabel({ children, required, htmlFor, sx }: FormFieldLabelProps) {
   return (
     <Typography
+      component={htmlFor ? "label" : "p"}
+      htmlFor={htmlFor}
       sx={{
         fontSize: 12,
         fontWeight: 700,

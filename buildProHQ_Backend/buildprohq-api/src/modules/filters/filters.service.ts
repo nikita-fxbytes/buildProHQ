@@ -18,9 +18,8 @@ function slugCode(input: string): string {
     .slice(0, 50);
 }
 
-function parseCsv(csv: string): string[] {
-  return csv
-    .split(',')
+function normalizeSubFilterNames(names: string[] | undefined): string[] {
+  return (names ?? [])
     .map((s) => s.trim())
     .filter(Boolean)
     .slice(0, 100);
@@ -40,43 +39,54 @@ export class FiltersService {
   ) {}
 
   async saveFilter(params: {
-    categoryId?: string;
-    categoryName?: string;
-    optionsCsv: string;
+    filterCategoryId?: string;
+    filterCategoryName?: string;
+    subFilterNames?: string[];
   }) {
-    const options = parseCsv(params.optionsCsv);
-    if (!options.length) {
-      throw new BadRequestException(MESSAGES.FILTERS.OPTIONS_REQUIRED);
+    const options = normalizeSubFilterNames(params.subFilterNames);
+    const hasId = Boolean((params.filterCategoryId ?? '').trim());
+    const nameTrim = (params.filterCategoryName ?? '').trim();
+    const hasName = Boolean(nameTrim);
+
+    if (!hasId && !hasName && !options.length) {
+      throw new BadRequestException(MESSAGES.FILTERS.CATEGORY_OR_SUBS);
+    }
+    if (!hasId && !hasName && options.length) {
+      throw new BadRequestException(MESSAGES.FILTERS.CATEGORY_NAME_OR_ID_FOR_OPTIONS);
     }
 
     let category: FilterCategory | null = null;
 
-    if (params.categoryId) {
+    if (hasId) {
+      const id = (params.filterCategoryId ?? '').trim();
       category = await this.filterCategoryRepo.findOne({
-        where: { id: params.categoryId, deletedAt: IsNull() },
+        where: { id, deletedAt: IsNull() },
       });
       if (!category) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
     } else {
-      const name = (params.categoryName ?? '').trim();
-      if (!name) {
+      if (!nameTrim) {
         throw new BadRequestException(MESSAGES.FILTERS.CATEGORY_NAME_REQUIRED);
       }
       // Reuse by name if exists.
       category =
         (await this.filterCategoryRepo.findOne({
-          where: { name, deletedAt: IsNull() },
+          where: { name: nameTrim, deletedAt: IsNull() },
         })) ?? null;
 
       if (!category) {
-        const codeBase = slugCode(name) || 'category';
+        const codeBase = slugCode(nameTrim) || 'category';
         category = await this.filterCategoryRepo.save(
           this.filterCategoryRepo.create({
-            name,
+            name: nameTrim,
             code: codeBase,
             isSystemCategory: false,
           }),
         );
       }
+    }
+
+    if (!options.length) {
+      return { message: MESSAGES.FILTERS.SAVED };
     }
 
     // Determine sort order start for category.

@@ -100,12 +100,12 @@ export class LookupsService {
     });
   }
 
-  getFilterOptions(categoryId?: string) {
-    if (categoryId) {
+  getFilterOptions(filterCategoryId?: string) {
+    if (filterCategoryId) {
       return this.filterOptionRepository.find({
         where: {
           deletedAt: IsNull(),
-          filterCategoryId: categoryId,
+          filterCategoryId,
         },
         order: { sortOrder: 'ASC', name: 'ASC' },
         select: {
