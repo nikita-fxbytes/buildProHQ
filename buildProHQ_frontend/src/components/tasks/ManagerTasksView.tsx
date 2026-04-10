@@ -11,8 +11,8 @@ import { DaysBadge } from "@/components/common/badges/DaysBadge";
 import { InitialsBadge } from "@/components/common/badges/InitialsBadge";
 import { PriorityBadge } from "@/components/common/badges/PriorityBadge";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
-import { FilterChipGroup } from "@/components/common/filters/FilterChipGroup";
 import { FilterPanel } from "@/components/common/filters/FilterPanel";
+import { FilterMultiSelect } from "@/components/common/filters/FilterMultiSelect";
 import { AppTableCell } from "@/components/common/table/AppTableCell";
 import { AppTableEmptyState } from "@/components/common/table/AppTableEmptyState";
 import { AppTableHeader } from "@/components/common/table/AppTableHeader";
@@ -27,20 +27,29 @@ import { StatCard } from "@/components/common/StatCard";
 import { htmlToPlainText } from "@/utils/richText";
 
 type Props = {
+  addTaskHref?: string;
+  showProjectColumn?: boolean;
   loading: boolean;
   search: string;
   setSearch: (value: string) => void;
   showFilters: boolean;
   setShowFilters: (value: boolean) => void;
+  projectOptions?: Array<string | { value: string; label: string }>;
   tradeOptions: Array<string | { value: string; label: string }>;
   levelOptions: Array<string | { value: string; label: string }>;
   userOptions: Array<string | { value: string; label: string }>;
+  projectFilters?: string[];
   tradeFilters: string[];
   levelFilters: string[];
   userFilters: string[];
+  setProjectFilters?: (value: string) => void;
+  setProjectFiltersDirect?: (value: string[]) => void;
   setTradeFilters: (value: string) => void;
+  setTradeFiltersDirect?: (value: string[]) => void;
   setLevelFilters: (value: string) => void;
+  setLevelFiltersDirect?: (value: string[]) => void;
   setUserFilters: (value: string) => void;
+  setUserFiltersDirect?: (value: string[]) => void;
   clearFilters: () => void;
   sortDays: "asc" | "desc" | null;
   setSortDays: (dir: "asc" | "desc") => void;
@@ -52,7 +61,16 @@ type Props = {
   clearSelected: () => void;
   openCompleteSelectedConfirm: () => void;
   openDeleteSelectedConfirm: () => void;
-  openDeleteSingleConfirm: (task: { id: string; level: string; trade: string; user: string; priority: string; desc: string; days: number }) => void;
+  openDeleteSingleConfirm: (task: {
+    id: string;
+    project: string | undefined;
+    level: string;
+    trade: string;
+    user: string;
+    priority: string;
+    desc: string;
+    days: number;
+  }) => void;
   confirmOpen: boolean;
   confirmTitle: string;
   confirmMessage: string;
@@ -60,7 +78,7 @@ type Props = {
   confirmColor: "error" | "success" | "primary";
   closeConfirm: () => void;
   onConfirm: () => void;
-  rows: Array<{ id: string; level: string; trade: string; user: string; priority: string; desc: string; days: number }>;
+  rows: Array<{ id: string; project: string | undefined; level: string; trade: string; user: string; priority: string; desc: string; days: number }>;
   page: number;
   pageSize: number;
   total: number;
@@ -76,6 +94,7 @@ type Props = {
 export function ManagerTasksView(props: Props) {
   type SortKey = NonNullable<Props["sortKey"]>;
   const filterCount =
+    (props.showProjectColumn ? props.projectFilters?.length ?? 0 : 0) +
     props.tradeFilters.length +
     props.levelFilters.length +
     props.userFilters.length +
@@ -105,6 +124,16 @@ export function ManagerTasksView(props: Props) {
             onChange={props.setSearch}
           />
         </Box>
+        {props.addTaskHref ? (
+          <AppButton
+            href={props.addTaskHref}
+            variant="contained"
+            size="small"
+            sx={{ mr: 1 }}
+          >
+            + Add Task
+          </AppButton>
+        ) : null}
         <AppButton
           type="button"
           variant="outlined"
@@ -134,26 +163,37 @@ export function ManagerTasksView(props: Props) {
 
       <FilterPanel open={props.showFilters}>
           <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: "16px" }}>
-            <FilterChipGroup
+            {props.showProjectColumn ? (
+              <FilterMultiSelect
+                label="Project"
+                options={props.projectOptions ?? []}
+                selected={props.projectFilters ?? []}
+                onChange={(next) => props.setProjectFiltersDirect?.(next)}
+                placeholder="Search projects..."
+              />
+            ) : null}
+            <FilterMultiSelect
               label="Trade"
               options={props.tradeOptions}
               selected={props.tradeFilters}
-              onToggle={props.setTradeFilters}
+              onChange={(next) => props.setTradeFiltersDirect?.(next)}
+              placeholder="Search trades..."
             />
-            <FilterChipGroup
+            <FilterMultiSelect
               label="Level"
               options={props.levelOptions}
               selected={props.levelFilters}
-              onToggle={props.setLevelFilters}
+              onChange={(next) => props.setLevelFiltersDirect?.(next)}
+              placeholder="Search levels..."
             />
-            <FilterChipGroup
+            <FilterMultiSelect
               label="User"
               options={props.userOptions}
               selected={props.userFilters}
-              onToggle={props.setUserFilters}
-              tone="blue"
+              onChange={(next) => props.setUserFiltersDirect?.(next)}
+              placeholder="Search users..."
             />
-            <Box>
+            <Box sx={{ gridColumn: props.showProjectColumn ? "span 4" : undefined }}>
               <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#7B89A8", textTransform: "uppercase", mb: 1 }}>
                 Sort by Days
               </Typography>
@@ -238,9 +278,14 @@ export function ManagerTasksView(props: Props) {
         ) : null}
 
         <AppTableHeader
-          columnsTemplate="36px 80px 130px 50px 80px 1fr 100px 36px"
+          columnsTemplate={
+            props.showProjectColumn
+              ? "36px 170px 80px 130px 50px 80px 1fr 100px 36px"
+              : "36px 80px 130px 50px 80px 1fr 100px 36px"
+          }
           columns={[
             { key: "select", label: "" },
+            ...(props.showProjectColumn ? [{ key: "project", label: "Project" } as const] : []),
             { key: "level", label: "Level", sortable: true, sortKey: "level" },
             { key: "trade", label: "Trade", sortable: true, sortKey: "trade" },
             { key: "user", label: "User", sortable: true, sortKey: "user" },
@@ -257,7 +302,11 @@ export function ManagerTasksView(props: Props) {
 
         {props.loading ? (
           <AppGridTableSkeleton
-            columnsTemplate="36px 80px 130px 50px 80px 1fr 100px 36px"
+            columnsTemplate={
+              props.showProjectColumn
+                ? "36px 170px 80px 130px 50px 80px 1fr 100px 36px"
+                : "36px 80px 130px 50px 80px 1fr 100px 36px"
+            }
             rowCount={8}
           />
         ) : props.rows.length === 0 ? (
@@ -266,7 +315,11 @@ export function ManagerTasksView(props: Props) {
           props.rows.map((task) => (
             <AppTableRow
               key={task.id}
-              columnsTemplate="36px 80px 130px 50px 80px 1fr 100px 36px"
+              columnsTemplate={
+                props.showProjectColumn
+                  ? "36px 170px 80px 130px 50px 80px 1fr 100px 36px"
+                  : "36px 80px 130px 50px 80px 1fr 100px 36px"
+              }
               className="task-row-item mgmt"
             >
               <Box>
@@ -277,6 +330,9 @@ export function ManagerTasksView(props: Props) {
                   sx={{ p: 0 }}
                 />
               </Box>
+              {props.showProjectColumn ? (
+                <AppTableCell variant="text">{task.project ?? "-"}</AppTableCell>
+              ) : null}
               <AppTableCell variant="level">{task.level}</AppTableCell>
               <AppTableCell variant="trade">{task.trade}</AppTableCell>
               <InitialsBadge initials={task.user} />

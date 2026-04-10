@@ -56,9 +56,11 @@ type IconName =
   | "actionItems"
   | "addActionItem"
   | "completedItems"
+  | "superAdmin"
   | "analytics"
   | "manageFilters"
   | "users"
+  | "projects"
   | "addUser"
   | "assignedTasks"
   | "myCompleted"
@@ -90,9 +92,11 @@ const ICON_MAP = {
   actionItems: AssignmentOutlinedIcon,
   addActionItem: AddCircleOutlineIcon,
   completedItems: TaskAltOutlinedIcon,
+  superAdmin: DashboardCustomizeIcon,
   analytics: GraphicEqIcon,
   manageFilters: TuneIcon,
   users: GroupOutlinedIcon,
+  projects: FolderOpenIcon,
   addUser: PersonAddAltOutlinedIcon,
   assignedTasks: BuildCircleOutlinedIcon,
   myCompleted: CheckCircleOutlineIcon,

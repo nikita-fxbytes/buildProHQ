@@ -14,17 +14,20 @@ import type { UploadItem } from "@/components/common/FormUploadField";
 import { revokeBlobUrls } from "@/utils/uploadItems";
 import { useTaskDescriptionTools } from "@/hooks/useTaskDescriptionTools";
 import { emitTasksChanged } from "@/utils/taskEvents";
+import { projectsApi, type MyProjectItem } from "@/services/projectsApi.service";
 
 export function useManagerAddTaskController() {
   const router = useRouter();
   const [lookups, setLookups] = useState<ManagerAddTaskLookups | null>(null);
   const [loadingLookups, setLoadingLookups] = useState(true);
+  const [projects, setProjects] = useState<MyProjectItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [photos, setPhotos] = useState<UploadItem[]>([]);
 
   const form = useForm<ManagerAddTaskFormValues>({
     resolver: zodResolver(managerAddTaskSchema),
     defaultValues: {
+      projectId: "",
       description: "",
       levelId: "",
       tradeId: "",
@@ -37,8 +40,12 @@ export function useManagerAddTaskController() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await managerAddTaskService.loadLookups();
+        const [data, myProjects] = await Promise.all([
+          managerAddTaskService.loadLookups(),
+          projectsApi.listMine(),
+        ]);
         setLookups(data);
+        setProjects(myProjects);
         form.setValue("priorityId", data.defaultPriorityId);
       } catch (e) {
         appToast.error(getApiErrorMessage(e, MESSAGES.task.loadFailed));
@@ -61,6 +68,7 @@ export function useManagerAddTaskController() {
         .map((p) => p.file as File);
       await managerAddTaskService.createTaskWithOptionalPhotos(
         {
+          projectId: values.projectId,
           statusId: lookups.openStatusId,
           levelId: values.levelId,
           tradeId: values.tradeId,
@@ -94,6 +102,7 @@ export function useManagerAddTaskController() {
     lookups,
     loadingLookups,
     submitting,
+    projects,
     levels: lookups?.levels ?? [],
     trades: lookups?.trades ?? [],
     priorities: lookups?.priorities ?? [],

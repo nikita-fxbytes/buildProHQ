@@ -13,6 +13,7 @@ import { MESSAGES } from '../../../infrastructure/common/constants/messages';
 import type { AuthUser } from '../../../infrastructure/common/interfaces/auth-user.interface';
 
 const PORTAL_ROLES: readonly AuthUser['role'][] = [
+  'super_admin',
   'manager',
   'field_user',
   'trade_user',

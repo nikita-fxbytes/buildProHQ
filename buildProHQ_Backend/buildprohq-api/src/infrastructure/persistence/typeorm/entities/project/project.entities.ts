@@ -5,6 +5,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  Index,
 } from 'typeorm';
 
 import { SoftDeleteTimestamps } from '../shared';
@@ -149,4 +150,34 @@ export class SiteLocation extends SoftDeleteTimestamps {
   isPrimary!: boolean;
 }
 
-export const PROJECT_TYPEORM_ENTITIES = [Project, Site, SiteUser, SiteLocation];
+@Entity('project_users')
+@Index('uq_project_users_project_user', ['projectId', 'userId'], { unique: true })
+export class ProjectUser extends SoftDeleteTimestamps {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ type: 'uuid', name: 'project_id' })
+  projectId!: string;
+
+  @ManyToOne(() => Project, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'project_id' })
+  project!: Project;
+
+  @Column({ type: 'uuid', name: 'user_id' })
+  userId!: string;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
+
+  @Column({ type: 'varchar', name: 'project_role', length: 50, nullable: true })
+  projectRole?: string | null;
+}
+
+export const PROJECT_TYPEORM_ENTITIES = [
+  Project,
+  Site,
+  SiteUser,
+  SiteLocation,
+  ProjectUser,
+];

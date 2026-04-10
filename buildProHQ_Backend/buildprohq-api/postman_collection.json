@@ -34,7 +34,45 @@
                   "pm.test('Login succeeded', function () {",
                   "  pm.response.to.have.status(200);",
                   "  var json = pm.response.json();",
-                  "  pm.environment.set('jwt_token', json.access_token);",
+                  "  pm.environment.set('jwt_token', json.data && json.data.accessToken ? json.data.accessToken : '');",
+                  "  pm.environment.set('me_role', json.data && json.data.user ? json.data.user.role : '');",
+                  "  pm.environment.set('me_user_id', json.data && json.data.user ? json.data.user.id : '');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (Super Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"super@buildpro.com\",\n  \"password\": \"Super@123\",\n  \"portalRole\": \"super_admin\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login (super) succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  var json = pm.response.json();",
+                  "  pm.environment.set('jwt_token', json.data && json.data.accessToken ? json.data.accessToken : '');",
+                  "  pm.environment.set('me_role', json.data && json.data.user ? json.data.user.role : '');",
+                  "  pm.environment.set('me_user_id', json.data && json.data.user ? json.data.user.id : '');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -174,16 +212,21 @@
       "name": "Projects",
       "item": [
         {
-          "name": "List Projects",
+          "name": "Search Projects (POST body)",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/projects",
+              "raw": "{{base_url}}/api/v1/projects/search",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "projects"]
+              "path": ["api", "v1", "projects", "search"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"limit\": 20,\n  \"search\": \"Alpha\",\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"desc\"\n}"
             }
           },
           "response": []
@@ -203,7 +246,62 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"PRJ001\",\n  \"name\": \"Demo Project\",\n  \"description\": \"A sample project for testing\"\n}"
+              "raw": "{\n  \"code\": \"p3\",\n  \"name\": \"Project Gamma — West Wing\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Project Members (POST body)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/projects/{{projectId}}/members/search",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "projects", "{{projectId}}", "members", "search"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"limit\": 20,\n  \"search\": \"Rob\",\n  \"role\": \"manager\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Project Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/projects/{{projectId}}/members",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "projects", "{{projectId}}", "members"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"projectRole\": \"Manager\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unassign Project Member",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/projects/{{projectId}}/members/{{userId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "projects", "{{projectId}}", "members", "{{userId}}"]
             }
           },
           "response": []
@@ -584,7 +682,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"filterCategoryName\": \"Zone\",\n  \"subFilterNames\": [\"North\", \"South\", \"East\", \"West\"]\n}"
+              "raw": "{\n  \"projectIds\": [\"{{projectId}}\"],\n  \"filterCategoryName\": \"Zone\",\n  \"subFilterNames\": [\"North\", \"South\", \"East\", \"West\"]\n}"
             }
           },
           "response": []
@@ -666,6 +764,9 @@
   "variable": [
     { "key": "base_url", "value": "http://localhost:3001" },
     { "key": "jwt_token", "value": "" },
+    { "key": "projectId", "value": "" },
+    { "key": "me_role", "value": "" },
+    { "key": "me_user_id", "value": "" },
     { "key": "taskId", "value": "" },
     { "key": "fileUrl", "value": "" },
     { "key": "uploadFilePath", "value": "" },

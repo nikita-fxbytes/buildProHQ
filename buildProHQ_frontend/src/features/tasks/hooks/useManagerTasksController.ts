@@ -7,13 +7,15 @@ import { useTableSort } from "@/hooks/use-table-sort";
 import { lookupsApi } from "@/services/lookupsApi.service";
 import { tasksApi, type ListOpenTasksBody, type TaskListItem, type TaskStats } from "@/services/tasksApi.service";
 import { usersApi } from "@/services/usersApi.service";
+import { projectsApi } from "@/services/projectsApi.service";
 import { truncateRichPlainText } from "@/utils/richText";
 import { appToast } from "@/utils/toast";
 
 type ConfirmAction = "completeSelected" | "deleteSelected" | "deleteSingle";
 type SortKey = "level" | "trade" | "user" | "priority" | "description" | "daysOpen" | "createdAt";
 
-export function useManagerTasksController() {
+export function useManagerTasksController(opts?: { mode?: "manager" | "super" }) {
+  const mode = opts?.mode ?? "manager";
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Array<ReturnType<typeof mapRow>>>([]);
   const [stats, setStats] = useState<TaskStats>({
@@ -30,8 +32,10 @@ export function useManagerTasksController() {
   const [tradeOptions, setTradeOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [levelOptions, setLevelOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [userOptions, setUserOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [projectOptions, setProjectOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [usersCount, setUsersCount] = useState(0);
   const [search, setSearch] = useState("");
+  const [projectFilters, setProjectFilters] = useState<string[]>([]);
   const [tradeFilters, setTradeFilters] = useState<string[]>([]);
   const [levelFilters, setLevelFilters] = useState<string[]>([]);
   const [userFilters, setUserFilters] = useState<string[]>([]);
@@ -54,10 +58,11 @@ export function useManagerTasksController() {
 
   const loadLookups = useCallback(async () => {
     try {
-      const [trades, levels, users] = await Promise.all([
+      const [trades, levels, users, projects] = await Promise.all([
         lookupsApi.getTrades(),
         lookupsApi.getLevels(),
         usersApi.list(),
+        mode === "super" ? projectsApi.listMine() : Promise.resolve([]),
       ]);
       setTradeOptions(trades.map((t) => ({ value: t.id, label: t.name })));
       setLevelOptions(levels.map((l) => ({ value: l.id, label: l.name })));
@@ -67,13 +72,14 @@ export function useManagerTasksController() {
           .filter((u) => Boolean(u.initials))
           .map((u) => ({ value: u.id, label: u.initials as string })),
       );
+      setProjectOptions(projects.map((p) => ({ value: p.id, label: p.name })));
     } catch {
       // Non-fatal; page still works without filter options.
       setUsersCount(0);
     } finally {
       // no-op
     }
-  }, []);
+  }, [mode]);
 
   const loadStats = useCallback(async () => {
     try {
@@ -97,13 +103,14 @@ export function useManagerTasksController() {
           sortBy: sortKey ? mapSortKey(sortKey) : undefined,
           sortOrder: sortDirection ?? undefined,
           filters: ({
+            projectIds: mode === "super" ? projectFilters : undefined,
             tradeIds: tradeFilters,
             levelIds: levelFilters,
             createdByUserIds: userFilters,
           } satisfies NonNullable<ListOpenTasksBody["filters"]>),
         };
         const res = await tasksApi.listOpen(query);
-        setRows(res.items.map(mapRow));
+        setRows(res.items.map((r) => mapRow(r, { withProject: mode === "super" })));
         setTotal(res.meta.total);
       } catch {
         appToast.error(MESSAGES.task.loadFailed);
@@ -111,7 +118,18 @@ export function useManagerTasksController() {
         setLoading(false);
       }
     },
-    [levelFilters, page, pageSize, search, sortDirection, sortKey, tradeFilters, userFilters],
+    [
+      levelFilters,
+      mode,
+      page,
+      pageSize,
+      projectFilters,
+      search,
+      sortDirection,
+      sortKey,
+      tradeFilters,
+      userFilters,
+    ],
   );
 
   useEffect(() => {
@@ -126,7 +144,7 @@ export function useManagerTasksController() {
     }, 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, tradeFilters, levelFilters, userFilters, sortKey, sortDirection]);
+  }, [search, projectFilters, tradeFilters, levelFilters, userFilters, sortKey, sortDirection]);
 
   useEffect(() => {
     loadTasks();
@@ -184,21 +202,30 @@ export function useManagerTasksController() {
   };
 
   return {
+    showProjectColumn: mode === "super",
     loading,
     search,
     setSearch,
     showFilters,
     setShowFilters,
+    projectOptions,
     tradeOptions,
     levelOptions,
     userOptions,
+    projectFilters,
     tradeFilters,
     levelFilters,
     userFilters,
+    setProjectFiltersDirect: setProjectFilters,
+    setTradeFiltersDirect: setTradeFilters,
+    setLevelFiltersDirect: setLevelFilters,
+    setUserFiltersDirect: setUserFilters,
+    setProjectFilters: (value: string) => setProjectFilters((prev) => toggleFilterValue(prev, value)),
     setTradeFilters: (value: string) => setTradeFilters((prev) => toggleFilterValue(prev, value)),
     setLevelFilters: (value: string) => setLevelFilters((prev) => toggleFilterValue(prev, value)),
     setUserFilters: (value: string) => setUserFilters((prev) => toggleFilterValue(prev, value)),
     clearFilters: () => {
+      setProjectFilters([]);
       setTradeFilters([]);
       setLevelFilters([]);
       setUserFilters([]);
@@ -276,8 +303,9 @@ const toInitials = (name: string) =>
     .slice(0, 4)
     .toUpperCase();
 
-const mapRow = (row: TaskListItem) => ({
+const mapRow = (row: TaskListItem, opts?: { withProject?: boolean }) => ({
   id: row.id,
+  project: opts?.withProject ? (row.project_name ?? "-") : undefined,
   level: row.level_name ?? "-",
   trade: row.trade_name ?? "-",
   user:

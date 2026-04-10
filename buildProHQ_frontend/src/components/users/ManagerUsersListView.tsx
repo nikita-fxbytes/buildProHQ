@@ -43,6 +43,7 @@ export type ManagerUsersListViewProps = {
   pageSize: number;
   search: string;
   roleFilter: RoleFilter;
+  addUserHref?: string;
   sortKey?: "createdAt" | "name" | "email" | "role" | "tasks" | "lastLoginAt" | null;
   sortDirection?: "asc" | "desc";
   onSortColumn?: (key: "createdAt" | "name" | "email" | "role" | "tasks" | "lastLoginAt") => void;
@@ -67,6 +68,7 @@ export function ManagerUsersListView({
   pageSize,
   search,
   roleFilter,
+  addUserHref = ROUTES.MANAGER_ADD_USER,
   sortKey,
   sortDirection,
   onSortColumn,
@@ -107,7 +109,7 @@ export function ManagerUsersListView({
 
           <AppButton
             component={Link}
-            href={ROUTES.MANAGER_ADD_USER}
+            href={addUserHref}
             variant="contained"
             sx={{ paddingInline: "18px", paddingBlock: "9px", fontSize: "15px", "&:hover": { transform: "translateY(-1px)" } }}
           >

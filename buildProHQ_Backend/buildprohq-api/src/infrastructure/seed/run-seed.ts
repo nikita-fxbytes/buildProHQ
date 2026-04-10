@@ -11,6 +11,8 @@ import {
   FilterCategory,
   FilterOption,
   Level,
+  Project,
+  ProjectUser,
   Role,
   Task,
   TaskPriority,
@@ -89,6 +91,7 @@ async function ensureUserRole(userId: string, roleId: string): Promise<void> {
 
 async function ensureTask(params: {
   description: string;
+  projectId: string;
   statusId: string;
   priorityId: string;
   levelId: string;
@@ -99,11 +102,16 @@ async function ensureTask(params: {
 }): Promise<void> {
   const repo = dataSource.getRepository(Task);
   const existing = await repo.findOne({
-    where: { description: params.description, deletedAt: IsNull() },
+    where: {
+      description: params.description,
+      projectId: params.projectId,
+      deletedAt: IsNull(),
+    },
   });
   if (existing) return;
   const task = repo.create({
     description: params.description,
+    projectId: params.projectId,
     statusId: params.statusId,
     priorityId: params.priorityId,
     levelId: params.levelId,
@@ -129,6 +137,8 @@ async function run(): Promise<void> {
   const levelRepo = dataSource.getRepository(Level);
   const filterCategoryRepo = dataSource.getRepository(FilterCategory);
   const filterOptionRepo = dataSource.getRepository(FilterOption);
+  const projectRepo = dataSource.getRepository(Project);
+  const projectUserRepo = dataSource.getRepository(ProjectUser);
 
   const fieldType = await getOrCreateByCode(userTypeRepo, 'field_user', {
     name: 'Field User',
@@ -151,6 +161,10 @@ async function run(): Promise<void> {
 
   const managerRole = await getOrCreateByCode(roleRepo, 'manager_admin', {
     name: 'Manager Admin',
+    isSystemRole: true,
+  });
+  const superRole = await getOrCreateByCode(roleRepo, 'super_admin', {
+    name: 'Super Admin',
     isSystemRole: true,
   });
   const fieldRole = await getOrCreateByCode(roleRepo, 'field_user', {
@@ -228,10 +242,12 @@ async function run(): Promise<void> {
   const tradeCategory = await getOrCreateByCode(filterCategoryRepo, 'trade', {
     name: 'Trade',
     isSystemCategory: true,
+    projectId: null,
   });
   const levelCategory = await getOrCreateByCode(filterCategoryRepo, 'level', {
     name: 'Level',
     isSystemCategory: true,
+    projectId: null,
   });
 
   const ensureFilterOption = async (
@@ -259,6 +275,17 @@ async function run(): Promise<void> {
   await ensureFilterOption(levelCategory.id, 'l1', 'L1', 1);
   await ensureFilterOption(levelCategory.id, 'l2', 'L2', 2);
 
+  // Projects
+  const ensureProject = async (code: string, name: string): Promise<Project> => {
+    const existing = await projectRepo.findOne({
+      where: { code, deletedAt: IsNull() },
+    });
+    if (existing) return existing;
+    return projectRepo.save(projectRepo.create({ code, name }));
+  };
+  const p1 = await ensureProject('p1', 'Project Alpha — North Tower');
+  const p2 = await ensureProject('p2', 'Project Beta — West Wing');
+
   const manager = await getOrCreateUser({
     userTypeId: managerType.id,
     userStatusId: activeStatus.id,
@@ -283,13 +310,47 @@ async function run(): Promise<void> {
     email: 'trade@buildpro.com',
     password: 'Trade@123',
   });
+  const superAdmin = await getOrCreateUser({
+    userTypeId: managerType.id,
+    userStatusId: activeStatus.id,
+    fullName: 'Super Admin',
+    initials: 'SA',
+    email: 'super@buildpro.com',
+    password: 'Super@123',
+  });
 
   await ensureUserRole(manager.id, managerRole.id);
   await ensureUserRole(field.id, fieldRole.id);
   await ensureUserRole(trade.id, tradeRole.id);
+  await ensureUserRole(superAdmin.id, superRole.id);
+
+  // Project membership (manager can be on multiple projects)
+  const ensureProjectUser = async (
+    projectId: string,
+    userId: string,
+    projectRole?: string,
+  ): Promise<void> => {
+    const existing = await projectUserRepo.findOne({
+      where: { projectId, userId, deletedAt: IsNull() },
+    });
+    if (existing) return;
+    await projectUserRepo.save(
+      projectUserRepo.create({
+        projectId,
+        userId,
+        projectRole: projectRole ?? null,
+      }),
+    );
+  };
+  await ensureProjectUser(p1.id, manager.id, 'Manager');
+  await ensureProjectUser(p2.id, manager.id, 'Manager');
+  await ensureProjectUser(p1.id, field.id, 'Field');
+  await ensureProjectUser(p1.id, trade.id, 'Trade');
+  await ensureProjectUser(p2.id, trade.id, 'Trade');
 
   await ensureTask({
-    description: 'Seed open task',
+    description: 'External fascia paint',
+    projectId: p1.id,
     statusId: openStatus.id,
     priorityId: highPriority.id,
     levelId: level2.id,
@@ -298,7 +359,8 @@ async function run(): Promise<void> {
     notes: 'Open flow seed task',
   });
   await ensureTask({
-    description: 'Seed assigned task',
+    description: 'Internal wall skim coat',
+    projectId: p1.id,
     statusId: openStatus.id,
     priorityId: mediumPriority.id,
     levelId: level1.id,
@@ -308,7 +370,8 @@ async function run(): Promise<void> {
     notes: 'Assigned to trade user',
   });
   await ensureTask({
-    description: 'Seed completed task',
+    description: 'Switchboard install',
+    projectId: p2.id,
     statusId: completedStatus.id,
     priorityId: lowPriority.id,
     levelId: level1.id,
@@ -317,6 +380,30 @@ async function run(): Promise<void> {
     assignedToUserId: trade.id,
     notes: 'Completed flow seed task',
   });
+
+  // Project-wise custom filters (matches HTML idea)
+  const ensureProjectFilter = async (projectId: string, name: string, subs: string[]) => {
+    const existing = await filterCategoryRepo.findOne({
+      where: { projectId, name, deletedAt: IsNull() },
+    });
+    const cat =
+      existing ??
+      (await filterCategoryRepo.save(
+        filterCategoryRepo.create({
+          projectId,
+          code: `custom_${name.toLowerCase().replace(/\s+/g, '_')}`,
+          name,
+          isSystemCategory: false,
+        }),
+      ));
+    let order = 1;
+    for (const s of subs) {
+      const key = s.toLowerCase().replace(/\s+/g, '_');
+      await ensureFilterOption(cat.id, `opt_${key}`, s, order++);
+    }
+  };
+  await ensureProjectFilter(p1.id, 'Zone', ['North', 'South', 'East', 'West']);
+  await ensureProjectFilter(p2.id, 'Floor', ['Ground', 'First', 'Second']);
 
   await dataSource.destroy();
   console.log('Seed completed');

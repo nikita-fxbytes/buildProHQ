@@ -12,6 +12,17 @@ export type PortalPageMeta = {
  * pathname prefix (resolvePortalRoleFromPathname); title falls back to inferTitleFromPath.
  */
 const EXACT_PAGE_META: Record<string, PortalPageMeta> = {
+  "/super/dashboard": { role: ROLES.SUPER_ADMIN, title: "Super Admin Dashboard", breadcrumb: "Super Admin" },
+  "/super/projects": { role: ROLES.SUPER_ADMIN, title: "Projects", breadcrumb: "Super Admin" },
+  "/super/management-dashboard": { role: ROLES.SUPER_ADMIN, title: "Management Dashboard", breadcrumb: "Super Admin" },
+  "/super/tasks": { role: ROLES.SUPER_ADMIN, title: "All Action Items", breadcrumb: "Super Admin" },
+  "/super/completed": { role: ROLES.SUPER_ADMIN, title: "All Completed", breadcrumb: "Super Admin" },
+  "/super/analytics": { role: ROLES.SUPER_ADMIN, title: "Analytics", breadcrumb: "Super Admin" },
+  "/super/users": { role: ROLES.SUPER_ADMIN, title: "Users", breadcrumb: "Super Admin" },
+  "/super/users/add": { role: ROLES.SUPER_ADMIN, title: "Add User", breadcrumb: "Super Admin" },
+  "/super/filters": { role: ROLES.SUPER_ADMIN, title: "Filters", breadcrumb: "Super Admin" },
+  "/super/filters/new": { role: ROLES.SUPER_ADMIN, title: "Add Filter", breadcrumb: "Super Admin" },
+  "/super/tasks/create": { role: ROLES.SUPER_ADMIN, title: "Create Task", breadcrumb: "Super Admin" },
   "/field/tasks": { role: ROLES.FIELD_USER, title: "Action Items", breadcrumb: "" },
   "/field/add-task": { role: ROLES.FIELD_USER, title: "Add Action Item", breadcrumb: "" },
   "/field/completed": { role: ROLES.FIELD_USER, title: "Completed Items", breadcrumb: "" },
@@ -42,6 +53,7 @@ function inferTitleFromPath(pathname: string): string {
 }
 
 function defaultBreadcrumbForRole(role: Role): string {
+  if (role === ROLES.SUPER_ADMIN) return "Super Admin";
   if (role === ROLES.MANAGER) return "Management";
   if (role === ROLES.TRADE_USER) return "Trade Portal";
   return "";
@@ -58,6 +70,13 @@ export function resolvePortalPageMeta(pathname: string): PortalPageMeta {
       role: ROLES.MANAGER,
       title: "Edit User",
       breadcrumb: "Management",
+    };
+  }
+  if (/^\/super\/filters\/[^/]+\/edit$/.test(pathname)) {
+    return {
+      role: ROLES.SUPER_ADMIN,
+      title: "Edit Filter",
+      breadcrumb: "Super Admin",
     };
   }
 

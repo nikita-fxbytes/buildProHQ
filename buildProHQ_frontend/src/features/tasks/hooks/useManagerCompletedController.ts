@@ -130,6 +130,9 @@ export function useManagerCompletedController() {
     tradeFilters,
     levelFilters,
     userFilters,
+    setTradeFiltersDirect: setTradeFilters,
+    setLevelFiltersDirect: setLevelFilters,
+    setUserFiltersDirect: setUserFilters,
     setTradeFilters: (value: string) => {
       setTradeFilters((current) => toggleFilterValue(current, value));
       setPage(1);

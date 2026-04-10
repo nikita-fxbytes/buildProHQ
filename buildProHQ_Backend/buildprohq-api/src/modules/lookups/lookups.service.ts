@@ -71,8 +71,14 @@ export class LookupsService {
   getFilterCategories() {
     return this.filterCategoryRepository.find({
       where: { deletedAt: IsNull() },
-      order: { name: 'ASC' },
-      select: { id: true, code: true, name: true, isSystemCategory: true },
+      order: { createdAt: 'ASC' },
+      select: {
+        id: true,
+        projectId: true,
+        code: true,
+        name: true,
+        isSystemCategory: true,
+      },
     });
   }
 

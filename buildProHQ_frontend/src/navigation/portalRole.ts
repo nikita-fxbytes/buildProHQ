@@ -5,6 +5,7 @@ import { ROLES, type Role } from "@/constants/roles";
  * Used by ProtectedRoute and by layout/sidebar role resolution.
  */
 export function getAllowedRolesForPortalPath(pathname: string): Role[] | undefined {
+  if (pathname.startsWith("/super")) return [ROLES.SUPER_ADMIN];
   if (pathname.startsWith("/manager")) return [ROLES.MANAGER];
   if (pathname.startsWith("/trade")) return [ROLES.TRADE_USER];
   if (pathname.startsWith("/field") || pathname.startsWith("/user")) return [ROLES.FIELD_USER];

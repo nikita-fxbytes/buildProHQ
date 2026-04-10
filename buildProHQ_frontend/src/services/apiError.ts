@@ -29,13 +29,25 @@ export class AppApiError extends Error {
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
     const payload = error.response?.data as ApiErrorPayload | undefined;
+    const detailLines =
+      payload &&
+      typeof payload === "object" &&
+      Array.isArray(payload.error?.details) &&
+      payload.error.details.length > 0
+        ? payload.error.details.map((d) => String(d).trim()).filter(Boolean)
+        : undefined;
+
+    if (detailLines?.length) {
+      return detailLines.join(" · ");
+    }
+
     if (
       payload &&
       typeof payload === "object" &&
       typeof payload.message === "string" &&
       payload.message.trim().length > 0
     ) {
-      return payload.message;
+      return payload.message.trim();
     }
     if (error.code === "ECONNABORTED") return MESSAGES.common.timeoutError;
     if (error.code === "ERR_NETWORK") {

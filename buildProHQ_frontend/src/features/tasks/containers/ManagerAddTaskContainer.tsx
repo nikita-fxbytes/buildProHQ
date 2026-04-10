@@ -8,6 +8,7 @@ export function ManagerAddTaskContainer() {
   return (
     <ManagerAddTaskView
       form={controller.form}
+      projects={controller.projects.map((p) => ({ id: p.id, code: p.code, name: p.name }))}
       levels={controller.levels}
       trades={controller.trades}
       priorities={controller.priorities}

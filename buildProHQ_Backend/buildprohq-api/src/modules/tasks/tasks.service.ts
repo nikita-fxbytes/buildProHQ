@@ -10,6 +10,7 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthUser } from '../../infrastructure/common/interfaces/auth-user.interface';
 import {
   Attachment,
+  ProjectUser,
   Task,
   TaskAssignment,
   TaskComment,
@@ -50,6 +51,8 @@ export class TasksService {
     private readonly taskHistoryRepository: Repository<TaskHistory>,
     @InjectRepository(Attachment)
     private readonly attachmentRepository: Repository<Attachment>,
+    @InjectRepository(ProjectUser)
+    private readonly projectUserRepository: Repository<ProjectUser>,
     private readonly taskAttachments: TaskAttachmentsService,
     private readonly audit: AuditService,
   ) {}
@@ -125,7 +128,22 @@ export class TasksService {
   }
 
   async create(dto: CreateTaskDto, user: AuthUser) {
+    if (user.role !== 'super_admin') {
+      const membership = await this.projectUserRepository.findOne({
+        where: {
+          projectId: dto.projectId,
+          userId: user.id,
+          deletedAt: IsNull(),
+        },
+        select: { id: true },
+      });
+      if (!membership) {
+        throw new ForbiddenException(MESSAGES.COMMON.FORBIDDEN);
+      }
+    }
+
     const task = this.taskRepository.create({
+      projectId: dto.projectId,
       statusId: dto.statusId,
       priorityId: dto.priorityId ?? null,
       levelId: dto.levelId,
@@ -467,7 +485,7 @@ export class TasksService {
   }
 
   async getAnalytics(user: AuthUser) {
-    if (user.role !== 'manager') {
+    if (user.role !== 'manager' && user.role !== 'super_admin') {
       throw new ForbiddenException(MESSAGES.TASKS.ANALYTICS_MANAGER_ONLY);
     }
 
@@ -744,9 +762,12 @@ export class TasksService {
       .leftJoin('task_priorities', 'tp', 'tp.id = t.priority_id')
       .leftJoin('trades', 'tr', 'tr.id = t.trade_id')
       .leftJoin('levels', 'lv', 'lv.id = t.level_id')
+      .leftJoin('projects', 'p', 'p.id = t.project_id')
       .leftJoin('users', 'uc', 'uc.id = t.created_by_user_id')
       .select([
         't.id AS id',
+        't.project_id AS project_id',
+        'p.name AS project_name',
         't.description AS description',
         't.days_open AS days_open',
         't.created_at AS created_at',
@@ -769,6 +790,9 @@ export class TasksService {
       .andWhere('ts.is_terminal = :isTerminal', { isTerminal });
 
     const filters = dto.filters;
+    if (filters?.projectIds?.length) {
+      qb.andWhere('t.project_id IN (:...projectIds)', { projectIds: filters.projectIds });
+    }
     if (filters?.tradeIds?.length) {
       qb.andWhere('t.trade_id IN (:...tradeIds)', { tradeIds: filters.tradeIds });
     }

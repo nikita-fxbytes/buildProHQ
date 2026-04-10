@@ -3,8 +3,8 @@
 import { ManagerAddUserView } from "@/components/users/ManagerAddUserView";
 import { useManagerAddUserController } from "@/features/users/hooks/useManagerAddUserController";
 
-export function ManagerAddUserContainer() {
-  const controller = useManagerAddUserController();
+export function ManagerAddUserContainer(props?: { redirectHref?: string }) {
+  const controller = useManagerAddUserController({ redirectHref: props?.redirectHref });
   return (
     <ManagerAddUserView
       form={controller.form}

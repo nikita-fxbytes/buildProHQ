@@ -12,7 +12,9 @@ Production-style core backend implementation for BuildPro HQ aligned to:
 - JWT authentication:
   - `POST /api/v1/auth/login`
   - `GET /api/v1/auth/me`
-- Role-based access control: manager, field_user, trade_user
+- Role-based access control: `super_admin`, `manager`, `field_user`, `trade_user`
+- Multi-project membership:
+  - `project_users` table (a user can belong to multiple projects)
 - Task APIs:
   - create, open/completed listing, detail
   - update, delete
@@ -119,6 +121,13 @@ npm run start:dev
 - `manager@buildpro.com` / `Manager@123` (Manager Role)
 - `field@buildpro.com` / `Field@123` (Field User Role)
 - `trade@buildpro.com` / `Trade@123` (Trade User Role)
+- `super@buildpro.com` / `Super@123` (Super Admin Role)
+
+## Project-scoped Filters (important)
+
+- **System filters** like Trade/Level are global (no project id).
+- **Custom filters** are **project-wise**: each `filter_category` may have `project_id`.
+- Filter save supports **multi-project create**: `POST /api/v1/filters` with `projectIds: string[]`.
 
 ## API Documentation
 

@@ -84,6 +84,12 @@ export class UsersService {
         'ts.id = t.status_id AND ts.is_terminal = :isTerminal',
         { isTerminal: false },
       )
+      .leftJoin(
+        TaskStatus,
+        'ts_done',
+        'ts_done.id = t.status_id AND ts_done.is_terminal = :isTerminalDone',
+        { isTerminalDone: true },
+      )
       .where('u.deleted_at IS NULL')
       .andWhere('u.created_by = :actorId', { actorId });
 
@@ -119,6 +125,11 @@ export class UsersService {
       'us.name AS user_status_name',
     ]);
     qb.addSelect('COUNT(ts.id)::int', 'open_tasks_count');
+    qb.addSelect('COUNT(ts_done.id)::int', 'completed_tasks_count');
+    qb.addSelect(
+      `COALESCE(SUM(CASE WHEN ts.id IS NOT NULL AND t.days_open > 10 THEN 1 ELSE 0 END), 0)::int`,
+      'overdue_tasks_count',
+    );
     qb.groupBy('u.id')
       .addGroupBy('ut.code')
       .addGroupBy('ut.name')

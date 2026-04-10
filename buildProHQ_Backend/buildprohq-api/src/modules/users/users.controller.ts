@@ -48,16 +48,16 @@ export class UsersController {
   }
 
   @Get()
-  @Roles('manager')
-  @ApiOperation({ summary: 'List all active users (manager only)' })
+  @Roles('manager', 'super_admin')
+  @ApiOperation({ summary: 'List all active users (manager/super admin)' })
   listUsers(@CurrentUser() actor: AuthUser) {
     return this.usersService.list(actor.id);
   }
 
   @Post()
-  @Roles('manager')
+  @Roles('manager', 'super_admin')
   @ApiOperation({
-    summary: 'List/search users with pagination (POST body, manager only)',
+    summary: 'List/search users with pagination (POST body, manager/super admin)',
     description:
       'Preferred endpoint for the Users table. Supports pagination, search, role filter, and server-side sorting.',
   })
@@ -110,22 +110,22 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Roles('manager')
-  @ApiOperation({ summary: 'Get user details by id (manager only)' })
+  @Roles('manager', 'super_admin')
+  @ApiOperation({ summary: 'Get user details by id (manager/super admin)' })
   getUser(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
     return this.usersService.getById(id);
   }
 
   @Post('create')
-  @Roles('manager')
-  @ApiOperation({ summary: 'Create user (manager only)' })
+  @Roles('manager', 'super_admin')
+  @ApiOperation({ summary: 'Create user (manager/super admin)' })
   createUser(@Body() dto: CreateUserDto, @CurrentUser() actor: AuthUser) {
     return this.usersService.create(dto, actor.id);
   }
 
   @Patch(':id')
-  @Roles('manager')
-  @ApiOperation({ summary: 'Update user (manager only)' })
+  @Roles('manager', 'super_admin')
+  @ApiOperation({ summary: 'Update user (manager/super admin)' })
   updateUser(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateUserDto,
@@ -135,8 +135,8 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @Roles('manager')
-  @ApiOperation({ summary: 'Delete (soft-delete) user (manager only)' })
+  @Roles('manager', 'super_admin')
+  @ApiOperation({ summary: 'Delete (soft-delete) user (manager/super admin)' })
   removeUser(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() actor: AuthUser,

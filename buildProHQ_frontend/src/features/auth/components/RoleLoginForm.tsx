@@ -246,9 +246,11 @@ export function RoleLoginForm({ role, theme }: RoleLoginFormProps) {
           sx={{
             marginTop: "18px",
             color: "#7B89A8",
-            flexWrap: "nowrap",
-            columnGap: { xs: 1, sm: 0 },
+            flexWrap: "wrap",
+            rowGap: 0.5,
+            columnGap: 1,
             fontSize: { xs: 12, sm: 13 },
+            lineHeight: 1.4,
           }}
         >
           {theme.links.map((link, idx) => (
@@ -266,8 +268,8 @@ export function RoleLoginForm({ role, theme }: RoleLoginFormProps) {
                 <Box
                   component="span"
                   sx={{
-                    mx: { xs: 0.75, sm: 1.25 },
-                    color: "inherit",
+                    mx: 1,
+                    color: "rgba(123,137,168,0.55)",
                     userSelect: "none",
                   }}
                   aria-hidden
@@ -276,10 +278,19 @@ export function RoleLoginForm({ role, theme }: RoleLoginFormProps) {
                 </Box>
               ) : null}
               <span>
-                {link.label}{" "}
+                <Box component="span" sx={{ color: "inherit" }}>
+                  {link.label}
+                </Box>{" "}
                 <Link
                   href={link.href}
-                  style={{ color: "#F5A623", fontWeight: 600, textDecoration: "none" }}
+                  style={{
+                    color: theme.submitBackground,
+                    fontWeight: 700,
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
                 >
                   {link.text} <AppIcon name="arrowRight" size={13} />
                 </Link>

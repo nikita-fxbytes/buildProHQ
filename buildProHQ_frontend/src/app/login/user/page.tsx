@@ -21,6 +21,7 @@ export default function LoginUserPage() {
         links: [
           { label: "Trade User?", text: "Trade Login", href: ROUTES.LOGIN_TRADE },
           { label: "Manager?", text: "Manager Login", href: ROUTES.LOGIN_MANAGER },
+          { label: "Super Admin?", text: "Super Admin Login", href: ROUTES.LOGIN_SUPER },
         ],
       }}
     />

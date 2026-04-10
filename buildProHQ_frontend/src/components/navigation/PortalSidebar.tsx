@@ -27,12 +27,14 @@ const ROLE_SIDEBAR_BG: Record<Role, string> = {
   [ROLES.FIELD_USER]: STYLE_TOKENS.colors.sidebarBg,
   [ROLES.TRADE_USER]: "#0F2117",
   [ROLES.MANAGER]: "#111827",
+  [ROLES.SUPER_ADMIN]: "#140f24",
 };
 
 const ROLE_CARD_META: Record<Role, { roleLabel: string; avatarBg: string }> = {
   [ROLES.FIELD_USER]: { roleLabel: "Field User", avatarBg: STYLE_TOKENS.colors.orange },
   [ROLES.TRADE_USER]: { roleLabel: "Trade User", avatarBg: STYLE_TOKENS.colors.green },
   [ROLES.MANAGER]: { roleLabel: "Manager / Admin", avatarBg: STYLE_TOKENS.colors.blue },
+  [ROLES.SUPER_ADMIN]: { roleLabel: "Super Admin", avatarBg: "#7C3AED" },
 };
 
 function isNavActive(pathname: string, itemHref: string): boolean {

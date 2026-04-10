@@ -15,6 +15,7 @@ export const MESSAGES = {
     selectLevel: "Please select a level",
     selectTrade: "Please select a trade",
     selectPriority: "Please select a priority",
+    selectProject: "Please select a project",
     openStatusMissing: "Unable to resolve open task status. Please try again.",
     priorityDefaultMissing: "Unable to resolve default priority. Please try again.",
     photosTooMany: "Too many photos selected",
@@ -83,6 +84,12 @@ export const MESSAGES = {
     setPasswordFailed: "Failed to set password",
   },
   filter: {
+    validation: {
+      categoryMinLength: "Filter category name must be at least 2 characters.",
+      categoryMaxLength: "Filter category name must be at most 100 characters.",
+      subFilterMaxLength: "Each sub-filter name must be at most 100 characters.",
+      subFiltersMaxCount: "You can add at most 100 sub-filters at once.",
+    },
     added: "Filter added successfully",
     updated: "Filter updated successfully",
     deleted: "Filter deleted successfully",
@@ -95,6 +102,10 @@ export const MESSAGES = {
     deleteConfirmLabel: "Yes, Delete",
     deleteConfirmMessageTemplate:
       'Delete filter category "{{name}}" and all its sub-filters? This cannot be undone.',
+    subFilterDeleteConfirmTitle: "Remove sub-filter?",
+    subFilterDeleteConfirmLabel: "Yes, remove",
+    subFilterDeleteConfirmMessageTemplate:
+      'Remove sub-filter "{{label}}"? This cannot be undone.',
   },
   common: {
     cancel: "Cancel",

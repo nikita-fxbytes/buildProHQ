@@ -24,8 +24,8 @@ export class FiltersController {
   constructor(private readonly filtersService: FiltersService) {}
 
   @Post()
-  @Roles('manager')
-  @ApiOperation({ summary: 'Create or update filter category/options (manager)' })
+  @Roles('manager', 'super_admin')
+  @ApiOperation({ summary: 'Create or update filter category/options (manager/super admin)' })
   @ApiBody({ type: SaveFilterDto })
   save(@Body() dto: SaveFilterDto) {
     return this.filtersService.saveFilter(dto);
@@ -48,15 +48,15 @@ export class FiltersController {
   }
 
   @Delete('categories/:id')
-  @Roles('manager')
-  @ApiOperation({ summary: 'Delete a filter category (manager)' })
+  @Roles('manager', 'super_admin')
+  @ApiOperation({ summary: 'Delete a filter category (manager/super admin)' })
   deleteCategory(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
     return this.filtersService.deleteCategory(id);
   }
 
   @Delete('options/:id')
-  @Roles('manager')
-  @ApiOperation({ summary: 'Delete a filter option (manager)' })
+  @Roles('manager', 'super_admin')
+  @ApiOperation({ summary: 'Delete a filter option (manager/super admin)' })
   deleteOption(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
     return this.filtersService.deleteOption(id);
   }

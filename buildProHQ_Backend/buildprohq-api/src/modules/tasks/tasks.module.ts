@@ -4,6 +4,7 @@ import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import {
   Attachment,
+  ProjectUser,
   Task,
   TaskAssignment,
   TaskComment,
@@ -23,6 +24,7 @@ import { TaskAttachmentsService } from './task-attachments.service';
       TaskComment,
       TaskHistory,
       Attachment,
+      ProjectUser,
     ]),
   ],
   controllers: [TasksController],

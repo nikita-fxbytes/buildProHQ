@@ -1,0 +1,20 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import {
+  Project,
+  ProjectUser,
+  Role,
+  User,
+  UserRole,
+} from '../../infrastructure/persistence/typeorm/entities';
+import { ProjectsController } from './projects.controller';
+import { ProjectsService } from './projects.service';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([Project, ProjectUser, User, UserRole, Role])],
+  controllers: [ProjectsController],
+  providers: [ProjectsService],
+  exports: [ProjectsService],
+})
+export class ProjectsModule {}
+

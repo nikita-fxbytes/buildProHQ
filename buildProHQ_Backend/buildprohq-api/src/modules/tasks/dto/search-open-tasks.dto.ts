@@ -30,6 +30,11 @@ class DateRangeDto {
 }
 
 export class OpenTasksFiltersDto {
+  @ApiPropertyOptional({ type: [String], description: 'Project UUIDs' })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  projectIds?: string[];
+
   @ApiPropertyOptional({ type: [String], description: 'Trade UUIDs' })
   @IsOptional()
   @IsUUID('4', { each: true })

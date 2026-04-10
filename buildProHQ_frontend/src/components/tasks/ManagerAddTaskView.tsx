@@ -27,6 +27,7 @@ import { FormUploadField } from "@/components/common/FormUploadField";
 
 type Props = {
   form: UseFormReturn<ManagerAddTaskFormValues>;
+  projects: LookupItem[];
   levels: LookupItem[];
   trades: LookupItem[];
   priorities: LookupItem[];
@@ -58,6 +59,7 @@ function priorityCodeFromLookup(p: LookupItem): TaskPriorityCode | null {
 
 export function ManagerAddTaskView({
   form,
+  projects,
   levels,
   trades,
   priorities,
@@ -72,6 +74,7 @@ export function ManagerAddTaskView({
   voiceActive,
 }: Props) {
   const disabled = loadingLookups || submitting;
+  const sortedProjects = useMemo(() => sortLookups(projects), [projects]);
   const sortedLevels = useMemo(() => sortLookups(levels), [levels]);
   const sortedTrades = useMemo(() => sortLookups(trades), [trades]);
 
@@ -129,6 +132,18 @@ export function ManagerAddTaskView({
 
         <form onSubmit={onSubmit} noValidate>
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
+            <Box sx={{ gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "6px" }}>
+              <FormFieldLabel required>Project</FormFieldLabel>
+              <FormLookupAutocompleteField
+                control={form.control}
+                name="projectId"
+                options={sortedProjects}
+                placeholder="Select Project"
+                noOptionsText={MESSAGES.taskForm.autocompleteNoOptions}
+                disabled={disabled}
+              />
+            </Box>
+
             <Box sx={{ gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "6px" }}>
               <FormFieldLabel required>Description</FormFieldLabel>
 

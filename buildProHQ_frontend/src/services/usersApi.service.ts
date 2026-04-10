@@ -21,6 +21,8 @@ export type UserListItem = {
   last_login_at: string | null;
   created_at: string;
   open_tasks_count?: number;
+  completed_tasks_count?: number;
+  overdue_tasks_count?: number;
 };
 
 export type UsersListMeta = {

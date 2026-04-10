@@ -10,7 +10,7 @@ import {
 
 import { SoftDeleteTimestamps } from '../shared';
 
-import { Task, User } from '..';
+import { Project, Task, User } from '..';
 
 @Entity('user_types')
 export class UserType extends SoftDeleteTimestamps {
@@ -195,6 +195,13 @@ export class Permission extends SoftDeleteTimestamps {
 export class FilterCategory extends SoftDeleteTimestamps {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
+
+  @Column({ type: 'uuid', name: 'project_id', nullable: true })
+  projectId?: string | null;
+
+  @ManyToOne(() => Project, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'project_id' })
+  project?: Project | null;
 
   @Column({ type: 'varchar', length: 50 })
   code!: string;

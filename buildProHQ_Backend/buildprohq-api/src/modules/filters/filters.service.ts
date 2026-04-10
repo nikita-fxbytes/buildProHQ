@@ -18,11 +18,19 @@ function slugCode(input: string): string {
     .slice(0, 50);
 }
 
-function normalizeSubFilterNames(names: string[] | undefined): string[] {
-  return (names ?? [])
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 100);
+/** Trim, drop empties, dedupe within the request (case-insensitive), max 100. */
+function normalizeAndDedupeSubFilterNames(names: string[] | undefined): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of names ?? []) {
+    const t = raw.trim();
+    if (!t) continue;
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+  }
+  return out.slice(0, 100);
 }
 
 @Injectable()
@@ -39,14 +47,16 @@ export class FiltersService {
   ) {}
 
   async saveFilter(params: {
+    projectIds?: string[];
     filterCategoryId?: string;
     filterCategoryName?: string;
     subFilterNames?: string[];
   }) {
-    const options = normalizeSubFilterNames(params.subFilterNames);
+    const options = normalizeAndDedupeSubFilterNames(params.subFilterNames);
     const hasId = Boolean((params.filterCategoryId ?? '').trim());
     const nameTrim = (params.filterCategoryName ?? '').trim();
     const hasName = Boolean(nameTrim);
+    const projectIds = (params.projectIds ?? []).map((p) => (p ?? '').trim()).filter(Boolean);
 
     if (!hasId && !hasName && !options.length) {
       throw new BadRequestException(MESSAGES.FILTERS.CATEGORY_OR_SUBS);
@@ -55,66 +65,76 @@ export class FiltersService {
       throw new BadRequestException(MESSAGES.FILTERS.CATEGORY_NAME_OR_ID_FOR_OPTIONS);
     }
 
-    let category: FilterCategory | null = null;
-
     if (hasId) {
       const id = (params.filterCategoryId ?? '').trim();
-      category = await this.filterCategoryRepo.findOne({
+      const category = await this.filterCategoryRepo.findOne({
         where: { id, deletedAt: IsNull() },
+        select: { id: true },
       });
       if (!category) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
-    } else {
-      if (!nameTrim) {
-        throw new BadRequestException(MESSAGES.FILTERS.CATEGORY_NAME_REQUIRED);
-      }
-      // Reuse by name if exists.
-      category =
-        (await this.filterCategoryRepo.findOne({
-          where: { name: nameTrim, deletedAt: IsNull() },
-        })) ?? null;
 
-      if (!category) {
-        const codeBase = slugCode(nameTrim) || 'category';
-        category = await this.filterCategoryRepo.save(
-          this.filterCategoryRepo.create({
-            name: nameTrim,
-            code: codeBase,
-            isSystemCategory: false,
-          }),
-        );
-      }
-    }
-
-    if (!options.length) {
+      await this.appendOptions(category.id, options);
       return { message: MESSAGES.FILTERS.SAVED };
     }
 
-    // Determine sort order start for category.
-    const existing = await this.filterOptionRepo.find({
-      where: { filterCategoryId: category.id, deletedAt: IsNull() },
-      order: { sortOrder: 'DESC' },
-      take: 1,
-      select: { sortOrder: true },
+    if (!nameTrim) {
+      throw new BadRequestException(MESSAGES.FILTERS.CATEGORY_NAME_REQUIRED);
+    }
+    if (!projectIds.length) {
+      throw new BadRequestException('projectIds is required for project-scoped filters');
+    }
+
+    for (const projectId of projectIds) {
+      // Find by (projectId, name) case-insensitive
+      const existing = await this.filterCategoryRepo
+        .createQueryBuilder('fc')
+        .select(['fc.id'])
+        .where('fc.deleted_at IS NULL')
+        .andWhere('fc.project_id = :projectId', { projectId })
+        .andWhere('lower(fc.name) = lower(:name)', { name: nameTrim })
+        .limit(1)
+        .getOne();
+
+      const category =
+        existing ??
+        (await this.filterCategoryRepo.save(
+          this.filterCategoryRepo.create({
+            projectId,
+            name: nameTrim,
+            code: slugCode(nameTrim) || 'category',
+            isSystemCategory: false,
+          }),
+        ));
+
+      await this.appendOptions(category.id, options);
+    }
+
+    return { message: MESSAGES.FILTERS.SAVED };
+  }
+
+  private async appendOptions(filterCategoryId: string, options: string[]) {
+    if (!options.length) return;
+    const existingOpts = await this.filterOptionRepo.find({
+      where: { filterCategoryId, deletedAt: IsNull() },
+      select: { name: true, sortOrder: true },
     });
-    let nextSort = (existing[0]?.sortOrder ?? 0) + 1;
+    let nextSort =
+      existingOpts.reduce((m, o) => Math.max(m, o.sortOrder ?? 0), 0) + 1;
+    const existingLower = new Set(existingOpts.map((o) => o.name.toLowerCase()));
 
     for (const optName of options) {
-      const already = await this.filterOptionRepo.findOne({
-        where: { filterCategoryId: category.id, name: optName, deletedAt: IsNull() },
-        select: { id: true },
-      });
-      if (already) continue;
+      const key = optName.toLowerCase();
+      if (existingLower.has(key)) continue;
+      existingLower.add(key);
       await this.filterOptionRepo.save(
         this.filterOptionRepo.create({
-          filterCategoryId: category.id,
+          filterCategoryId,
           name: optName,
           code: slugCode(optName) || `opt_${nextSort}`,
           sortOrder: nextSort++,
         }),
       );
     }
-
-    return { message: MESSAGES.FILTERS.SAVED };
   }
 
   async quickAddLevel(nameRaw: string) {

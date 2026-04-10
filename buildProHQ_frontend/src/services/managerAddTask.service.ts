@@ -14,6 +14,7 @@ export const managerAddTaskService = {
     return loadAddTaskLookups();
   },
   async createTaskWithOptionalPhotos(values: {
+    projectId: string;
     statusId: string;
     levelId: string;
     tradeId: string;

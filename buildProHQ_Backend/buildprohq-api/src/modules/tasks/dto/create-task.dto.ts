@@ -5,6 +5,13 @@ import { IsRichTaskDescriptionConstraint } from '../../../infrastructure/common/
 
 export class CreateTaskDto {
   @ApiProperty({
+    description: 'Project id this task belongs to.',
+    example: '15004760-efa3-406e-9a24-18a6c64f8d51',
+  })
+  @IsUUID('4', { message: MESSAGES.TASK_VALIDATION.PROJECT_ID_INVALID })
+  projectId!: string;
+
+  @ApiProperty({
     description: 'Task status id (use open status when creating a new action item).',
     example: '1b6a0fb1-2d3f-4f05-8c7f-5c9fdb1e3d42',
   })

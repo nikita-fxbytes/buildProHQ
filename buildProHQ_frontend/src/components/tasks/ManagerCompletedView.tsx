@@ -6,8 +6,8 @@ import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
 import { DoneBadge } from "@/components/common/badges/DoneBadge";
 import { InitialsBadge } from "@/components/common/badges/InitialsBadge";
-import { FilterChipGroup } from "@/components/common/filters/FilterChipGroup";
 import { FilterPanel } from "@/components/common/filters/FilterPanel";
+import { FilterMultiSelect } from "@/components/common/filters/FilterMultiSelect";
 import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTableSkeleton";
 import { AppTableCell } from "@/components/common/table/AppTableCell";
 import { AppTableEmptyState } from "@/components/common/table/AppTableEmptyState";
@@ -42,8 +42,11 @@ type Props = {
   levelFilters: string[];
   userFilters: string[];
   setTradeFilters: (value: string) => void;
+  setTradeFiltersDirect?: (value: string[]) => void;
   setLevelFilters: (value: string) => void;
+  setLevelFiltersDirect?: (value: string[]) => void;
   setUserFilters: (value: string) => void;
+  setUserFiltersDirect?: (value: string[]) => void;
   clearFilters: () => void;
   page: number;
   setPage: (page: number) => void;
@@ -115,24 +118,26 @@ export function ManagerCompletedView(props: Props) {
               gap: "16px",
             }}
           >
-            <FilterChipGroup
+            <FilterMultiSelect
               label="Trade"
               options={props.tradeOptions}
               selected={props.tradeFilters}
-              onToggle={props.setTradeFilters}
+              onChange={(next) => props.setTradeFiltersDirect?.(next)}
+              placeholder="Search trades..."
             />
-            <FilterChipGroup
+            <FilterMultiSelect
               label="Level"
               options={props.levelOptions}
               selected={props.levelFilters}
-              onToggle={props.setLevelFilters}
+              onChange={(next) => props.setLevelFiltersDirect?.(next)}
+              placeholder="Search levels..."
             />
-            <FilterChipGroup
+            <FilterMultiSelect
               label="User"
               options={props.userOptions}
               selected={props.userFilters}
-              onToggle={props.setUserFilters}
-              tone="blue"
+              onChange={(next) => props.setUserFiltersDirect?.(next)}
+              placeholder="Search users..."
             />
           </Box>
           <Box className="filter-actions" sx={{ mt: 2, pt: 2, borderTop: "1px solid #E4E8F0" }}>

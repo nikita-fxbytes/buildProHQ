@@ -85,6 +85,7 @@ export class AuthController {
     const result = await this.authService.login(dto);
     this.authService.setAuthCookie(response, result.accessToken);
     return {
+      accessToken: result.accessToken,
       user: result.user,
       message: result.message,
     };

@@ -11,6 +11,7 @@ export type SaveFilterCategoryPayload = {
   filterCategoryId?: string;
   filterCategoryName?: string;
   subFilterNames?: string[];
+  projectIds?: string[];
 };
 
 export const filtersApi = {

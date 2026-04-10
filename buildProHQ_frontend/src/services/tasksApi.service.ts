@@ -11,6 +11,8 @@ type ApiEnvelope<T> = {
 
 export type TaskListItem = {
   id: string;
+  project_id?: string | null;
+  project_name?: string | null;
   description: string;
   days_open: number;
   created_at: string;
@@ -44,6 +46,7 @@ export type ListTasksResponseMeta = {
 };
 
 export type OpenTasksFilters = {
+  projectIds?: string[];
   tradeIds?: string[];
   levelIds?: string[];
   createdByUserIds?: string[];
@@ -113,6 +116,7 @@ export type ManagerAnalytics = {
 };
 
 export type CreateTaskPayload = {
+  projectId: string;
   statusId: string;
   priorityId?: string;
   levelId: string;

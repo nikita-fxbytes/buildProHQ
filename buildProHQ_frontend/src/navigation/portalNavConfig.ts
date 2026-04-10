@@ -6,9 +6,12 @@ export type PortalNavIconName =
   | "actionItems"
   | "addActionItem"
   | "completedItems"
+  | "superAdmin"
   | "analytics"
   | "manageFilters"
   | "users"
+  | "projects"
+  | "manager"
   | "addUser"
   | "assignedTasks"
   | "myCompleted";
@@ -114,10 +117,40 @@ const MANAGER_SECTIONS: PortalNavSectionConfig[] = [
   },
 ];
 
+const SUPER_ADMIN_SECTIONS: PortalNavSectionConfig[] = [
+  {
+    id: "main",
+    label: "Main",
+    items: [
+      { href: ROUTES.SUPER_DASHBOARD, label: "Super Dashboard", icon: "superAdmin" },
+      { href: ROUTES.SUPER_MANAGEMENT_DASHBOARD, label: "Management Dashboard", icon: "manager" },
+    ],
+  },
+  {
+    id: "administration",
+    label: "Administration",
+    items: [
+      { href: ROUTES.SUPER_PROJECTS, label: "Projects", icon: "projects" },
+      { href: ROUTES.SUPER_TASKS, label: "All Action Items", icon: "actionItems", badge: "openTasks" },
+      {
+        href: ROUTES.SUPER_COMPLETED,
+        label: "All Completed",
+        icon: "completedItems",
+        badge: "completedTasks",
+        badgeClass: "blue",
+      },
+      { href: ROUTES.SUPER_ANALYTICS, label: "Analytics", icon: "analytics" },
+      { href: ROUTES.SUPER_USERS, label: "All Users", icon: "users", badge: "users" },
+      { href: ROUTES.SUPER_FILTERS, label: "Filters", icon: "manageFilters" },
+    ],
+  },
+];
+
 const SECTIONS_BY_ROLE: Record<Role, PortalNavSectionConfig[]> = {
   [ROLES.FIELD_USER]: FIELD_SECTIONS,
   [ROLES.TRADE_USER]: TRADE_SECTIONS,
   [ROLES.MANAGER]: MANAGER_SECTIONS,
+  [ROLES.SUPER_ADMIN]: SUPER_ADMIN_SECTIONS,
 };
 
 export function getPortalNavSections(role: Role): PortalNavSectionConfig[] {

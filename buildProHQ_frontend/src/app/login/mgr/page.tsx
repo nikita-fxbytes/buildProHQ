@@ -18,7 +18,10 @@ export default function LoginManagerPage() {
         submitHoverBackground: "#1C2333",
         submitHoverShadow: "0 6px 20px rgba(15,23,42,0.35)",
         emailPlaceholder: "manager@buildpro.com",
-        links: [{ label: "Field user?", text: "Switch to User Login", href: ROUTES.LOGIN_USER }],
+        links: [
+          { label: "Field user?", text: "Switch to User Login", href: ROUTES.LOGIN_USER },
+          { label: "Super Admin?", text: "Super Admin Login", href: ROUTES.LOGIN_SUPER },
+        ],
       }}
     />
   );

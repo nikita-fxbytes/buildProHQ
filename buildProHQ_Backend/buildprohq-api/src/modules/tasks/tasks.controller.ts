@@ -70,7 +70,7 @@ export class TasksController {
   }
 
   @Get('analytics')
-  @Roles('manager')
+  @Roles('manager', 'super_admin')
   @ApiOperation({ summary: 'Get grouped analytics for manager dashboard' })
   @ApiOkResponse({
     description: 'Analytics fetched successfully',
@@ -217,7 +217,7 @@ export class TasksController {
   }
 
   @Post('completed')
-  @Roles('manager', 'field_user', 'trade_user')
+  @Roles('manager', 'field_user', 'trade_user', 'super_admin')
   @ApiOperation({
     summary: 'List/search completed tasks with filters (POST body)',
     description:
@@ -313,9 +313,9 @@ export class TasksController {
   }
 
   @Post()
-  @Roles('manager', 'field_user')
+  @Roles('manager', 'field_user', 'super_admin')
   @ApiOperation({
-    summary: 'Create task (manager/field user)',
+    summary: 'Create task (manager/field user/super admin)',
     description:
       'Creates an open action item. Send `statusId` for the `open` status from GET /lookups/task-statuses. Optional `priorityId` from GET /lookups/task-priorities.',
   })

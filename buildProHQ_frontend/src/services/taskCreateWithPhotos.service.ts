@@ -7,6 +7,7 @@ import { sanitizeRichHtml } from "@/utils/richText";
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
 export type CreateTaskWithPhotosValues = {
+  projectId: string;
   statusId: string;
   levelId: string;
   tradeId: string;
@@ -24,6 +25,7 @@ export async function createTaskWithOptionalPhotos(
   }
 
   const created = await tasksApi.createTask({
+    projectId: values.projectId,
     statusId: values.statusId,
     levelId: values.levelId,
     tradeId: values.tradeId,

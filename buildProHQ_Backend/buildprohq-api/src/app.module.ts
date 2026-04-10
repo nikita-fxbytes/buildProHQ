@@ -16,6 +16,7 @@ import {
   TasksModule,
   UsersModule,
   NotificationsModule,
+  ProjectsModule,
 } from './modules';
 
 import { ALL_TYPEORM_ENTITIES } from './infrastructure/persistence/typeorm/entities';
@@ -92,6 +93,7 @@ import { ALL_TYPEORM_ENTITIES } from './infrastructure/persistence/typeorm/entit
     AuthModule,
     UsersModule,
     TasksModule,
+    ProjectsModule,
     LookupsModule,
     FiltersModule,
     NotificationsModule,

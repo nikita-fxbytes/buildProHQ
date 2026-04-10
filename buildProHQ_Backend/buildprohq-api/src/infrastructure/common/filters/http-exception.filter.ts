@@ -59,6 +59,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
         details,
       },
     });
+
+    // 401/403/404 are common and not actionable as "errors" in logs.
+    // Only log stacktraces for unexpected failures.
+    if (status >= 500) {
+      this.logger.error(`${request.method} ${request.url}`, exception as Error);
+    } else if (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN) {
+      this.logger.warn(`${request.method} ${request.url} -> ${status} ${message}`);
+    } else {
+      this.logger.log(`${request.method} ${request.url} -> ${status} ${message}`);
+    }
   }
 
   private resolveStatus(exception: unknown): number {

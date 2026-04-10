@@ -17,8 +17,9 @@ import type { UploadItem } from "@/components/common/FormUploadField";
 import { resolvePublicUrl } from "@/utils/urls";
 import { emitUsersChanged } from "@/utils/taskEvents";
 
-export function useManagerAddUserController() {
+export function useManagerAddUserController(opts?: { redirectHref?: string }) {
   const router = useRouter();
+  const redirectHref = opts?.redirectHref ?? ROUTES.MANAGER_USERS;
   const [lookups, setLookups] = useState<UserCreateLookups | null>(null);
   const [loadingLookups, setLoadingLookups] = useState(true);
   const [cropOpen, setCropOpen] = useState(false);
@@ -88,7 +89,7 @@ export function useManagerAddUserController() {
       });
       emitUsersChanged();
       appToast.success(MESSAGES.user.created);
-      router.push(ROUTES.MANAGER_USERS);
+      router.push(redirectHref);
     } catch (e) {
       appToast.error(getApiErrorMessage(e, MESSAGES.common.saveFailed));
     } finally {
@@ -97,7 +98,7 @@ export function useManagerAddUserController() {
   });
 
   const onCancel = () => {
-    router.push(ROUTES.MANAGER_USERS);
+    router.push(redirectHref);
   };
 
   return {

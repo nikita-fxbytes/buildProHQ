@@ -108,6 +108,9 @@ export class AuthService {
     userTypeCode: string | null,
   ): AuthUser['role'] {
     const source = (roleCode ?? userTypeCode ?? '').toLowerCase();
+    if (source.includes('super')) {
+      return 'super_admin';
+    }
     if (
       source.includes('manager') ||
       source.includes('admin') ||

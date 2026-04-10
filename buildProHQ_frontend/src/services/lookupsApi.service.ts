@@ -25,6 +25,7 @@ export type RoleLookupItem = LookupItem & {
 
 export type FilterCategoryApi = {
   id: string;
+  projectId?: string | null;
   code: string;
   name: string;
   isSystemCategory: boolean;

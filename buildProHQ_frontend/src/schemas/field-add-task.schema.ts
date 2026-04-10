@@ -4,6 +4,10 @@ import { TASK_BEFORE_PHOTOS_MAX } from "@/constants/task-form.constants";
 import { htmlToPlainText } from "@/utils/richText";
 
 export const fieldAddTaskSchema = z.object({
+  projectId: z
+    .string()
+    .min(1, MESSAGES.validation.selectProject)
+    .uuid(MESSAGES.validation.selectProject),
   description: z.string().superRefine((val, ctx) => {
     const plain = htmlToPlainText(val);
     if (!plain) {

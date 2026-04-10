@@ -19,7 +19,20 @@ export const MESSAGES = {
     PORTAL_MISMATCH:
       'This account does not have access to this portal. Sign in using the correct portal for your role.',
   },
+  FILTER_VALIDATION: {
+    CATEGORY_ID_INVALID:
+      'Filter category: choose a valid saved category from the list, or leave it blank and type a new category name.',
+    CATEGORY_NAME_STRING: 'Filter category name must be text.',
+    CATEGORY_NAME_MIN_LENGTH: 'Filter category name must be at least 2 characters.',
+    CATEGORY_NAME_MAX_LENGTH: 'Filter category name must be at most 100 characters.',
+    SUB_FILTER_NAMES_ARRAY: 'Sub-filters must be sent as a list of names.',
+    SUB_FILTER_NAMES_MAX_COUNT: 'You can add at most 100 sub-filters at once.',
+    SUB_FILTER_NAME_STRING: 'Each sub-filter name must be text.',
+    SUB_FILTER_NAME_MIN_LENGTH: 'Each sub-filter name must be at least 1 character.',
+    SUB_FILTER_NAME_MAX_LENGTH: 'Each sub-filter name must be at most 100 characters.',
+  },
   TASK_VALIDATION: {
+    PROJECT_ID_INVALID: 'Project must be a valid identifier',
     STATUS_ID_REQUIRED: 'Please select a valid task status',
     STATUS_ID_INVALID: 'Task status must be a valid identifier',
     PRIORITY_ID_INVALID: 'Priority must be a valid identifier',

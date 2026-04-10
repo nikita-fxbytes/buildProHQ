@@ -22,17 +22,20 @@ import type { UploadItem } from "@/components/common/FormUploadField";
 import { revokeBlobUrls } from "@/utils/uploadItems";
 import { useTaskDescriptionTools } from "@/hooks/useTaskDescriptionTools";
 import { emitTasksChanged } from "@/utils/taskEvents";
+import { projectsApi, type MyProjectItem } from "@/services/projectsApi.service";
 
 export function useFieldAddTaskController() {
   const router = useRouter();
   const [lookups, setLookups] = useState<FieldAddTaskLookups | null>(null);
   const [loadingLookups, setLoadingLookups] = useState(true);
+  const [projects, setProjects] = useState<MyProjectItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [photos, setPhotos] = useState<UploadItem[]>([]);
 
   const form = useForm<FieldAddTaskFormValues>({
     resolver: zodResolver(fieldAddTaskSchema),
     defaultValues: {
+      projectId: "",
       description: "",
       levelId: "",
       tradeId: "",
@@ -45,8 +48,12 @@ export function useFieldAddTaskController() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await fieldAddTaskService.loadLookups();
+        const [data, myProjects] = await Promise.all([
+          fieldAddTaskService.loadLookups(),
+          projectsApi.listMine(),
+        ]);
         setLookups(data);
+        setProjects(myProjects);
         form.setValue("priorityId", data.defaultPriorityId);
       } catch (e) {
         appToast.error(getApiErrorMessage(e, MESSAGES.task.loadFailed));
@@ -103,6 +110,7 @@ export function useFieldAddTaskController() {
     lookups,
     loadingLookups,
     submitting,
+    projects,
     levels: lookups?.levels ?? [],
     trades: lookups?.trades ?? [],
     priorityOptions,
