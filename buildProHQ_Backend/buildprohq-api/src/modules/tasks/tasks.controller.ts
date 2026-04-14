@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
+  Ip,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -325,8 +327,8 @@ export class TasksController {
   }
 
   @Patch(':id')
-  @Roles('manager', 'field_user')
-  @ApiOperation({ summary: 'Update task (manager/field user)' })
+  @Roles('manager', 'field_user', 'super_admin')
+  @ApiOperation({ summary: 'Update task (manager/field user/super admin)' })
   updateTask(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateTaskDto,
@@ -336,19 +338,26 @@ export class TasksController {
   }
 
   @Delete(':id')
-  @Roles('manager', 'field_user')
+  @Roles('manager', 'field_user', 'super_admin')
   @ApiOperation({
-    summary: 'Delete task (manager/field user, with scope checks)',
+    summary: 'Delete task (manager/field user/super admin, with scope checks)',
   })
   deleteTask(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthUser,
+    @Ip() ipAddress?: string,
+    @Headers('x-request-id') requestId?: string,
+    @Headers('user-agent') userAgent?: string,
   ) {
-    return this.tasksService.delete(id, user);
+    return this.tasksService.delete(id, user, {
+      ipAddress: ipAddress || null,
+      requestId: requestId || null,
+      userAgent: userAgent || null,
+    });
   }
 
   @Post(':id/assign')
-  @Roles('manager', 'field_user')
+  @Roles('manager', 'field_user', 'super_admin')
   @ApiOperation({
     summary: 'Assign or reassign task and persist assignment history',
   })
@@ -356,8 +365,15 @@ export class TasksController {
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: AssignTaskDto,
     @CurrentUser() user: AuthUser,
+    @Ip() ipAddress?: string,
+    @Headers('x-request-id') requestId?: string,
+    @Headers('user-agent') userAgent?: string,
   ) {
-    return this.tasksService.assign(id, dto, user);
+    return this.tasksService.assign(id, dto, user, {
+      ipAddress: ipAddress || null,
+      requestId: requestId || null,
+      userAgent: userAgent || null,
+    });
   }
 
   @Post(':id/complete')
@@ -374,7 +390,7 @@ export class TasksController {
   }
 
   @Post(':id/comments')
-  @Roles('manager', 'field_user', 'trade_user')
+  @Roles('manager', 'field_user', 'trade_user', 'super_admin')
   @ApiOperation({ summary: 'Add task comment' })
   addComment(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -382,6 +398,15 @@ export class TasksController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.tasksService.addComment(id, dto, user);
+  }
+
+  @Get(':id/comments')
+  @ApiOperation({ summary: 'Get task comments' })
+  getComments(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.tasksService.getComments(id, user);
   }
 
   @Get(':id/history')

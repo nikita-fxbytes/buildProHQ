@@ -47,6 +47,7 @@ export const MESSAGES = {
   },
   task: {
     created: "Task created successfully",
+    updated: "Task updated successfully",
     completed: "Task completed successfully",
     deleted: "Task deleted successfully",
     loadFailed: "Failed to load tasks",

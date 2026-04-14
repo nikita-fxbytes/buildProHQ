@@ -2,9 +2,15 @@
 
 import Box from "@mui/material/Box";
 import Checkbox from "@mui/material/Checkbox";
+import IconButton from "@mui/material/IconButton";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
 import { DaysBadge } from "@/components/common/badges/DaysBadge";
@@ -24,7 +30,9 @@ import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTable
 import { AppStatCardsSkeleton } from "@/components/common/skeletons/AppStatCardsSkeleton";
 import { SearchInput } from "@/components/common/SearchInput";
 import { StatCard } from "@/components/common/StatCard";
+import { STYLE_TOKENS } from "@/constants/style-tokens";
 import { htmlToPlainText } from "@/utils/richText";
+import { AppAutocomplete } from "@/components/common/AppAutocomplete";
 
 type Props = {
   addTaskHref?: string;
@@ -78,6 +86,16 @@ type Props = {
   confirmColor: "error" | "success" | "primary";
   closeConfirm: () => void;
   onConfirm: () => void;
+  goToEdit: (taskId: string) => void;
+  openAssign: (taskId: string) => void;
+  assignOpen: boolean;
+  assignLoading: boolean;
+  assignSubmitting: boolean;
+  assignUserOptions: Array<{ value: string; label: string }>;
+  assigneeUserId: string | null;
+  setAssigneeUserId: (v: string | null) => void;
+  closeAssign: () => void;
+  saveAssign: () => void;
   rows: Array<{ id: string; project: string | undefined; level: string; trade: string; user: string; priority: string; desc: string; days: number }>;
   page: number;
   pageSize: number;
@@ -280,8 +298,8 @@ export function ManagerTasksView(props: Props) {
         <AppTableHeader
           columnsTemplate={
             props.showProjectColumn
-              ? "36px 170px 80px 130px 50px 80px 1fr 100px 36px"
-              : "36px 80px 130px 50px 80px 1fr 100px 36px"
+              ? "36px 170px 80px 130px 50px 80px 1fr 100px 140px"
+              : "36px 80px 130px 50px 80px 1fr 100px 140px"
           }
           columns={[
             { key: "select", label: "" },
@@ -292,7 +310,7 @@ export function ManagerTasksView(props: Props) {
             { key: "priority", label: "Priority", sortable: true, sortKey: "priority" },
             { key: "description", label: "Description", sortable: true, sortKey: "description" },
             { key: "daysOpen", label: "Days Open", sortable: true, sortKey: "daysOpen" },
-            { key: "actions", label: "" },
+            { key: "actions", label: "Actions" },
           ]}
           sortKey={props.sortKey ?? null}
           sortDirection={props.sortDirection ?? "asc"}
@@ -317,8 +335,8 @@ export function ManagerTasksView(props: Props) {
               key={task.id}
               columnsTemplate={
                 props.showProjectColumn
-                  ? "36px 170px 80px 130px 50px 80px 1fr 100px 36px"
-                  : "36px 80px 130px 50px 80px 1fr 100px 36px"
+                  ? "36px 170px 80px 130px 50px 80px 1fr 100px 140px"
+                  : "36px 80px 130px 50px 80px 1fr 100px 140px"
               }
               className="task-row-item mgmt"
             >
@@ -341,24 +359,79 @@ export function ManagerTasksView(props: Props) {
               </AppTableCell>
               <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
               <DaysBadge days={task.days} />
-              <AppButton
-                type="button"
-                size="small"
-                variant="contained"
-                color="error"
-                onClick={() => props.openDeleteSingleConfirm(task)}
+              <Box
+                className="table-cell-actions"
                 sx={{
-                  padding: "4px 10px",
-                  fontSize: 12,
-                  minWidth: 0,
-                  background: "#FEE2E2",
-                  color: "#EF4444",
-                  boxShadow: "none",
-                  "&:hover": { background: "#EF4444", color: "#fff", boxShadow: "none" },
+                  width: "100%",
+                  display: "inline-flex",
+                  justifyContent: "flex-end",
+                  gap: 0.5,
+                  alignItems: "center",
                 }}
               >
-                <AppIcon name="delete" size={14} />
-              </AppButton>
+                <Tooltip title="Edit Task" arrow>
+                  <IconButton
+                    aria-label="Edit Task"
+                    size="small"
+                    onClick={() => props.goToEdit(task.id)}
+                    sx={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: "8px",
+                      border: `1.5px solid ${STYLE_TOKENS.colors.border}`,
+                      color: STYLE_TOKENS.colors.text,
+                      background: "#fff",
+                      "&:hover": {
+                        borderColor: STYLE_TOKENS.colors.orange,
+                        color: STYLE_TOKENS.colors.orange,
+                        background: "#fff",
+                      },
+                    }}
+                  >
+                    <AppIcon name="edit" size={16} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Assign" arrow>
+                  <IconButton
+                    aria-label="Assign"
+                    size="small"
+                    onClick={() => props.openAssign(task.id)}
+                    sx={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: "8px",
+                      border: `1.5px solid ${STYLE_TOKENS.colors.border}`,
+                      color: STYLE_TOKENS.colors.blue,
+                      background: "#fff",
+                      "&:hover": {
+                        borderColor: STYLE_TOKENS.colors.blue,
+                        color: STYLE_TOKENS.colors.blue,
+                        background: "#fff",
+                      },
+                    }}
+                  >
+                    <AppIcon name="addUser" size={16} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete" arrow>
+                  <IconButton
+                    aria-label="Delete"
+                    size="small"
+                    onClick={() => props.openDeleteSingleConfirm(task)}
+                    sx={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: "8px",
+                      background: "#FEE2E2",
+                      color: "#EF4444",
+                      border: `1.5px solid ${STYLE_TOKENS.colors.border}`,
+                      "&:hover": { background: "#EF4444", color: "#fff" },
+                    }}
+                  >
+                    <AppIcon name="delete" size={16} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </AppTableRow>
           ))
         )}
@@ -386,6 +459,45 @@ export function ManagerTasksView(props: Props) {
         onClose={props.closeConfirm}
         onConfirm={props.onConfirm}
       />
+
+      <Dialog open={props.assignOpen} onClose={props.closeAssign} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: 16 }}>👤 Assign Task</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Box sx={{ mt: 1 }}>
+            <Typography sx={{ fontSize: 12, fontWeight: 800, color: STYLE_TOKENS.colors.textMuted, mb: 1 }}>
+              Assign To
+            </Typography>
+            <AppAutocomplete<{ value: string; label: string }>
+              options={props.assignUserOptions}
+              value={props.assignUserOptions.find((o) => o.value === props.assigneeUserId) ?? null}
+              onChange={(opt) => props.setAssigneeUserId(opt?.value ?? null)}
+              getOptionLabel={(o) => o.label}
+              isOptionEqualToValue={(a, b) => a.value === b.value}
+              disabled={props.assignLoading || props.assignSubmitting}
+              noOptionsText="No users found"
+              textFieldProps={{ placeholder: "Select user…" }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <AppButton
+            type="button"
+            variant="contained"
+            onClick={props.saveAssign}
+            disabled={props.assignLoading || props.assignSubmitting}
+          >
+            ✅ Assign
+          </AppButton>
+          <AppButton
+            type="button"
+            variant="outlined"
+            onClick={props.closeAssign}
+            disabled={props.assignLoading || props.assignSubmitting}
+          >
+            Cancel
+          </AppButton>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

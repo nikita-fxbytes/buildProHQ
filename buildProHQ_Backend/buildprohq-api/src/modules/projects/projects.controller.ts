@@ -3,9 +3,12 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
+  Ip,
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -57,7 +60,7 @@ export class ProjectsController {
     return this.projectsService.createProject(actor, dto);
   }
 
-  @Post(':projectId/members/search')
+  @Post(':projectId/members')
   @Roles('super_admin', 'manager')
   @ApiOperation({ summary: 'List/search project members (pagination + search)' })
   @ApiBody({ type: SearchProjectMembersDto })
@@ -69,7 +72,18 @@ export class ProjectsController {
     return this.projectsService.listMembers(actor, projectId, dto);
   }
 
-  @Post(':projectId/members')
+  @Get(':projectId/members')
+  @Roles('super_admin', 'manager')
+  @ApiOperation({ summary: 'List/search project members (pagination + search)' })
+  membersGet(
+    @CurrentUser() actor: AuthUser,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
+    @Query() dto: SearchProjectMembersDto,
+  ) {
+    return this.projectsService.listMembers(actor, projectId, dto);
+  }
+
+  @Post(':projectId/members/assign')
   @Roles('super_admin')
   @ApiOperation({ summary: 'Assign user to project (super admin)' })
   @ApiBody({ type: AssignProjectMemberDto })
@@ -90,6 +104,23 @@ export class ProjectsController {
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
   ) {
     return this.projectsService.unassignMember(actor, projectId, userId);
+  }
+
+  @Delete(':projectId')
+  @Roles('super_admin')
+  @ApiOperation({ summary: 'Delete a project (super admin)' })
+  deleteProject(
+    @CurrentUser() actor: AuthUser,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
+    @Ip() ipAddress?: string,
+    @Headers('x-request-id') requestId?: string,
+    @Headers('user-agent') userAgent?: string,
+  ) {
+    return this.projectsService.deleteProject(actor, projectId, {
+      ipAddress: ipAddress || null,
+      requestId: requestId || null,
+      userAgent: userAgent || null,
+    });
   }
 }
 

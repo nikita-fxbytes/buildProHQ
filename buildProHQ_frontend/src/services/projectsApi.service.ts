@@ -74,7 +74,8 @@ export type SearchProjectMembersBody = {
 };
 
 export type AssignProjectMemberBody = {
-  userId: string;
+  userId?: string;
+  userIds?: string[];
   projectRole?: string;
 };
 
@@ -99,16 +100,35 @@ export const projectsApi = {
     projectId: string,
     body: SearchProjectMembersBody,
   ): Promise<{ items: ProjectMemberListItem[]; meta: ListProjectMembersMeta }> {
+    const safeLimit = Math.min(body.limit || 10, 100);
+    const safePage = Math.max(1, body.page || 1);
     const { data } = await apiClient.post<ApiEnvelope<ProjectMemberListItem[]>>(
-      `/v1/projects/${projectId}/members/search`,
-      body,
+      `/v1/projects/${projectId}/members`,
+      {
+        ...body,
+        page: safePage,
+        limit: safeLimit,
+      },
+    );
+    return { items: data.data, meta: (data.meta || {}) as ListProjectMembersMeta };
+  },
+
+  async listMembersGet(
+    projectId: string,
+    params: SearchProjectMembersBody,
+  ): Promise<{ items: ProjectMemberListItem[]; meta: ListProjectMembersMeta }> {
+    const safeLimit = Math.min(params.limit || 10, 100);
+    const safePage = Math.max(1, params.page || 1);
+    const { data } = await apiClient.get<ApiEnvelope<ProjectMemberListItem[]>>(
+      `/v1/projects/${projectId}/members`,
+      { params: { ...params, page: safePage, limit: safeLimit } },
     );
     return { items: data.data, meta: (data.meta || {}) as ListProjectMembersMeta };
   },
 
   async assignMember(projectId: string, body: AssignProjectMemberBody): Promise<{ message: string }> {
     const { data } = await apiClient.post<ApiEnvelope<{ message: string }>>(
-      `/v1/projects/${projectId}/members`,
+      `/v1/projects/${projectId}/members/assign`,
       body,
     );
     return data.data;
@@ -118,6 +138,11 @@ export const projectsApi = {
     const { data } = await apiClient.delete<ApiEnvelope<{ message: string }>>(
       `/v1/projects/${projectId}/members/${userId}`,
     );
+    return data.data;
+  },
+
+  async remove(projectId: string): Promise<{ message: string }> {
+    const { data } = await apiClient.delete<ApiEnvelope<{ message: string }>>(`/v1/projects/${projectId}`);
     return data.data;
   },
 };

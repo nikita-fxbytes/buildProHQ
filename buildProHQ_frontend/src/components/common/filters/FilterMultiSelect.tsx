@@ -35,7 +35,6 @@ export function FilterMultiSelect({
   const normalized = Array.from(
     new Map(normalizedRaw.map((o) => [o.value, o] as const)).values(),
   );
-  const indexByValue = new Map(normalized.map((o, i) => [o.value, i] as const));
   const selectedSet = new Set(selected);
   const value = normalized.filter((o) => selectedSet.has(o.value));
 
@@ -72,7 +71,7 @@ export function FilterMultiSelect({
             return (
               <Chip
                 {...tagProps}
-                key={`${option.value}__${index}`}
+                key={key ?? option.value}
                 label={option.label}
                 size="small"
               />
@@ -80,12 +79,11 @@ export function FilterMultiSelect({
           })
         }
         renderOption={(props, option, { selected: isSelected }) => {
-          const stableKey = `${option.value}__${indexByValue.get(option.value) ?? "x"}`;
-
           // React keys must be passed directly, not via `{...props}`.
-          const { key: _muiKey, ...liProps } = props as unknown as { key?: React.Key } & Record<string, unknown>;
+          // Prefer MUI-provided key, otherwise fall back to stable unique option.value.
+          const { key, ...liProps } = props as unknown as { key?: React.Key } & Record<string, unknown>;
           return (
-            <li {...liProps} key={stableKey}>
+            <li {...liProps} key={key ?? option.value}>
               <Checkbox size="small" checked={isSelected} sx={{ mr: 1, p: 0 }} />
               {option.label}
             </li>

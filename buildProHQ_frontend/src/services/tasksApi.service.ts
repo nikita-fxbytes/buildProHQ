@@ -1,3 +1,4 @@
+import { ApiV1 } from "@/constants/apiEndpoints";
 import { apiClient } from "@/services/apiClient";
 import { resolvePublicUrl } from "@/utils/urls";
 
@@ -129,6 +130,12 @@ export type TaskDetailResponse = {
   id: string;
   description?: string;
   status_id?: string;
+  project_id?: string | null;
+  priority_id?: string | null;
+  level_id?: string | null;
+  trade_id?: string | null;
+  assigned_to_user_id?: string | null;
+  due_at?: string | null;
   [key: string]: unknown;
 };
 
@@ -155,22 +162,19 @@ export type TaskAttachmentItem = {
 
 export const tasksApi = {
   async getStats(): Promise<TaskStats> {
-    const { data } = await apiClient.get<ApiEnvelope<TaskStats>>("/v1/tasks/stats");
+    const { data } = await apiClient.get<ApiEnvelope<TaskStats>>(ApiV1.tasks.stats);
     return data.data;
   },
 
   async getAnalytics(): Promise<ManagerAnalytics> {
-    const { data } = await apiClient.get<ApiEnvelope<ManagerAnalytics>>("/v1/tasks/analytics");
+    const { data } = await apiClient.get<ApiEnvelope<ManagerAnalytics>>(ApiV1.tasks.analytics);
     return data.data;
   },
 
   async listOpen(
     body: ListOpenTasksBody,
   ): Promise<{ items: TaskListItem[]; meta: ListTasksResponseMeta }> {
-    const { data } = await apiClient.post<ApiEnvelope<TaskListItem[]>>(
-      "/v1/tasks/open",
-      body,
-    );
+    const { data } = await apiClient.post<ApiEnvelope<TaskListItem[]>>(ApiV1.tasks.open, body);
     const meta = (data.meta || {}) as ListTasksResponseMeta;
     return { items: data.data, meta };
   },
@@ -203,6 +207,56 @@ export const tasksApi = {
   async deleteOne(id: string): Promise<{ id: string; deleted: true }> {
     const { data } = await apiClient.delete<ApiEnvelope<{ id: string; deleted: true }>>(
       `/v1/tasks/${id}`,
+    );
+    return data.data;
+  },
+
+  async getById(id: string): Promise<TaskDetailResponse> {
+    const { data } = await apiClient.get<ApiEnvelope<TaskDetailResponse>>(`/v1/tasks/${id}`);
+    return data.data;
+  },
+
+  async update(
+    id: string,
+    body: {
+      description?: string;
+      levelId?: string;
+      tradeId?: string;
+      priorityId?: string;
+      dueAt?: string | null;
+      assignedToUserId?: string | null;
+      notes?: string;
+    },
+  ): Promise<TaskDetailResponse> {
+    const { data } = await apiClient.patch<ApiEnvelope<TaskDetailResponse>>(`/v1/tasks/${id}`, body);
+    return data.data;
+  },
+
+  async assign(id: string, body: { assigneeUserId: string; notes?: string }): Promise<TaskDetailResponse> {
+    const { data } = await apiClient.post<ApiEnvelope<TaskDetailResponse>>(`/v1/tasks/${id}/assign`, body);
+    return data.data;
+  },
+
+  async addComment(id: string, body: { comment: string }): Promise<{ taskId: string; commentAdded: true; message: string }> {
+    const { data } = await apiClient.post<ApiEnvelope<{ taskId: string; commentAdded: true; message: string }>>(
+      `/v1/tasks/${id}/comments`,
+      body,
+    );
+    return data.data;
+  },
+
+  async getComments(
+    id: string,
+  ): Promise<Array<{ id: string; taskId: string; comment: string; createdAt: string; createdBy: string }>> {
+    const { data } = await apiClient.get<
+      ApiEnvelope<Array<{ id: string; taskId: string; comment: string; createdAt: string; createdBy: string }>>
+    >(`/v1/tasks/${id}/comments`);
+    return data.data;
+  },
+
+  async getHistory(id: string): Promise<Array<{ id: string; changedAt?: string; changeReason?: string; notes?: string }>> {
+    const { data } = await apiClient.get<ApiEnvelope<Array<{ id: string; changedAt?: string; changeReason?: string; notes?: string }>>>(
+      `/v1/tasks/${id}/history`,
     );
     return data.data;
   },

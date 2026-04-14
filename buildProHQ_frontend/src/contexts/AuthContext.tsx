@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { authService } from "@/services/auth.service";
 import { sessionService } from "@/services/session.service";
 import type { SessionUser } from "@/types/domain";
@@ -26,6 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   const checkSession = useCallback(async () => {
     try {
@@ -34,16 +36,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (localUser) {
         setUser(localUser);
       }
-      const currentUser = await authService.me();
-      setUser(currentUser);
-      sessionService.setUser(currentUser);
+      // Avoid calling protected APIs on public routes unless we already have a local session.
+      // This prevents noisy/expected 401s during the unauthenticated login flow.
+      const isPublicAuthRoute =
+        pathname.startsWith("/login") || pathname.startsWith("/set-password");
+
+      if (!isPublicAuthRoute || localUser) {
+        const currentUser = await authService.me();
+        setUser(currentUser);
+        sessionService.setUser(currentUser);
+      }
     } catch {
       setUser(null);
       sessionService.clearUser();
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [pathname]);
 
   const login = async (role: Role, email: string, password: string) => {
     try {
@@ -88,7 +97,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       router.push(ROUTES.LOGIN);
       appToast.info(MESSAGES.auth.logoutSuccess);
     } catch (error) {
-      console.error("Logout failed", error);
       appToast.error(MESSAGES.common.somethingWrong);
     }
   };

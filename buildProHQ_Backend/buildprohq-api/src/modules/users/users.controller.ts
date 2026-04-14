@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
+  Ip,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -51,7 +53,7 @@ export class UsersController {
   @Roles('manager', 'super_admin')
   @ApiOperation({ summary: 'List all active users (manager/super admin)' })
   listUsers(@CurrentUser() actor: AuthUser) {
-    return this.usersService.list(actor.id);
+    return this.usersService.list(actor);
   }
 
   @Post()
@@ -106,7 +108,7 @@ export class UsersController {
     },
   })
   searchUsers(@Body() dto: SearchUsersDto, @CurrentUser() actor: AuthUser) {
-    return this.usersService.search(actor.id, dto);
+    return this.usersService.search(actor, dto);
   }
 
   @Get(':id')
@@ -130,8 +132,15 @@ export class UsersController {
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateUserDto,
     @CurrentUser() actor: AuthUser,
+    @Ip() ipAddress?: string,
+    @Headers('x-request-id') requestId?: string,
+    @Headers('user-agent') userAgent?: string,
   ) {
-    return this.usersService.update(id, dto, actor.id);
+    return this.usersService.update(id, dto, actor.id, {
+      ipAddress: ipAddress || null,
+      requestId: requestId || null,
+      userAgent: userAgent || null,
+    });
   }
 
   @Delete(':id')
@@ -140,7 +149,14 @@ export class UsersController {
   removeUser(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() actor: AuthUser,
+    @Ip() ipAddress?: string,
+    @Headers('x-request-id') requestId?: string,
+    @Headers('user-agent') userAgent?: string,
   ) {
-    return this.usersService.remove(id, actor.id);
+    return this.usersService.remove(id, actor.id, {
+      ipAddress: ipAddress || null,
+      requestId: requestId || null,
+      userAgent: userAgent || null,
+    });
   }
 }

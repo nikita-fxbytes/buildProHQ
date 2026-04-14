@@ -67,7 +67,7 @@ export function SuperFiltersListView(props: SuperFiltersListViewProps) {
           ]}
           sortKey={props.sortKey}
           sortDirection={props.sortDirection}
-          onSort={(k) => props.onSortColumn(k as any)}
+          onSort={(k) => props.onSortColumn(k as SuperFiltersListViewProps["sortKey"])}
           className="mgmt"
         />
 

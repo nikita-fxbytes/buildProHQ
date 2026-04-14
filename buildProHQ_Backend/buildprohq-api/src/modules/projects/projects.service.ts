@@ -4,11 +4,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, IsNull, Repository } from 'typeorm';
+import { ILike, In, IsNull, QueryFailedError, Repository } from 'typeorm';
 import {
   Project,
   ProjectUser,
   Role,
+  AuditLog,
+  Task,
+  TaskAssignment,
+  TaskAssignmentResponse,
+  TaskComment,
+  TaskCompletion,
+  TaskFilterValue,
+  TaskHistory,
+  TaskMetric,
+  Attachment,
   User,
   UserRole,
 } from '../../infrastructure/persistence/typeorm/entities';
@@ -135,7 +145,9 @@ export class ProjectsService {
       qb.orderBy('p.created_at', sortOrder.toUpperCase() as any);
     }
 
-    qb.take(dto.limit).skip((dto.page - 1) * dto.limit);
+    // NOTE: With grouped raw queries, TypeORM's `take/skip` can be unreliable in some setups.
+    // Use explicit LIMIT/OFFSET to guarantee server-side pagination.
+    qb.limit(dto.limit).offset((dto.page - 1) * dto.limit);
 
     const [rawItems, total] = await Promise.all([
       qb.getRawMany(),
@@ -177,6 +189,18 @@ export class ProjectsService {
     if (actor.role !== 'super_admin') {
       throw new ConflictException(MESSAGES.COMMON.FORBIDDEN);
     }
+    const name = dto.name.trim();
+
+    const existingName = await this.projectRepo
+      .createQueryBuilder('p')
+      .select(['p.id AS id'])
+      .where('p.deleted_at IS NULL')
+      .andWhere('lower(p.name) = lower(:name)', { name })
+      .getRawOne();
+    if (existingName?.id) {
+      throw new ConflictException('Project with this name already exists');
+    }
+
     const code = dto.code?.trim() || slugCode(dto.name) || 'project';
     const existing = await this.projectRepo.findOne({
       where: { code, deletedAt: IsNull() },
@@ -187,115 +211,261 @@ export class ProjectsService {
     }
     const row = this.projectRepo.create({
       code,
-      name: dto.name.trim(),
+      name,
       createdBy: actor.id,
       updatedBy: actor.id,
     });
-    const saved = await this.projectRepo.save(row);
-    return { message: 'Project created', data: saved };
+    try {
+      const saved = await this.projectRepo.save(row);
+      return { message: 'Project created', data: saved };
+    } catch (e) {
+      // Handle DB-level uniqueness (race conditions / concurrent requests)
+      if (e instanceof QueryFailedError && (e as any).driverError?.code === '23505') {
+        throw new ConflictException('Project with this name already exists');
+      }
+      throw e;
+    }
   }
 
-  async listMembers(actor: AuthUser, projectId: string, dto: SearchProjectMembersDto) {
-    if (actor.role !== 'super_admin' && actor.role !== 'manager') {
-      return { message: 'Members fetched successfully', data: [], meta: { page: dto.page, limit: dto.limit, total: 0, totalPages: 1 } };
+  async deleteProject(
+    actor: AuthUser,
+    projectId: string,
+    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+  ) {
+    if (actor.role !== 'super_admin') {
+      throw new ConflictException(MESSAGES.COMMON.FORBIDDEN);
     }
 
-    const project = await this.projectRepo.findOne({
+    const existing = await this.projectRepo.findOne({
       where: { id: projectId, deletedAt: IsNull() },
       select: { id: true },
     });
-    if (!project) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
+    if (!existing) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
 
-    const term = dto.search?.trim();
+    // Option 1 (recommended): Soft delete project; tasks remain for history but are deactivated via soft-delete,
+    // and all related mappings are cleaned inside a single transaction (no partial deletes).
+    await this.projectRepo.manager.transaction(async (em) => {
+      const taskRepo = em.getRepository(Task);
+      const assignmentRepo = em.getRepository(TaskAssignment);
+      const assignmentResponseRepo = em.getRepository(TaskAssignmentResponse);
+      const completionRepo = em.getRepository(TaskCompletion);
+      const commentRepo = em.getRepository(TaskComment);
+      const historyRepo = em.getRepository(TaskHistory);
+      const filterValueRepo = em.getRepository(TaskFilterValue);
+      const attachmentRepo = em.getRepository(Attachment);
+      const metricRepo = em.getRepository(TaskMetric);
+      const projectUserRepo = em.getRepository(ProjectUser);
+      const projectRepo = em.getRepository(Project);
+      const auditRepo = em.getRepository(AuditLog);
 
-    // Load memberships (paged) then hydrate user + role in one pass.
-    const [memberships, total] = await this.projectUserRepo.findAndCount({
-      where: {
-        projectId,
-        deletedAt: IsNull(),
-      },
-      order: { createdAt: 'DESC' },
-      take: dto.limit,
-      skip: (dto.page - 1) * dto.limit,
-      select: {
-        id: true,
-        userId: true,
-        projectRole: true,
-        createdAt: true,
-      },
-    });
+      const tasks = await taskRepo.find({
+        where: { projectId, deletedAt: IsNull() },
+        select: { id: true },
+      });
+      const taskIds = tasks.map((t) => t.id);
 
-    const userIds = memberships.map((m) => m.userId);
-    const users = userIds.length
-      ? await this.userRepo.find({
-          where: term
-            ? [
-                { id: userIds as any, fullName: ILike(`%${term}%`), deletedAt: IsNull() },
-                { id: userIds as any, email: ILike(`%${term}%`), deletedAt: IsNull() },
-              ]
-            : { id: userIds as any, deletedAt: IsNull() },
-          select: { id: true, fullName: true, email: true, initials: true, avatarUrl: true },
-        })
-      : [];
-    const usersById = new Map(users.map((u) => [u.id, u]));
+      if (taskIds.length) {
+        const assignments = await assignmentRepo.find({
+          where: { taskId: In(taskIds), deletedAt: IsNull() },
+          select: { id: true },
+        });
+        const assignmentIds = assignments.map((a) => a.id);
 
-    // Map user->role code via user_roles join (take first)
-    const userRoles = userIds.length
-      ? await this.userRoleRepo.find({
-          where: { userId: userIds as any, deletedAt: IsNull() },
-          select: { userId: true, roleId: true },
-        })
-      : [];
-    const roleIds = [...new Set(userRoles.map((ur) => ur.roleId))];
-    const roles = roleIds.length
-      ? await this.roleRepo.find({
-          where: { id: roleIds as any, deletedAt: IsNull() },
-          select: { id: true, code: true, name: true },
-        })
-      : [];
-    const rolesById = new Map(roles.map((r) => [r.id, r]));
-    const roleCodeByUserId = new Map<string, string>();
-    userRoles.forEach((ur) => {
-      if (!roleCodeByUserId.has(ur.userId)) {
-        const r = rolesById.get(ur.roleId);
-        if (r?.code) roleCodeByUserId.set(ur.userId, r.code);
+        if (assignmentIds.length) {
+          await assignmentResponseRepo
+            .createQueryBuilder()
+            .softDelete()
+            .where('"assignment_id" IN (:...assignmentIds)', { assignmentIds })
+            .execute();
+        }
+
+        await assignmentRepo
+          .createQueryBuilder()
+          .softDelete()
+          .where('"task_id" IN (:...taskIds)', { taskIds })
+          .execute();
+
+        await completionRepo
+          .createQueryBuilder()
+          .softDelete()
+          .where('"task_id" IN (:...taskIds)', { taskIds })
+          .execute();
+
+        await commentRepo
+          .createQueryBuilder()
+          .softDelete()
+          .where('"task_id" IN (:...taskIds)', { taskIds })
+          .execute();
+
+        await historyRepo
+          .createQueryBuilder()
+          .softDelete()
+          .where('"task_id" IN (:...taskIds)', { taskIds })
+          .execute();
+
+        await filterValueRepo
+          .createQueryBuilder()
+          .softDelete()
+          .where('"task_id" IN (:...taskIds)', { taskIds })
+          .execute();
+
+        await attachmentRepo
+          .createQueryBuilder()
+          .softDelete()
+          .where('"task_id" IN (:...taskIds)', { taskIds })
+          .execute();
+
+        await taskRepo
+          .createQueryBuilder()
+          .softDelete()
+          .where('"id" IN (:...taskIds)', { taskIds })
+          .execute();
       }
+
+      await metricRepo
+        .createQueryBuilder()
+        .softDelete()
+        .where('"project_id" = :projectId', { projectId })
+        .execute();
+
+      // project_members table in the requirements maps to "project_users" in this codebase.
+      await projectUserRepo
+        .createQueryBuilder()
+        .softDelete()
+        .where('"project_id" = :projectId', { projectId })
+        .execute();
+
+      await projectRepo.softDelete(projectId);
+
+      await auditRepo.save(
+        auditRepo.create({
+          tableName: 'projects',
+          recordId: projectId,
+          actionType: 'DELETE',
+          newValue: {
+            action: 'PROJECT_DELETED',
+            projectId,
+            deletedAt: new Date().toISOString(),
+          },
+          performedBy: actor.id,
+          ipAddress: meta?.ipAddress ?? null,
+          requestId: meta?.requestId ?? null,
+          userAgent: meta?.userAgent ?? null,
+        }),
+      );
     });
 
-    const items = memberships
-      .map((m) => {
-        const u = usersById.get(m.userId);
-        if (!u) return null;
-        const code = roleCodeByUserId.get(m.userId) ?? '';
-        return {
-          membershipId: m.id,
+    return { message: 'Project deleted' };
+  }
+
+  async listMembers(actor: AuthUser, projectId: string, dto: SearchProjectMembersDto) {
+    const page = dto.page ?? 1;
+    const limit = dto.limit ?? 10;
+    const role = dto.role?.toLowerCase() as any;
+
+    if (actor.role !== 'super_admin' && actor.role !== 'manager') {
+      return { message: 'Members fetched successfully', data: [], meta: { page, limit, total: 0, totalPages: 1 } };
+    }
+
+    try {
+      const project = await this.projectRepo.findOne({
+        where: { id: projectId, deletedAt: IsNull() },
+        select: { id: true },
+      });
+      if (!project) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
+
+      const term = dto.search?.trim();
+
+      // Load memberships (paged) then hydrate user + role in one pass.
+      const [memberships, total] = await this.projectUserRepo.findAndCount({
+        where: {
           projectId,
-          userId: u.id,
-          fullName: u.fullName,
-          email: u.email,
-          initials: u.initials,
-          avatarUrl: u.avatarUrl,
-          roleCode: code,
-          projectRole: m.projectRole,
-          assignedAt: m.createdAt,
-        };
-      })
-      .filter(Boolean);
+          deletedAt: IsNull(),
+        },
+        order: { createdAt: 'DESC' },
+        take: limit,
+        skip: (page - 1) * limit,
+        select: {
+          id: true,
+          userId: true,
+          projectRole: true,
+          createdAt: true,
+        },
+      });
 
-    const filtered = dto.role
-      ? items.filter((i: any) => (i.roleCode || '').includes(dto.role!))
-      : items;
+      const userIds = memberships.map((m) => m.userId);
+      const users = userIds.length
+        ? await this.userRepo.find({
+            where: term
+              ? [
+                  { id: In(userIds), fullName: ILike(`%${term}%`), deletedAt: IsNull() },
+                  { id: In(userIds), email: ILike(`%${term}%`), deletedAt: IsNull() },
+                ]
+              : { id: In(userIds), deletedAt: IsNull() },
+            select: { id: true, fullName: true, email: true, initials: true, avatarUrl: true },
+          })
+        : [];
+      const usersById = new Map(users.map((u) => [u.id, u]));
 
-    return {
-      message: 'Members fetched successfully',
-      data: filtered,
-      meta: {
-        page: dto.page,
-        limit: dto.limit,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / dto.limit)),
-      },
-    };
+      // Map user->role code via user_roles join (take first)
+      const userRoles = userIds.length
+        ? await this.userRoleRepo.find({
+            where: { userId: In(userIds), deletedAt: IsNull() },
+            select: { userId: true, roleId: true },
+          })
+        : [];
+      const roleIds = [...new Set(userRoles.map((ur) => ur.roleId))];
+      const roles = roleIds.length
+        ? await this.roleRepo.find({
+            where: { id: In(roleIds), deletedAt: IsNull() },
+            select: { id: true, code: true, name: true },
+          })
+        : [];
+      const rolesById = new Map(roles.map((r) => [r.id, r]));
+      const roleCodeByUserId = new Map<string, string>();
+      userRoles.forEach((ur) => {
+        if (!roleCodeByUserId.has(ur.userId)) {
+          const r = rolesById.get(ur.roleId);
+          if (r?.code) roleCodeByUserId.set(ur.userId, r.code);
+        }
+      });
+
+      const items = memberships
+        .map((m) => {
+          const u = usersById.get(m.userId);
+          if (!u) return null;
+          const code = (roleCodeByUserId.get(m.userId) ?? '').toLowerCase();
+          return {
+            membershipId: m.id,
+            projectId,
+            userId: u.id,
+            fullName: u.fullName,
+            email: u.email,
+            initials: u.initials,
+            avatarUrl: u.avatarUrl,
+            roleCode: code,
+            projectRole: m.projectRole,
+            assignedAt: m.createdAt,
+          };
+        })
+        .filter(Boolean);
+
+      const filtered = role ? items.filter((i: any) => (i.roleCode || '').includes(role)) : items;
+
+      return {
+        message: 'Members fetched successfully',
+        data: filtered,
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / limit)),
+        },
+      };
+    } catch {
+      // Never hard-crash the UI for member listing
+      return { message: 'Members fetched successfully', data: [], meta: { page, limit, total: 0, totalPages: 1 } };
+    }
   }
 
   async assignMember(actor: AuthUser, projectId: string, dto: AssignProjectMemberDto) {
@@ -308,28 +478,39 @@ export class ProjectsService {
     });
     if (!project) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
 
-    const user = await this.userRepo.findOne({
-      where: { id: dto.userId, deletedAt: IsNull() },
-      select: { id: true },
-    });
-    if (!user) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
-
-    const existing = await this.projectUserRepo.findOne({
-      where: { projectId, userId: dto.userId, deletedAt: IsNull() },
-      select: { id: true },
-    });
-    if (existing) {
-      return { message: 'User already assigned' };
+    const ids = (dto.userIds?.length ? dto.userIds : dto.userId ? [dto.userId] : []).filter(Boolean) as string[];
+    if (ids.length === 0) {
+      throw new ConflictException('userId or userIds is required');
     }
 
+    // Validate users exist.
+    const users = await this.userRepo.find({
+      where: ids.map((id) => ({ id, deletedAt: IsNull() })),
+      select: { id: true },
+    });
+    const found = new Set(users.map((u) => u.id));
+    const missing = ids.filter((id) => !found.has(id));
+    if (missing.length > 0) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
+
+    // Skip already assigned.
+    const existing = await this.projectUserRepo.find({
+      where: ids.map((userId) => ({ projectId, userId, deletedAt: IsNull() })),
+      select: { userId: true },
+    });
+    const already = new Set(existing.map((e) => e.userId));
+    const toCreate = ids.filter((id) => !already.has(id));
+    if (toCreate.length === 0) return { message: 'Users already assigned' };
+
     await this.projectUserRepo.save(
-      this.projectUserRepo.create({
-        projectId,
-        userId: dto.userId,
-        projectRole: dto.projectRole ?? null,
-      }),
+      toCreate.map((userId) =>
+        this.projectUserRepo.create({
+          projectId,
+          userId,
+          projectRole: dto.projectRole ?? null,
+        }),
+      ),
     );
-    return { message: 'User assigned' };
+    return { message: 'Users assigned' };
   }
 
   async unassignMember(actor: AuthUser, projectId: string, userId: string) {

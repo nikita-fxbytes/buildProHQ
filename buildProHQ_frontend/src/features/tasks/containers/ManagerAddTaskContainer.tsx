@@ -3,8 +3,8 @@
 import { ManagerAddTaskView } from "@/components/tasks/ManagerAddTaskView";
 import { useManagerAddTaskController } from "@/features/tasks/hooks/useManagerAddTaskController";
 
-export function ManagerAddTaskContainer() {
-  const controller = useManagerAddTaskController();
+export function ManagerAddTaskContainer(props?: { mode?: "manager" | "super" }) {
+  const controller = useManagerAddTaskController({ mode: props?.mode ?? "manager" });
   return (
     <ManagerAddTaskView
       form={controller.form}

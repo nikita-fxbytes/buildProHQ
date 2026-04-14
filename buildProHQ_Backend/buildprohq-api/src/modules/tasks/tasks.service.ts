@@ -13,8 +13,10 @@ import {
   ProjectUser,
   Task,
   TaskAssignment,
+  TaskAssignmentResponse,
   TaskComment,
   TaskCompletion,
+  TaskFilterValue,
   TaskHistory,
   TaskStatus,
 } from '../../infrastructure/persistence/typeorm/entities';
@@ -97,6 +99,7 @@ export class TasksService {
       .leftJoin('levels', 'lv', 'lv.id = t.level_id')
       .select([
         't.id AS id',
+        't.project_id AS project_id',
         't.status_id AS status_id',
         't.priority_id AS priority_id',
         't.level_id AS level_id',
@@ -105,6 +108,7 @@ export class TasksService {
         't.assigned_to_user_id AS assigned_to_user_id',
         't.description AS description',
         't.notes AS notes',
+        't.due_at AS due_at',
         't.opened_at AS opened_at',
         't.closed_at AS closed_at',
         't.days_open AS days_open',
@@ -152,6 +156,7 @@ export class TasksService {
       assignedToUserId: dto.assignedToUserId ?? null,
       description: sanitizeRichHtml(dto.description),
       notes: dto.notes ?? null,
+      dueAt: dto.dueAt ? new Date(dto.dueAt) : null,
       createdBy: user.id,
       updatedBy: user.id,
     });
@@ -212,6 +217,8 @@ export class TasksService {
     if (dto.description !== undefined)
       updatePayload.description = sanitizeRichHtml(dto.description);
     if (dto.notes !== undefined) updatePayload.notes = dto.notes;
+    if (dto.dueAt !== undefined)
+      updatePayload.dueAt = dto.dueAt ? new Date(dto.dueAt) : null;
 
     await this.taskRepository.update(id, updatePayload);
 
@@ -242,7 +249,11 @@ export class TasksService {
     return this.getById(id, user);
   }
 
-  async delete(id: string, user: AuthUser) {
+  async delete(
+    id: string,
+    user: AuthUser,
+    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+  ) {
     const existing = await this.getById(id, user);
     this.enforceTaskDeleteScope(user, existing);
 
@@ -254,10 +265,69 @@ export class TasksService {
       throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
     }
 
-    await this.taskRepository.softDelete(id);
-    await this.taskRepository.update(id, {
-      updatedBy: user.id,
-      statusId: deletedStatus.id,
+    await this.taskRepository.manager.transaction(async (em) => {
+      const taskRepo = em.getRepository(Task);
+      const assignmentRepo = em.getRepository(TaskAssignment);
+      const assignmentResponseRepo = em.getRepository(TaskAssignmentResponse);
+      const completionRepo = em.getRepository(TaskCompletion);
+      const commentRepo = em.getRepository(TaskComment);
+      const historyRepo = em.getRepository(TaskHistory);
+      const filterValueRepo = em.getRepository(TaskFilterValue);
+      const attachmentRepo = em.getRepository(Attachment);
+
+      // Soft-delete task and mark status as deleted (keeps history, prevents orphaned active relations).
+      await taskRepo.softDelete(id);
+      await taskRepo.update(id, { updatedBy: user.id, statusId: deletedStatus.id });
+
+      // Soft-delete all task-scoped relations to avoid dangling active rows.
+      const assignments = await assignmentRepo.find({
+        where: { taskId: id, deletedAt: IsNull() },
+        select: { id: true },
+      });
+      const assignmentIds = assignments.map((a) => a.id);
+      if (assignmentIds.length) {
+        await assignmentResponseRepo
+          .createQueryBuilder()
+          .softDelete()
+          .where('"assignment_id" IN (:...assignmentIds)', { assignmentIds })
+          .execute();
+      }
+
+      await assignmentRepo
+        .createQueryBuilder()
+        .softDelete()
+        .where('"task_id" = :taskId', { taskId: id })
+        .execute();
+
+      await completionRepo
+        .createQueryBuilder()
+        .softDelete()
+        .where('"task_id" = :taskId', { taskId: id })
+        .execute();
+
+      await commentRepo
+        .createQueryBuilder()
+        .softDelete()
+        .where('"task_id" = :taskId', { taskId: id })
+        .execute();
+
+      await historyRepo
+        .createQueryBuilder()
+        .softDelete()
+        .where('"task_id" = :taskId', { taskId: id })
+        .execute();
+
+      await filterValueRepo
+        .createQueryBuilder()
+        .softDelete()
+        .where('"task_id" = :taskId', { taskId: id })
+        .execute();
+
+      await attachmentRepo
+        .createQueryBuilder()
+        .softDelete()
+        .where('"task_id" = :taskId', { taskId: id })
+        .execute();
     });
 
     await this.audit.log({
@@ -266,12 +336,20 @@ export class TasksService {
       actionType: 'DELETE',
       oldValue: existing,
       performedBy: user.id,
+      ipAddress: meta?.ipAddress ?? null,
+      requestId: meta?.requestId ?? null,
+      userAgent: meta?.userAgent ?? null,
     });
 
     return { id, deleted: true };
   }
 
-  async assign(id: string, dto: AssignTaskDto, user: AuthUser) {
+  async assign(
+    id: string,
+    dto: AssignTaskDto,
+    user: AuthUser,
+    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+  ) {
     const existing = await this.getById(id, user);
     this.enforceTaskWriteScope(user, existing);
 
@@ -305,8 +383,12 @@ export class TasksService {
       tableName: 'task_assignments',
       recordId: assignment.id,
       actionType: 'CREATE',
+      oldValue: { taskId: id, assigneeUserId: existing.assigned_to_user_id ?? null },
       newValue: dto,
       performedBy: user.id,
+      ipAddress: meta?.ipAddress ?? null,
+      requestId: meta?.requestId ?? null,
+      userAgent: meta?.userAgent ?? null,
     });
 
     return this.getById(id, user);
@@ -386,6 +468,14 @@ export class TasksService {
     });
     await this.taskCommentRepository.save(row);
     return { taskId, commentAdded: true, message: MESSAGES.TASKS.UPDATED };
+  }
+
+  async getComments(taskId: string, user: AuthUser) {
+    await this.getById(taskId, user);
+    return this.taskCommentRepository.find({
+      where: { taskId, deletedAt: IsNull() },
+      order: { createdAt: 'DESC', id: 'DESC' },
+    });
   }
 
   async getHistory(taskId: string, user: AuthUser) {
@@ -967,6 +1057,7 @@ export class TasksService {
   }
 
   private enforceTaskReadScope(user: AuthUser, task: any): void {
+    if (user.role === 'super_admin') return;
     if (user.role === 'manager') return;
     if (user.role === 'trade_user' && task.assigned_to_user_id !== user.id) {
       throw new ForbiddenException(MESSAGES.TASKS.READ_SCOPE_DENIED);
@@ -981,6 +1072,7 @@ export class TasksService {
   }
 
   private enforceTaskWriteScope(user: AuthUser, task: any): void {
+    if (user.role === 'super_admin') return;
     if (user.role === 'manager') return;
     if (user.role === 'field_user' && task.created_by_user_id === user.id)
       return;
@@ -988,6 +1080,7 @@ export class TasksService {
   }
 
   private enforceTaskDeleteScope(user: AuthUser, task: any): void {
+    if (user.role === 'super_admin') return;
     if (user.role === 'manager') return;
     if (user.role === 'field_user' && task.created_by_user_id === user.id)
       return;
@@ -995,6 +1088,7 @@ export class TasksService {
   }
 
   private enforceTaskCompleteScope(user: AuthUser, task: any): void {
+    if (user.role === 'super_admin') return;
     if (user.role === 'manager') return;
     if (user.role === 'trade_user' && task.assigned_to_user_id === user.id)
       return;

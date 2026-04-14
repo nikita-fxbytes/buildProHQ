@@ -16,9 +16,11 @@ import {
   UserStatus,
   UserType,
 } from '../../infrastructure/persistence/typeorm/entities';
+import { Role } from '../../infrastructure/persistence/typeorm/entities';
 import { MESSAGES } from '../../infrastructure/common/constants/messages';
 import { Task, TaskStatus } from '../../infrastructure/persistence/typeorm/entities';
 import { SearchUsersDto } from './dto/search-users.dto';
+import type { AuthUser } from '../../infrastructure/common/interfaces/auth-user.interface';
 
 @Injectable()
 export class UsersService {
@@ -33,10 +35,10 @@ export class UsersService {
     private readonly invitationsService: InvitationsService,
   ) {}
 
-  async list(actorId: string) {
+  async list(actor: AuthUser) {
     // Lightweight list endpoint used by lookups/filters/badges.
     // Keep it safe (no parameterized subquery in JOIN) and include open task count.
-    return this.userRepository
+    const qb = this.userRepository
       .createQueryBuilder('u')
       .innerJoin(UserType, 'ut', 'ut.id = u.user_type_id')
       .innerJoin(UserStatus, 'us', 'us.id = u.user_status_id')
@@ -61,7 +63,6 @@ export class UsersService {
         'us.name AS user_status_name',
       ])
       .where('u.deleted_at IS NULL')
-      .andWhere('u.created_by = :actorId', { actorId })
       .addSelect('COUNT(ts.id)::int', 'open_tasks_count')
       .groupBy('u.id')
       .addGroupBy('ut.code')
@@ -69,14 +70,23 @@ export class UsersService {
       .addGroupBy('us.code')
       .addGroupBy('us.name')
       .orderBy('u.created_at', 'DESC')
-      .getRawMany();
+      ;
+
+    // Super Admin can see all users. Managers are scoped to users they created.
+    if (actor.role !== 'super_admin') {
+      qb.andWhere('u.created_by = :actorId', { actorId: actor.id });
+    }
+
+    return qb.getRawMany();
   }
 
-  async search(actorId: string, dto: SearchUsersDto) {
+  async search(actor: AuthUser, dto: SearchUsersDto) {
     const qb = this.userRepository
       .createQueryBuilder('u')
       .innerJoin(UserType, 'ut', 'ut.id = u.user_type_id')
       .innerJoin(UserStatus, 'us', 'us.id = u.user_status_id')
+      .leftJoin(UserRole, 'ur', 'ur.user_id = u.id AND ur.deleted_at IS NULL')
+      .leftJoin(Role, 'r', 'r.id = ur.role_id AND r.deleted_at IS NULL')
       .leftJoin(Task, 't', 't.created_by_user_id = u.id AND t.deleted_at IS NULL')
       .leftJoin(
         TaskStatus,
@@ -90,8 +100,12 @@ export class UsersService {
         'ts_done.id = t.status_id AND ts_done.is_terminal = :isTerminalDone',
         { isTerminalDone: true },
       )
-      .where('u.deleted_at IS NULL')
-      .andWhere('u.created_by = :actorId', { actorId });
+      .where('u.deleted_at IS NULL');
+
+    // Super Admin can see all users. Managers are scoped to users they created.
+    if (actor.role !== 'super_admin') {
+      qb.andWhere('u.created_by = :actorId', { actorId: actor.id });
+    }
 
     const term = dto.search?.trim();
     if (term) {
@@ -111,6 +125,22 @@ export class UsersService {
       qb.andWhere('ut.code = :typeCode', { typeCode });
     }
 
+    // Super Admin accounts often share the same user_type ("management") as managers.
+    // For role-filtered user lists (Management/Trade/User), exclude super_admin role users.
+    // This keeps "Managers" tab strictly managers (not super admins).
+    if (dto.role) {
+      qb.andWhere(
+        `NOT EXISTS (
+          SELECT 1
+          FROM user_roles urx
+          INNER JOIN roles rx ON rx.id = urx.role_id AND rx.deleted_at IS NULL
+          WHERE urx.user_id = u.id
+            AND urx.deleted_at IS NULL
+            AND rx.code = 'super_admin'
+        )`,
+      );
+    }
+
     qb.select([
       'u.id AS id',
       'u.full_name AS full_name',
@@ -124,6 +154,17 @@ export class UsersService {
       'us.code AS user_status_code',
       'us.name AS user_status_name',
     ]);
+    qb.addSelect(
+      `EXISTS (
+        SELECT 1
+        FROM user_roles ury
+        INNER JOIN roles ry ON ry.id = ury.role_id AND ry.deleted_at IS NULL
+        WHERE ury.user_id = u.id
+          AND ury.deleted_at IS NULL
+          AND ry.code = 'super_admin'
+      )`,
+      'is_super_admin',
+    );
     qb.addSelect('COUNT(ts.id)::int', 'open_tasks_count');
     qb.addSelect('COUNT(ts_done.id)::int', 'completed_tasks_count');
     qb.addSelect(
@@ -165,7 +206,10 @@ export class UsersService {
       .createQueryBuilder('u')
       .innerJoin(UserType, 'ut', 'ut.id = u.user_type_id')
       .where('u.deleted_at IS NULL')
-      .andWhere('u.created_by = :actorId', { actorId });
+      ;
+    if (actor.role !== 'super_admin') {
+      qbCount.andWhere('u.created_by = :actorId', { actorId: actor.id });
+    }
     if (term) {
       qbCount.andWhere(
         '(u.full_name ILIKE :search OR u.email ILIKE :search OR ut.name ILIKE :search OR ut.code ILIKE :search OR u.initials ILIKE :search)',
@@ -332,14 +376,23 @@ export class UsersService {
     return this.getById(userId);
   }
 
-  async update(id: string, dto: UpdateUserDto, actorId: string) {
+  async update(
+    id: string,
+    dto: UpdateUserDto,
+    actorId: string,
+    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+  ) {
     const current = await this.userRepository.findOne({
       where: { id, deletedAt: IsNull() },
-      select: { id: true, email: true },
+      select: { id: true, email: true, fullName: true, avatarUrl: true },
     });
     if (!current) {
       throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
     }
+    const currentRole = await this.userRoleRepository.findOne({
+      where: { userId: id, deletedAt: IsNull() },
+      select: { roleId: true },
+    });
 
     if (dto.email !== undefined) {
       const nextEmail = dto.email.toLowerCase();
@@ -395,14 +448,32 @@ export class UsersService {
       tableName: 'users',
       recordId: id,
       actionType: 'UPDATE',
-      newValue: dto,
+      oldValue: {
+        id: current.id,
+        email: current.email,
+        fullName: current.fullName,
+        avatarUrl: current.avatarUrl ?? null,
+        roleId: currentRole?.roleId ?? null,
+      },
+      newValue: { ...dto, action: dto.roleId ? 'USER_ROLE_CHANGED' : 'USER_UPDATED' },
       performedBy: actorId,
+      ipAddress: meta?.ipAddress ?? null,
+      requestId: meta?.requestId ?? null,
+      userAgent: meta?.userAgent ?? null,
     });
 
     return this.getById(id);
   }
 
-  async remove(id: string, actorId: string) {
+  async remove(
+    id: string,
+    actorId: string,
+    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+  ) {
+    const existing = await this.userRepository.findOne({
+      where: { id, deletedAt: IsNull() },
+      select: { id: true, email: true, fullName: true },
+    });
     await this.getById(id);
 
     // Soft-delete user + user roles to keep referential integrity.
@@ -419,8 +490,12 @@ export class UsersService {
       tableName: 'users',
       recordId: id,
       actionType: 'DELETE',
-      newValue: null,
+      oldValue: existing ? { id: existing.id, email: existing.email, fullName: existing.fullName } : null,
+      newValue: { action: 'USER_DELETED', id },
       performedBy: actorId,
+      ipAddress: meta?.ipAddress ?? null,
+      requestId: meta?.requestId ?? null,
+      userAgent: meta?.userAgent ?? null,
     });
 
     return { id, deleted: true, message: MESSAGES.USERS.DELETED };

@@ -16,8 +16,9 @@ import { useTaskDescriptionTools } from "@/hooks/useTaskDescriptionTools";
 import { emitTasksChanged } from "@/utils/taskEvents";
 import { projectsApi, type MyProjectItem } from "@/services/projectsApi.service";
 
-export function useManagerAddTaskController() {
+export function useManagerAddTaskController(opts?: { mode?: "manager" | "super" }) {
   const router = useRouter();
+  const mode = opts?.mode ?? "manager";
   const [lookups, setLookups] = useState<ManagerAddTaskLookups | null>(null);
   const [loadingLookups, setLoadingLookups] = useState(true);
   const [projects, setProjects] = useState<MyProjectItem[]>([]);
@@ -83,7 +84,7 @@ export function useManagerAddTaskController() {
         return [];
       });
       emitTasksChanged();
-      router.push(ROUTES.MANAGER_TASKS);
+      router.push(mode === "super" ? ROUTES.SUPER_TASKS : ROUTES.MANAGER_TASKS);
     } catch (e) {
       const msg =
         e instanceof Error && e.message
@@ -95,7 +96,7 @@ export function useManagerAddTaskController() {
     }
   });
 
-  const onCancel = () => router.push(ROUTES.MANAGER_TASKS);
+  const onCancel = () => router.push(mode === "super" ? ROUTES.SUPER_TASKS : ROUTES.MANAGER_TASKS);
 
   return {
     form,

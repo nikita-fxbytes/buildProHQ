@@ -1,16 +1,21 @@
 "use client";
 
-import { useManagerAnalyticsController } from "@/features/analytics/hooks/useManagerAnalyticsController";
-import { ManagerAnalyticsView } from "@/components/analytics/ManagerAnalyticsView";
-import { SuperManagementDashboardHeader } from "@/components/dashboard/SuperManagementDashboardHeader";
+import { useSuperManagementDashboardController } from "@/features/dashboard/hooks/useSuperManagementDashboardController";
+import { SuperManagementDashboardView } from "@/features/dashboard/super-management/SuperManagementDashboardView";
 
 export function SuperManagementDashboardContainer() {
-  const c = useManagerAnalyticsController();
+  const c = useSuperManagementDashboardController();
   return (
-    <>
-      <SuperManagementDashboardHeader />
-      <ManagerAnalyticsView loading={c.loading} data={c.data} reload={c.reload} />
-    </>
+    <SuperManagementDashboardView
+      loading={c.loading}
+      stats={c.stats}
+      analytics={c.analytics}
+      recentLoading={c.recentLoading}
+      recentTasks={c.recentTasks}
+      exportLoading={c.exportLoading}
+      onExportCSV={c.exportCSV}
+      onBuildPrintableReport={c.buildPrintableReport}
+    />
   );
 }
 

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, Validate } from 'class-validator';
+import { IsDateString, IsOptional, IsString, IsUUID, Validate, ValidateIf } from 'class-validator';
 import { MESSAGES } from '../../../infrastructure/common/constants/messages';
 import { IsRichTaskDescriptionConstraint } from '../../../infrastructure/common/validators/rich-description.constraint';
 
@@ -42,9 +42,17 @@ export class CreateTaskDto {
   @ApiPropertyOptional({
     description: 'User id to assign the task to (optional).',
   })
-  @IsOptional()
+  @ValidateIf((_, v) => v !== undefined && v !== null)
   @IsUUID('4', { message: MESSAGES.TASK_VALIDATION.ASSIGNED_USER_ID_INVALID })
-  assignedToUserId?: string;
+  assignedToUserId?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Due date / deadline (optional). ISO date string, e.g. 2026-04-15.',
+    example: '2026-04-15',
+  })
+  @ValidateIf((_, v) => v !== undefined && v !== null && v !== '')
+  @IsDateString({}, { message: MESSAGES.TASK_VALIDATION.DUE_AT_INVALID })
+  dueAt?: string | null;
 
   @ApiProperty({
     example: '<p>Patch drywall in unit 12B</p>',

@@ -18,6 +18,8 @@ export class AuditService {
     newValue?: unknown;
     performedBy?: string | null;
     ipAddress?: string | null;
+    requestId?: string | null;
+    userAgent?: string | null;
   }): Promise<void> {
     const row = this.auditLogRepository.create({
       tableName: params.tableName,
@@ -27,6 +29,8 @@ export class AuditService {
       newValue: (params.newValue as Record<string, unknown> | null) ?? null,
       performedBy: params.performedBy ?? null,
       ipAddress: params.ipAddress ?? null,
+      requestId: params.requestId ?? null,
+      userAgent: params.userAgent ?? null,
     });
     await this.auditLogRepository.save(row);
   }
