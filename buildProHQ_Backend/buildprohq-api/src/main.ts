@@ -15,6 +15,22 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
+
+  /**
+   * Backwards-compatible routing:
+   * Some clients call versioned routes without the global `/api` prefix (e.g. `/v1/...`).
+   *
+   * IMPORTANT: Use an internal rewrite (not redirect) because some HTTP clients
+   * don't follow redirects for PATCH/POST, leading to persistent 404s.
+   */
+  app.use((req: any, _res: any, next: any) => {
+    const url: string = typeof req?.url === 'string' ? req.url : '';
+    if (url.startsWith('/v1/')) {
+      req.url = `/api${url}`;
+    }
+    next();
+  });
+
   app.use(cookieParser());
   app.use(
     helmet({

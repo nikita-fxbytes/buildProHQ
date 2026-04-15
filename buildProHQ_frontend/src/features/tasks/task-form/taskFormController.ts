@@ -35,8 +35,12 @@ export type TaskFormControllerOpts =
 
 type HistoryItem = {
   id: string;
-  changeReason?: string | null;
-  changedAt?: string | null;
+  change_reason?: string;
+  changed_at?: string;
+  changed_by_full_name?: string | null;
+  old_status_name?: string | null;
+  new_status_name?: string | null;
+  metadata?: unknown;
   notes?: string | null;
 };
 
@@ -60,10 +64,17 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [comments, setComments] = useState<
-    Array<{ id: string; comment: string; createdAt: string; createdBy: string }>
+    Array<{ id: string; comment: string; created_at: string; created_by_full_name?: string | null }>
   >([]);
+  const [commentsPage, setCommentsPage] = useState(1);
+  const [commentsHasNext, setCommentsHasNext] = useState(false);
+  const [commentsLoadingMore, setCommentsLoadingMore] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyHasNext, setHistoryHasNext] = useState(false);
+  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
   const [commentText, setCommentText] = useState("");
-  const [taskAssignedUserId, setTaskAssignedUserId] = useState<string | null>(null);
+  const [commentFiles, setCommentFiles] = useState<File[]>([]);
+  const [taskAssignedUserIds, setTaskAssignedUserIds] = useState<string[]>([]);
 
   const [projectSearchInput, setProjectSearchInput] = useState("");
   const [selectedProjectLabel, setSelectedProjectLabel] = useState("");
@@ -81,7 +92,7 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
       tradeId: "",
       priorityId: "",
       dueDate: "",
-      assignedToUserId: null,
+      assignedToUserIds: [],
     },
   });
 
@@ -132,17 +143,24 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
         projectsApi.listMine(),
         usersApi.list(),
         tasksApi.getById(editTaskId),
-        tasksApi.getHistory(editTaskId),
-        tasksApi.getComments(editTaskId),
+        tasksApi.getHistory(editTaskId, { page: 1, limit: 10 }),
+        tasksApi.getComments(editTaskId, { page: 1, limit: 10 }),
         tasksApi.listTaskAttachments(editTaskId).catch(() => [] as TaskAttachmentItem[]),
       ]);
       setLookups(lu);
       setUsers(userList);
-      setHistory(taskHistory as HistoryItem[]);
-      setComments(taskComments);
+      setHistory(taskHistory.items as HistoryItem[]);
+      setHistoryPage(taskHistory.meta.page);
+      setHistoryHasNext(taskHistory.meta.hasNext);
+      setComments(taskComments.items);
+      setCommentsPage(taskComments.meta.page);
+      setCommentsHasNext(taskComments.meta.hasNext);
       setExistingAttachments(att);
       setNewUploadItems([]);
-      setTaskAssignedUserId(task.assigned_to_user_id ?? null);
+      const assignedIds =
+        (task.assigned_to_user_ids as string[] | undefined) ??
+        ((task.assigned_to_user_id ? [task.assigned_to_user_id] : []) as string[]);
+      setTaskAssignedUserIds(assignedIds);
 
       const projectId = (task.project_id as string) ?? "";
       const projectName = (task.project_name as string) ?? "";
@@ -159,7 +177,7 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
         tradeId: (task.trade_id as string) ?? "",
         priorityId: (task.priority_id as string) ?? lu.defaultPriorityId,
         dueDate: task.due_at ? String(task.due_at).slice(0, 10) : "",
-        assignedToUserId: task.assigned_to_user_id ?? null,
+        assignedToUserIds: assignedIds,
       });
     } catch (e) {
       appToast.error(getApiErrorMessage(e, MESSAGES.task.loadFailed));
@@ -231,8 +249,7 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
           priorityId: values.priorityId,
           description: values.description,
           dueAt: values.dueDate?.trim() ? values.dueDate.trim() : null,
-          assignedToUserId:
-            values.assignedToUserId && values.assignedToUserId !== "" ? values.assignedToUserId : null,
+          assignedToUserIds: values.assignedToUserIds ?? [],
         },
         files,
       );
@@ -270,16 +287,10 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
         tradeId: values.tradeId,
         priorityId: values.priorityId,
         dueAt: values.dueDate ? values.dueDate : null,
-        assignedToUserId: values.assignedToUserId ?? null,
+        assignedToUserIds: values.assignedToUserIds ?? [],
       });
 
-      if (values.assignedToUserId && values.assignedToUserId !== taskAssignedUserId) {
-        await tasksApi.assign(editTaskId, { assigneeUserId: values.assignedToUserId });
-        setTaskAssignedUserId(values.assignedToUserId);
-      }
-      if (!values.assignedToUserId && taskAssignedUserId) {
-        setTaskAssignedUserId(null);
-      }
+      setTaskAssignedUserIds(values.assignedToUserIds ?? []);
 
       if (files.length) {
         await uploadBeforePhotosForTask(editTaskId, files);
@@ -302,17 +313,52 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
     const text = commentText.trim();
     if (!text) return;
     try {
-      await tasksApi.addComment(editTaskId, { comment: text });
+      await tasksApi.addComment(editTaskId, { comment: text, files: commentFiles });
       setCommentText("");
+      setCommentFiles([]);
       const [nextComments, nextHistory] = await Promise.all([
-        tasksApi.getComments(editTaskId),
-        tasksApi.getHistory(editTaskId),
+        tasksApi.getComments(editTaskId, { page: 1, limit: 10 }),
+        tasksApi.getHistory(editTaskId, { page: 1, limit: 10 }),
       ]);
-      setComments(nextComments);
-      setHistory(nextHistory as HistoryItem[]);
+      setComments(nextComments.items);
+      setCommentsPage(nextComments.meta.page);
+      setCommentsHasNext(nextComments.meta.hasNext);
+      setHistory(nextHistory.items as HistoryItem[]);
+      setHistoryPage(nextHistory.meta.page);
+      setHistoryHasNext(nextHistory.meta.hasNext);
       appToast.success(MESSAGES.task.commentAdded);
     } catch (e) {
       appToast.error(getApiErrorMessage(e, MESSAGES.common.saveFailed));
+    }
+  };
+
+  const loadMoreComments = async () => {
+    if (!isEdit || !isUuidV4(editTaskId) || commentsLoadingMore || !commentsHasNext) return;
+    setCommentsLoadingMore(true);
+    try {
+      const next = await tasksApi.getComments(editTaskId, { page: commentsPage + 1, limit: 10 });
+      setComments((prev) => [...prev, ...next.items]);
+      setCommentsPage(next.meta.page);
+      setCommentsHasNext(next.meta.hasNext);
+    } catch {
+      /* ignore */
+    } finally {
+      setCommentsLoadingMore(false);
+    }
+  };
+
+  const loadMoreHistory = async () => {
+    if (!isEdit || !isUuidV4(editTaskId) || historyLoadingMore || !historyHasNext) return;
+    setHistoryLoadingMore(true);
+    try {
+      const next = await tasksApi.getHistory(editTaskId, { page: historyPage + 1, limit: 10 });
+      setHistory((prev) => [...prev, ...(next.items as HistoryItem[])]);
+      setHistoryPage(next.meta.page);
+      setHistoryHasNext(next.meta.hasNext);
+    } catch {
+      /* ignore */
+    } finally {
+      setHistoryLoadingMore(false);
     }
   };
 
@@ -365,6 +411,14 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
     history,
     commentText,
     setCommentText,
+    commentFiles,
+    setCommentFiles,
     addComment,
+    loadMoreComments,
+    commentsHasNext,
+    commentsLoadingMore,
+    loadMoreHistory,
+    historyHasNext,
+    historyLoadingMore,
   };
 }

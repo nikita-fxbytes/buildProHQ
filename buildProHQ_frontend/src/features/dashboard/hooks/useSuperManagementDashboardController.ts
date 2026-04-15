@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MESSAGES } from "@/constants/messages";
 import { appToast } from "@/utils/toast";
-import { tasksApi, type ManagerAnalytics, type TaskListItem, type TaskStats } from "@/services/tasksApi.service";
+import { tasksApi, type ManagerAnalytics, type RecentTaskItem, type TaskStats } from "@/services/tasksApi.service";
+import { formatDateTime } from "@/utils/date";
 // This dashboard is monitoring-only; no user list fetched here.
 
 function buildPrintableReportHtml(params: {
   stats: TaskStats;
   analytics: ManagerAnalytics;
-  recentTasks: TaskListItem[];
+  recentTasks: RecentTaskItem[];
 }) {
-  const now = new Date().toLocaleString();
+  const now = formatDateTime(new Date());
   const esc = (s: string) =>
     String(s)
       .replace(/&/g, "&amp;")
@@ -22,8 +23,8 @@ function buildPrintableReportHtml(params: {
     .map(
       (t) =>
         `<tr><td>${esc(t.level_name ?? "—")}</td><td>${esc(t.trade_name ?? "—")}</td><td>${esc(
-          t.description,
-        )}</td><td>${t.days_open}d</td><td>${esc(t.project_name ?? "—")}</td></tr>`,
+          t.title ?? t.description,
+        )}</td><td>${esc(t.project_name ?? "—")}</td></tr>`,
     )
     .join("");
 
@@ -76,10 +77,10 @@ function buildPrintableReportHtml(params: {
   </div>
 
   <div class="section">
-    <h2>📋 Recently Added Open Tasks</h2>
+    <h2>📋 Recently Added Tasks</h2>
     <table>
-      <tr><th>Level</th><th>Trade</th><th>Description</th><th>Days</th><th>Project</th></tr>
-      ${recentRows || "<tr><td colspan='5'>No open tasks.</td></tr>"}
+      <tr><th>Level</th><th>Trade</th><th>Title</th><th>Project</th></tr>
+      ${recentRows || "<tr><td colspan='4'>No recent tasks.</td></tr>"}
     </table>
   </div>
 </body>
@@ -87,20 +88,20 @@ function buildPrintableReportHtml(params: {
 }
 
 export function useSuperManagementDashboardController() {
-  const recentLimit = 6;
+  const recentLimit = 5;
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<TaskStats | null>(null);
   const [analytics, setAnalytics] = useState<ManagerAnalytics | null>(null);
   const [recentLoading, setRecentLoading] = useState(true);
-  const [recentTasks, setRecentTasks] = useState<TaskListItem[]>([]);
+  const [recentTasks, setRecentTasks] = useState<RecentTaskItem[]>([]);
 
   // NOTE: This dashboard is monitoring-only (no user management list/modal).
 
   const loadCore = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, a] = await Promise.all([tasksApi.getStats(), tasksApi.getAnalytics()]);
+      const [s, a] = await Promise.all([tasksApi.getStats({ scope: "all" }), tasksApi.getAnalytics()]);
       setStats(s);
       setAnalytics(a);
     } catch {
@@ -115,8 +116,10 @@ export function useSuperManagementDashboardController() {
   const loadRecent = useCallback(async () => {
     setRecentLoading(true);
     try {
-      const res = await tasksApi.listOpen({ page: 1, limit: recentLimit, sortBy: "createdAt", sortOrder: "desc" });
-      setRecentTasks(res.items);
+      const items = await tasksApi.listRecentTasks(recentLimit);
+      // Debug + safety: ensure no duplicate IDs render.
+      const unique = Array.from(new Map(items.map((t) => [t.id, t])).values());
+      setRecentTasks(unique);
     } catch {
       appToast.error(MESSAGES.common.somethingWrong);
       setRecentTasks([]);
@@ -132,6 +135,16 @@ export function useSuperManagementDashboardController() {
     void loadRecent();
   }, [loadCore, loadRecent]);
 
+  // Real-time refresh when tasks mutate (create/update/delete).
+  useEffect(() => {
+    const onChanged = () => {
+      void loadCore();
+      void loadRecent();
+    };
+    window.addEventListener("buildprohq:tasksChanged", onChanged);
+    return () => window.removeEventListener("buildprohq:tasksChanged", onChanged);
+  }, [loadCore, loadRecent]);
+
   const exportLoading = useMemo(() => loading || recentLoading, [loading, recentLoading]);
 
   const exportCSV = useCallback(async () => {
@@ -139,7 +152,7 @@ export function useSuperManagementDashboardController() {
     const [s, a, recent] = await Promise.all([
       tasksApi.getStats(),
       tasksApi.getAnalytics(),
-      tasksApi.listOpen({ page: 1, limit: 10, sortBy: "createdAt", sortOrder: "desc" }).then((x) => x.items),
+      tasksApi.listRecentTasks(10),
     ]);
     return { stats: s, analytics: a, recentTasks: recent };
   }, []);

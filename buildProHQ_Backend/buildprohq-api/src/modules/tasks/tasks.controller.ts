@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,16 +11,26 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
+import { randomUUID } from 'crypto';
+import type { Request } from 'express';
 import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../../infrastructure/common/decorators/current-user.decorator';
@@ -36,6 +47,11 @@ import { AddAttachmentDto } from './dto/add-attachment.dto';
 import { BulkTasksDto } from './dto/bulk-tasks.dto';
 import { SearchOpenTasksDto } from './dto/search-open-tasks.dto';
 import { SearchCompletedTasksDto } from './dto/search-completed-tasks.dto';
+import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
+import { PagedQueryDto } from './dto/paged-query.dto';
+import { MESSAGES } from '../../infrastructure/common/constants/messages';
+import { TaskStatsQueryDto } from './dto/task-stats-query.dto';
+import { Header } from '@nestjs/common';
 
 @ApiTags('tasks')
 @ApiBearerAuth()
@@ -46,6 +62,7 @@ export class TasksController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Get task counts for dashboard' })
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @ApiOkResponse({
     description: 'Task stats fetched successfully',
     schema: {
@@ -67,8 +84,8 @@ export class TasksController {
       },
     },
   })
-  getStats(@CurrentUser() user: AuthUser) {
-    return this.tasksService.getStats(user);
+  getStats(@CurrentUser() user: AuthUser, @Query() query: TaskStatsQueryDto) {
+    return this.tasksService.getStats(user, query);
   }
 
   @Get('analytics')
@@ -99,6 +116,17 @@ export class TasksController {
   })
   getAnalytics(@CurrentUser() user: AuthUser) {
     return this.tasksService.getAnalytics(user);
+  }
+
+  @Get('recent')
+  @Roles('manager', 'super_admin')
+  @ApiOperation({ summary: 'Get recently added tasks (latest created)' })
+  getRecent(
+    @CurrentUser() user: AuthUser,
+    @Query('limit') limit?: string,
+  ) {
+    const n = Math.min(10, Math.max(1, Number(limit ?? 6) || 6));
+    return this.tasksService.getRecentTasks(user, n);
   }
 
   @Post('open')
@@ -176,6 +204,12 @@ export class TasksController {
   })
   searchOpen(@CurrentUser() user: AuthUser, @Body() dto: SearchOpenTasksDto) {
     return this.tasksService.searchOpen(user, dto);
+  }
+
+  @Post('search')
+  @ApiOperation({ summary: 'List/search all tasks (all statuses) with filters' })
+  searchAll(@CurrentUser() user: AuthUser, @Body() dto: SearchOpenTasksDto) {
+    return this.tasksService.searchAll(user, dto);
   }
 
   @Get('completed')
@@ -337,6 +371,34 @@ export class TasksController {
     return this.tasksService.update(id, dto, user);
   }
 
+  @Patch(':taskId/status')
+  @Roles('manager', 'field_user', 'super_admin')
+  @ApiOperation({ summary: 'Update task status (manager/field user/super admin)' })
+  @ApiBody({ type: UpdateTaskStatusDto })
+  updateTaskStatus(
+    @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
+    @Body() dto: UpdateTaskStatusDto,
+    @CurrentUser() user: AuthUser,
+    @Ip() ipAddress?: string,
+    @Headers('x-request-id') requestId?: string,
+    @Headers('user-agent') userAgent?: string,
+  ) {
+    // TEMP debug to prove route is registered/hit (remove after verifying).
+    // eslint-disable-next-line no-console
+    console.log('STATUS API HIT', { taskId, status: dto?.status });
+    return this.tasksService.updateStatus(taskId, dto, user, {
+      ipAddress: ipAddress || null,
+      requestId: requestId || null,
+      userAgent: userAgent || null,
+    });
+  }
+
+  @Get('debug-status')
+  @ApiOperation({ summary: 'Debug: verify TasksController is loaded' })
+  debugStatus() {
+    return 'TASK CONTROLLER WORKING';
+  }
+
   @Delete(':id')
   @Roles('manager', 'field_user', 'super_admin')
   @ApiOperation({
@@ -392,12 +454,57 @@ export class TasksController {
   @Post(':id/comments')
   @Roles('manager', 'field_user', 'trade_user', 'super_admin')
   @ApiOperation({ summary: 'Add task comment' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['comment'],
+      properties: {
+        comment: { type: 'string' },
+        files: { type: 'array', items: { type: 'string', format: 'binary' } },
+      },
+    },
+  })
+  @UseInterceptors(
+    FilesInterceptor('files', 5, {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const dir = path.join(process.cwd(), 'uploads');
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          cb(null, dir);
+        },
+        filename: (_req, file, cb) => {
+          const ext = (path.extname(file.originalname).toLowerCase() || '.bin')
+            .replace('.jpeg', '.jpg');
+          cb(null, `${randomUUID()}${ext}`);
+        },
+      }),
+      limits: { fileSize: 12 * 1024 * 1024, files: 5 },
+      fileFilter: (_req, file, cb) => {
+        const okMime =
+          /^image\/(jpeg|png|webp)$/i.test(file.mimetype) ||
+          file.mimetype === 'application/pdf' ||
+          file.mimetype === 'application/msword' ||
+          file.mimetype ===
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        const okExt = /\.(jpe?g|png|webp|pdf|doc|docx)$/i.test(
+          file.originalname,
+        );
+        if (!okMime && !okExt) {
+          return cb(new BadRequestException(MESSAGES.FILES.INVALID_TYPE), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
   addComment(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: CommentTaskDto,
     @CurrentUser() user: AuthUser,
+    @UploadedFiles() files: Array<Express.Multer.File>,
+    @Req() req: Request,
   ) {
-    return this.tasksService.addComment(id, dto, user);
+    return this.tasksService.addComment(id, dto, user, files ?? [], req);
   }
 
   @Get(':id/comments')
@@ -405,8 +512,9 @@ export class TasksController {
   getComments(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthUser,
+    @Query() query: PagedQueryDto,
   ) {
-    return this.tasksService.getComments(id, user);
+    return this.tasksService.getCommentsPaged(id, user, query);
   }
 
   @Get(':id/history')
@@ -414,8 +522,9 @@ export class TasksController {
   getHistory(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthUser,
+    @Query() query: PagedQueryDto,
   ) {
-    return this.tasksService.getHistory(id, user);
+    return this.tasksService.getHistoryPaged(id, user, query);
   }
 
   @Get(':id/attachments')

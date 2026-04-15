@@ -48,8 +48,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message = MESSAGES.COMMON.DATABASE_ERROR;
     }
 
-    this.logger.error(`${request.method} ${request.url}`, exception as Error);
-
     response.status(status).json({
       success: false,
       statusCode: status,

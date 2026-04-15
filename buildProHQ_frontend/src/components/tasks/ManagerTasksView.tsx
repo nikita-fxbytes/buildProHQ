@@ -11,10 +11,12 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
-import { InitialsBadge } from "@/components/common/badges/InitialsBadge";
 import { PriorityBadge } from "@/components/common/badges/PriorityBadge";
+import { TaskStatusBadge } from "@/components/common/badges/TaskStatusBadge";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { FilterPanel } from "@/components/common/filters/FilterPanel";
 import { FilterMultiSelect } from "@/components/common/filters/FilterMultiSelect";
@@ -52,6 +54,8 @@ type Props = {
   userFilters: string[];
   statusOptions?: Array<string | { value: string; label: string }>;
   statusFilters?: string[];
+  priorityOptions?: Array<string | { value: string; label: string }>;
+  priorityFilters?: string[];
   setProjectFilters?: (value: string) => void;
   setProjectFiltersDirect?: (value: string[]) => void;
   setTradeFilters: (value: string) => void;
@@ -62,12 +66,35 @@ type Props = {
   setUserFiltersDirect?: (value: string[]) => void;
   setStatusFiltersDirect?: (value: string[]) => void;
   setStatusFilters?: (value: string) => void;
+  setPriorityFiltersDirect?: (value: string[]) => void;
+  setPriorityFilters?: (value: string) => void;
   clearFilters: () => void;
   sortDays: "asc" | "desc" | null;
   setSortDays: (dir: "asc" | "desc") => void;
-  sortKey?: "level" | "trade" | "user" | "priority" | "description" | "daysOpen" | "createdAt" | null;
+  sortKey?:
+    | "projectName"
+    | "title"
+    | "level"
+    | "trade"
+    | "user"
+    | "assignees"
+    | "priority"
+    | "description"
+    | "daysOpen"
+    | "createdAt"
+    | null;
   sortDirection?: "asc" | "desc";
-  onSortColumn?: (key: "level" | "trade" | "user" | "priority" | "description" | "daysOpen" | "createdAt") => void;
+  onSortColumn?: (key:
+    | "projectName"
+    | "title"
+    | "level"
+    | "trade"
+    | "user"
+    | "assignees"
+    | "priority"
+    | "description"
+    | "daysOpen"
+    | "createdAt") => void;
   selectedIds: string[];
   toggleSelected: (id: string) => void;
   clearSelected: () => void;
@@ -75,11 +102,15 @@ type Props = {
   openDeleteSelectedConfirm: () => void;
   openDeleteSingleConfirm: (task: {
     id: string;
+    title: string;
     project: string | undefined;
     level: string;
     trade: string;
     user: string;
+    assignees: string;
+    assigneeIds: string[];
     priority: string;
+    status: string;
     desc: string;
     days: number;
     dueAt: string | null;
@@ -95,22 +126,33 @@ type Props = {
   goToEdit: (taskId: string) => void;
   goToView?: (taskId: string) => void;
   showSuperTaskRoutes?: boolean;
-  openAssign: (taskId: string) => void;
+  openAssign: (taskId: string, preselectIds?: string[]) => void;
+  openStatusChange?: (taskId: string, currentStatusName?: string) => void;
+  statusOpen?: boolean;
+  statusValue?: string;
+  setStatusValue?: (v: string) => void;
+  statusSubmitting?: boolean;
+  closeStatusChange?: () => void;
+  saveStatusChange?: () => void;
   assignOpen: boolean;
   assignLoading: boolean;
   assignSubmitting: boolean;
   assignUserOptions: Array<{ value: string; label: string }>;
-  assigneeUserId: string | null;
-  setAssigneeUserId: (v: string | null) => void;
+  assigneeUserIds: string[];
+  setAssigneeUserIds: (v: string[]) => void;
   closeAssign: () => void;
   saveAssign: () => void;
   rows: Array<{
     id: string;
+    title: string;
     project: string | undefined;
     level: string;
     trade: string;
     user: string;
+    assignees: string;
+    assigneeIds: string[];
     priority: string;
+    status: string;
     desc: string;
     days: number;
     dueAt: string | null;
@@ -122,9 +164,8 @@ type Props = {
   onPageChange: (page: number) => void;
   stats: {
     totalOpen: number;
-    overdue: number;
-    completedStub: number;
-    activeUsers: number;
+    today: number;
+    totalTasks: number;
   };
 };
 
@@ -132,26 +173,28 @@ export function ManagerTasksView(props: Props) {
   type SortKey = NonNullable<Props["sortKey"]>;
   const statusOpts = props.statusOptions ?? [];
   const statusSel = props.statusFilters ?? [];
+  const priorityOpts = props.priorityOptions ?? [];
+  const prioritySel = props.priorityFilters ?? [];
   const filterCount =
     (props.showProjectColumn ? props.projectFilters?.length ?? 0 : 0) +
     props.tradeFilters.length +
     props.levelFilters.length +
     props.userFilters.length +
     statusSel.length +
+    prioritySel.length +
     (props.sortDays ? 1 : 0);
   const initialLoading = props.loading && props.rows.length === 0;
 
   return (
     <Stack spacing={2}>
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px" }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "16px" }}>
         {initialLoading ? (
-          <AppStatCardsSkeleton count={4} />
+          <AppStatCardsSkeleton count={3} />
         ) : (
           <>
-            <StatCard value={props.stats.totalOpen} label="Total Open Tasks" accentColor="#F5A623" />
-            <StatCard value={props.stats.overdue} label="Overdue (10+ days)" accentColor="#EF4444" />
-            <StatCard value={props.stats.completedStub} label="Completed" accentColor="#22C55E" />
-            <StatCard value={props.stats.activeUsers} label="Active Users" accentColor="#3BB0D8" />
+            <StatCard value={props.stats.totalOpen ?? 0} label="Open" accentColor="#F5A623" />
+            <StatCard value={props.stats.today ?? 0} label="Today" accentColor="#22C55E" />
+            <StatCard value={props.total ?? 0} label="Total Tasks" accentColor="#3BB0D8" />
           </>
         )}
       </Box>
@@ -206,10 +249,10 @@ export function ManagerTasksView(props: Props) {
             sx={{
               display: "grid",
               gridTemplateColumns:
-                statusOpts.length > 0
+                statusOpts.length > 0 || priorityOpts.length > 0
                   ? props.showProjectColumn
-                    ? "repeat(5,minmax(0,1fr))"
-                    : "repeat(4,minmax(0,1fr))"
+                    ? "repeat(6,minmax(0,1fr))"
+                    : "repeat(5,minmax(0,1fr))"
                   : props.showProjectColumn
                     ? "repeat(4,minmax(0,1fr))"
                     : "repeat(3,minmax(0,1fr))",
@@ -245,6 +288,7 @@ export function ManagerTasksView(props: Props) {
               selected={props.userFilters}
               onChange={(next) => props.setUserFiltersDirect?.(next)}
               placeholder="Search users..."
+              chipVariant="user"
             />
             {statusOpts.length > 0 ? (
               <FilterMultiSelect
@@ -253,6 +297,16 @@ export function ManagerTasksView(props: Props) {
                 selected={statusSel}
                 onChange={(next) => props.setStatusFiltersDirect?.(next)}
                 placeholder="Search status..."
+              />
+            ) : null}
+            {priorityOpts.length > 0 ? (
+              <FilterMultiSelect
+                label="Priority"
+                options={priorityOpts}
+                selected={prioritySel}
+                onChange={(next) => props.setPriorityFiltersDirect?.(next)}
+                placeholder="Search priority..."
+                chipVariant="priority"
               />
             ) : null}
             <Box sx={{ gridColumn: "1 / -1" }}>
@@ -342,17 +396,21 @@ export function ManagerTasksView(props: Props) {
         <AppTableHeader
           columnsTemplate={
             props.showProjectColumn
-              ? "36px 170px 80px 130px 50px 80px 1fr 76px 104px 200px"
-              : "36px 80px 130px 50px 80px 1fr 76px 104px 200px"
+              ? "36px 170px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
+              : "36px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
           }
           columns={[
             { key: "select", label: "" },
-            ...(props.showProjectColumn ? [{ key: "project", label: "Project" } as const] : []),
+            ...(props.showProjectColumn
+              ? [{ key: "project", label: "Project", sortable: true, sortKey: "projectName" } as const]
+              : []),
+            { key: "title", label: "Title", sortable: true, sortKey: "title" },
+            { key: "description", label: "Description", sortable: true, sortKey: "description" },
             { key: "level", label: "Level", sortable: true, sortKey: "level" },
             { key: "trade", label: "Trade", sortable: true, sortKey: "trade" },
-            { key: "user", label: "User", sortable: true, sortKey: "user" },
+            { key: "assignees", label: "Assignees", sortable: true, sortKey: "assignees" },
             { key: "priority", label: "Priority", sortable: true, sortKey: "priority" },
-            { key: "description", label: "Description", sortable: true, sortKey: "description" },
+            { key: "status", label: "Status", sortable: false },
             { key: "days", label: "Days", sortable: true, sortKey: "daysOpen" },
             { key: "deadline", label: "Deadline", sortable: false },
             { key: "actions", label: "Actions" },
@@ -367,8 +425,38 @@ export function ManagerTasksView(props: Props) {
           <AppGridTableSkeleton
             columnsTemplate={
               props.showProjectColumn
-                ? "36px 170px 80px 130px 50px 80px 1fr 76px 104px 200px"
-                : "36px 80px 130px 50px 80px 1fr 76px 104px 200px"
+                ? "36px 170px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
+                : "36px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
+            }
+            columnKinds={
+              props.showProjectColumn
+                ? [
+                    "checkbox", // select
+                    "text", // project
+                    "text", // title
+                    "text", // description
+                    "text", // level
+                    "text", // trade
+                    "avatars", // assignees
+                    "chip", // priority
+                    "chip", // status
+                    "text", // days
+                    "date", // deadline
+                    "icons", // actions
+                  ]
+                : [
+                    "checkbox", // select
+                    "text", // title
+                    "text", // description
+                    "text", // level
+                    "text", // trade
+                    "avatars", // assignees
+                    "chip", // priority
+                    "chip", // status
+                    "text", // days
+                    "date", // deadline
+                    "icons", // actions
+                  ]
             }
             rowCount={8}
           />
@@ -380,8 +468,8 @@ export function ManagerTasksView(props: Props) {
               key={task.id}
               columnsTemplate={
                 props.showProjectColumn
-                  ? "36px 170px 80px 130px 50px 80px 1fr 76px 104px 200px"
-                  : "36px 80px 130px 50px 80px 1fr 76px 104px 200px"
+                  ? "36px 170px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
+                  : "36px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
               }
               className="task-row-item mgmt"
             >
@@ -396,13 +484,45 @@ export function ManagerTasksView(props: Props) {
               {props.showProjectColumn ? (
                 <AppTableCell variant="text">{task.project ?? "-"}</AppTableCell>
               ) : null}
+              <AppTableCell variant="text">
+                <Tooltip title="Open task" arrow disableHoverListener={!props.goToView}>
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: STYLE_TOKENS.colors.text,
+                      cursor: props.goToView ? "pointer" : "default",
+                      "&:hover": props.goToView ? { color: STYLE_TOKENS.colors.orange } : undefined,
+                    }}
+                    onClick={() => props.goToView?.(task.id)}
+                  >
+                    {task.title}
+                  </Typography>
+                </Tooltip>
+              </AppTableCell>
+              <AppTableCell variant="text">
+                <Tooltip title={htmlToPlainText(task.desc)} arrow>
+                  <Typography sx={{ fontSize: 13, color: STYLE_TOKENS.colors.text }}>
+                    {(() => {
+                      const plain = htmlToPlainText(task.desc);
+                      return plain.length > 90 ? `${plain.slice(0, 90)}…` : plain;
+                    })()}
+                  </Typography>
+                </Tooltip>
+              </AppTableCell>
               <AppTableCell variant="level">{task.level}</AppTableCell>
               <AppTableCell variant="trade">{task.trade}</AppTableCell>
-              <InitialsBadge initials={task.user} />
+              <AppTableCell variant="text">
+                <Typography sx={{ fontSize: 13, color: STYLE_TOKENS.colors.text }}>
+                  {task.assignees}
+                </Typography>
+              </AppTableCell>
               <AppTableCell variant="default">
                 <PriorityBadge label={task.priority} />
               </AppTableCell>
-              <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
+              <AppTableCell variant="default">
+                <TaskStatusBadge label={task.status ?? "Open"} />
+              </AppTableCell>
               <AppTableCell variant="default">
                 <TaskDaysToDueCell daysToDeadline={task.daysToDeadline} />
               </AppTableCell>
@@ -443,6 +563,30 @@ export function ManagerTasksView(props: Props) {
                     </IconButton>
                   </Tooltip>
                 ) : null}
+                {props.showSuperTaskRoutes && props.openStatusChange ? (
+                  <Tooltip title="Change status" arrow>
+                    <IconButton
+                      aria-label="Change status"
+                      size="small"
+                      onClick={() => props.openStatusChange?.(task.id, task.status ?? "Open")}
+                      sx={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: "8px",
+                        border: `1.5px solid ${STYLE_TOKENS.colors.border}`,
+                        color: STYLE_TOKENS.colors.text,
+                        background: "#fff",
+                        "&:hover": {
+                          borderColor: STYLE_TOKENS.colors.orange,
+                          color: STYLE_TOKENS.colors.orange,
+                          background: "#fff",
+                        },
+                      }}
+                    >
+                      <AppIcon name="status" size={16} />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
                 {props.showSuperTaskRoutes ? (
                   <Tooltip title="Edit Task" arrow>
                     <IconButton
@@ -471,7 +615,7 @@ export function ManagerTasksView(props: Props) {
                   <IconButton
                     aria-label="Assign"
                     size="small"
-                    onClick={() => props.openAssign(task.id)}
+                    onClick={() => props.openAssign(task.id, task.assigneeIds ?? [])}
                     sx={{
                       width: 34,
                       height: 34,
@@ -543,15 +687,29 @@ export function ManagerTasksView(props: Props) {
             <Typography sx={{ fontSize: 12, fontWeight: 800, color: STYLE_TOKENS.colors.textMuted, mb: 1 }}>
               Assign To
             </Typography>
-            <AppAutocomplete<{ value: string; label: string }>
+            <Autocomplete<{ value: string; label: string }, true, false, false>
+              multiple
               options={props.assignUserOptions}
-              value={props.assignUserOptions.find((o) => o.value === props.assigneeUserId) ?? null}
-              onChange={(opt) => props.setAssigneeUserId(opt?.value ?? null)}
+              value={props.assignUserOptions.filter((o) => props.assigneeUserIds.includes(o.value))}
+              onChange={(_, next) => props.setAssigneeUserIds(next.map((x) => x.value))}
+              disableCloseOnSelect
+              limitTags={2}
               getOptionLabel={(o) => o.label}
               isOptionEqualToValue={(a, b) => a.value === b.value}
               disabled={props.assignLoading || props.assignSubmitting}
               noOptionsText="No users found"
-              textFieldProps={{ placeholder: "Select user…" }}
+              renderOption={(liProps, option, { selected }) => {
+                const { key, ...rest } = liProps;
+                return (
+                  <li key={key} {...rest}>
+                    <Checkbox size="small" checked={selected} sx={{ mr: 1, p: 0 }} />
+                    {option.label}
+                  </li>
+                );
+              }}
+              renderInput={(params) => (
+                <TextField {...params} size="small" placeholder="Select users…" />
+              )}
             />
           </Box>
         </DialogContent>
@@ -569,6 +727,53 @@ export function ManagerTasksView(props: Props) {
             variant="outlined"
             onClick={props.closeAssign}
             disabled={props.assignLoading || props.assignSubmitting}
+          >
+            Cancel
+          </AppButton>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!props.statusOpen} onClose={props.closeStatusChange} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: 16 }}>Change Status</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Box sx={{ mt: 1 }}>
+            <Typography sx={{ fontSize: 12, fontWeight: 800, color: STYLE_TOKENS.colors.textMuted, mb: 1 }}>
+              Status
+            </Typography>
+            <AppAutocomplete<{ value: string; label: string }>
+              options={[
+                { value: "Open", label: "Open" },
+                { value: "In Progress", label: "In Progress" },
+                { value: "Completed", label: "Completed" },
+              ]}
+              value={
+                [{ value: "Open", label: "Open" }, { value: "In Progress", label: "In Progress" }, { value: "Completed", label: "Completed" }].find(
+                  (x) => x.value === (props.statusValue ?? "Open"),
+                ) ?? { value: "Open", label: "Open" }
+              }
+              onChange={(opt) => props.setStatusValue?.(opt?.value ?? "Open")}
+              getOptionLabel={(o) => o.label}
+              isOptionEqualToValue={(a, b) => a.value === b.value}
+              disabled={!!props.statusSubmitting}
+              noOptionsText="No statuses found"
+              textFieldProps={{ placeholder: "Select status…" }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <AppButton
+            type="button"
+            variant="contained"
+            onClick={props.saveStatusChange}
+            disabled={!!props.statusSubmitting}
+          >
+            Save
+          </AppButton>
+          <AppButton
+            type="button"
+            variant="outlined"
+            onClick={props.closeStatusChange}
+            disabled={!!props.statusSubmitting}
           >
             Cancel
           </AppButton>

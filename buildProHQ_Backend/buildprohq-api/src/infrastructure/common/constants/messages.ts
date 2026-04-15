@@ -35,6 +35,7 @@ export const MESSAGES = {
     PROJECT_ID_INVALID: 'Project must be a valid identifier',
     STATUS_ID_REQUIRED: 'Please select a valid task status',
     STATUS_ID_INVALID: 'Task status must be a valid identifier',
+    STATUS_NAME_INVALID: 'Task status must be one of: Open, In Progress, Completed',
     PRIORITY_ID_INVALID: 'Priority must be a valid identifier',
     LEVEL_ID_REQUIRED: 'Please select a level',
     LEVEL_ID_INVALID: 'Level must be a valid identifier',

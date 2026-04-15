@@ -180,6 +180,10 @@ async function run(): Promise<void> {
     name: 'Open',
     isTerminal: false,
   });
+  await getOrCreateByCode(taskStatusRepo, 'in_progress', {
+    name: 'In Progress',
+    isTerminal: false,
+  });
   const completedStatus = await getOrCreateByCode(taskStatusRepo, 'completed', {
     name: 'Completed',
     isTerminal: true,

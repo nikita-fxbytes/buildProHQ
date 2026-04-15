@@ -29,6 +29,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
 import TuneIcon from "@mui/icons-material/Tune";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import AutorenewOutlinedIcon from "@mui/icons-material/AutorenewOutlined";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ComponentType } from "react";
 
@@ -67,7 +68,8 @@ type IconName =
   | "myCompleted"
   | "logoutSidebar"
   | "photos"
-  | "view";
+  | "view"
+  | "status";
 
 const ICON_MAP = {
   search: SearchIcon,
@@ -105,6 +107,7 @@ const ICON_MAP = {
   logoutSidebar: LogoutOutlinedIcon,
   photos: PhotoCameraOutlinedIcon,
   view: VisibilityOutlinedIcon,
+  status: AutorenewOutlinedIcon,
 } as const satisfies Record<IconName, ComponentType<{ sx?: SxProps<Theme> }>>;
 
 export type AppIconProps = {

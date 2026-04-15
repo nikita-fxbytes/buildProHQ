@@ -1,21 +1,19 @@
 import Box from "@mui/material/Box";
 
-export type PriorityBadgeProps = {
+export type TaskStatusBadgeProps = {
   label?: string | null;
 };
 
 const toneFor = (label?: string | null) => {
   const key = (label ?? "").trim().toLowerCase();
   if (!key) return { bg: "#F3F4F6", fg: "#6B7280" }; // gray
-  // Product colors: High=red, Medium=yellow, Low=green, Urgent=red.
-  if (key.includes("urgent") || key.includes("critical")) return { bg: "#FEE2E2", fg: "#EF4444" };
-  if (key.includes("high")) return { bg: "#FEE2E2", fg: "#EF4444" };
-  if (key.includes("medium")) return { bg: "#FEF3C7", fg: "#B45309" };
-  if (key.includes("low")) return { bg: "#DCFCE7", fg: "#16A34A" };
+  if (key === "open" || key.includes("open")) return { bg: "#E0F2FE", fg: "#0284C7" }; // blue
+  if (key.includes("progress")) return { bg: "#FFF7ED", fg: "#EA580C" }; // orange
+  if (key.includes("complete")) return { bg: "#DCFCE7", fg: "#16A34A" }; // green
   return { bg: "#EEF2FF", fg: "#3730A3" };
 };
 
-export function PriorityBadge({ label }: PriorityBadgeProps) {
+export function TaskStatusBadge({ label }: TaskStatusBadgeProps) {
   const tone = toneFor(label);
   return (
     <Box

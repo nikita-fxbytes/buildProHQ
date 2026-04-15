@@ -83,7 +83,7 @@ export function useSuperAdminDashboardController() {
     setLoading(true);
     try {
       const [stats, managersRes, tradeRes, fieldRes] = await Promise.all([
-        tasksApi.getStats(),
+        tasksApi.getStats({ scope: "all" }),
         usersApi.search({ page: 1, limit: 1, role: "Management" }),
         usersApi.search({ page: 1, limit: 1, role: "Trade" }),
         usersApi.search({ page: 1, limit: 1, role: "User" }),
@@ -92,9 +92,9 @@ export function useSuperAdminDashboardController() {
       const s: TaskStats = stats;
       const totalUsers = managersRes.meta.total + tradeRes.meta.total + fieldRes.meta.total;
       setSummary({
-        openTasks: s.totalOpen,
-        completedTasks: s.totalCompleted,
-        overdueTasks: s.overdue10,
+        openTasks: s.open ?? s.totalOpen ?? 0,
+        completedTasks: s.completed ?? s.totalCompleted ?? 0,
+        overdueTasks: s.overdueDue ?? s.overdue ?? 0,
         totalUsers,
       });
     } catch {

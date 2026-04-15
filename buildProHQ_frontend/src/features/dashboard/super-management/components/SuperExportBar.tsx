@@ -4,7 +4,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { AppButton } from "@/components/common/AppButton";
 import { STYLE_TOKENS } from "@/constants/style-tokens";
-import type { ManagerAnalytics, TaskListItem, TaskStats } from "@/services/tasksApi.service";
+import type { ManagerAnalytics, RecentTaskItem, TaskStats } from "@/services/tasksApi.service";
 
 function downloadFile(filename: string, content: BlobPart, mime: string) {
   const blob = new Blob([content], { type: mime });
@@ -25,8 +25,8 @@ export type SuperExportBarProps = {
   loading: boolean;
   stats: TaskStats | null;
   analytics: ManagerAnalytics | null;
-  recentTasks: TaskListItem[];
-  onExportCSV: () => Promise<{ stats: TaskStats; analytics: ManagerAnalytics; recentTasks: TaskListItem[] }>;
+  recentTasks: RecentTaskItem[];
+  onExportCSV: () => Promise<{ stats: TaskStats; analytics: ManagerAnalytics; recentTasks: RecentTaskItem[] }>;
   onBuildPrintableReport: () => Promise<string>;
 };
 
@@ -65,14 +65,14 @@ export function SuperExportBar(props: SuperExportBarProps) {
           }
 
           rows.push([]);
-          rows.push(["RecentOpenTasks", "Level", "Trade", "Description", "DaysOpen", "Project"]);
+          rows.push(["RecentTasks", "Level", "Trade", "Title", "Project", "CreatedAt"]);
           for (const t of data.recentTasks) {
             rows.push([
               t.level_name ?? "",
               t.trade_name ?? "",
-              t.description ?? "",
-              String(t.days_open),
+              t.title ?? t.description ?? "",
               t.project_name ?? "",
+              t.created_at ?? "",
             ]);
           }
 

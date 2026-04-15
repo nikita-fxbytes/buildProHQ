@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
+import { TasksQueriesRepository } from './tasks-queries.repository';
+import { TasksCommandsService } from './tasks-commands.service';
+import { TasksAnalyticsService } from './tasks-analytics.service';
 import {
   Attachment,
   ProjectUser,
@@ -30,6 +33,12 @@ import { TaskAttachmentsService } from './task-attachments.service';
     ]),
   ],
   controllers: [TasksController],
-  providers: [TasksService, TaskAttachmentsService],
+  providers: [
+    TasksQueriesRepository,
+    TasksCommandsService,
+    TasksAnalyticsService,
+    TasksService,
+    TaskAttachmentsService,
+  ],
 })
 export class TasksModule {}

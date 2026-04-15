@@ -13,8 +13,12 @@ import { isUuidV4 } from "@/utils/taskRouteParams";
 
 type HistoryItem = {
   id: string;
-  changeReason?: string | null;
-  changedAt?: string | null;
+  change_reason?: string;
+  changed_at?: string;
+  changed_by_full_name?: string | null;
+  old_status_name?: string | null;
+  new_status_name?: string | null;
+  metadata?: unknown;
   notes?: string | null;
 };
 
@@ -26,7 +30,7 @@ export function useSuperTaskViewController(opts: { taskId: string }) {
   const [loading, setLoading] = useState(true);
   const [task, setTask] = useState<TaskDetailResponse | null>(null);
   const [comments, setComments] = useState<
-    Array<{ id: string; comment: string; createdAt: string; createdBy: string }>
+    Array<{ id: string; comment: string; created_at: string; created_by_full_name?: string | null }>
   >([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [users, setUsers] = useState<UserListItem[]>([]);
@@ -41,14 +45,14 @@ export function useSuperTaskViewController(opts: { taskId: string }) {
     try {
       const [t, c, h, u, att] = await Promise.all([
         tasksApi.getById(opts.taskId),
-        tasksApi.getComments(opts.taskId),
-        tasksApi.getHistory(opts.taskId),
+        tasksApi.getComments(opts.taskId, { page: 1, limit: 10 }),
+        tasksApi.getHistory(opts.taskId, { page: 1, limit: 10 }),
         usersApi.list(),
         tasksApi.listTaskAttachments(opts.taskId).catch(() => []),
       ]);
       setTask(t);
-      setComments(c);
-      setHistory(h as HistoryItem[]);
+      setComments(c.items);
+      setHistory(h.items as HistoryItem[]);
       setUsers(u);
       setAttachments(att);
     } catch (e) {
@@ -63,11 +67,16 @@ export function useSuperTaskViewController(opts: { taskId: string }) {
     void load();
   }, [load]);
 
-  const assigneeLabel = useMemo(() => {
-    const id = task?.assigned_to_user_id as string | null | undefined;
-    if (!id) return "—";
-    const u = users.find((x) => x.id === id);
-    return u ? `${u.full_name} (${u.user_type_name})` : "—";
+  const assignedUsersLabel = useMemo(() => {
+    const ids =
+      (task?.assigned_to_user_ids as string[] | undefined) ??
+      ((task?.assigned_to_user_id ? [task.assigned_to_user_id] : []) as string[]);
+    if (!ids.length) return "—";
+    return ids
+      .map((id) => users.find((u) => u.id === id))
+      .filter(Boolean)
+      .map((u) => `${u!.full_name} (${u!.user_type_name})`)
+      .join(", ");
   }, [task, users]);
 
   const daysToDeadline = useMemo(() => computeDaysToDeadline(task?.due_at ?? null), [task?.due_at]);
@@ -85,7 +94,7 @@ export function useSuperTaskViewController(opts: { taskId: string }) {
     comments,
     history,
     attachments,
-    assigneeLabel,
+    assigneeLabel: assignedUsersLabel,
     daysToDeadline,
     deadlineLabel,
     onBack,

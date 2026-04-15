@@ -14,7 +14,7 @@ import { AppTableRow } from "@/components/common/table/AppTableRow";
 import { AppTableShell } from "@/components/common/table/AppTableShell";
 import { SearchInput } from "@/components/common/SearchInput";
 import type { TradePortalCompletedTask } from "@/types/domain";
-import { formatIndianLongDate } from "@/utils/date";
+import { formatDate } from "@/utils/date";
 import { htmlToPlainText } from "@/utils/richText";
 
 type Props = {
@@ -58,7 +58,7 @@ export function TradeCompletedView(props: Props) {
               <AppTableCell variant="level">{task.level}</AppTableCell>
               <AppTableCell variant="trade">{task.trade}</AppTableCell>
               <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
-              <AppTableCell variant="muted">{formatIndianLongDate(task.date)}</AppTableCell>
+              <AppTableCell variant="muted">{formatDate(task.date)}</AppTableCell>
               <DoneBadge label={`${task.duration}d`} />
             </AppTableRow>
           ))

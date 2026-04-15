@@ -24,14 +24,25 @@ export function AppStatCardsSkeleton({ count = 4 }: AppStatCardsSkeletonProps) {
             borderRadius: `${STYLE_TOKENS.radius.card}px`,
             borderLeft: `4px solid ${STYLE_TOKENS.colors.border}`,
             boxShadow: STYLE_TOKENS.shadow.card,
+            minHeight: 92,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
           }}
         >
-          <Skeleton variant="rounded" width="45%" height={32} sx={{ borderRadius: "4px", bgcolor: "rgba(0,0,0,0.06)" }} />
+          {/* Count (matches StatCard value sizing) */}
           <Skeleton
             variant="rounded"
-            width="72%"
-            height={16}
-            sx={{ mt: 1, borderRadius: "4px", bgcolor: "rgba(0,0,0,0.06)" }}
+            width="70%"
+            height={28}
+            sx={{ borderRadius: "6px", bgcolor: "rgba(0,0,0,0.06)" }}
+          />
+          {/* Title (matches StatCard label sizing) */}
+          <Skeleton
+            variant="rounded"
+            width="52%"
+            height={12}
+            sx={{ mt: 1.25, borderRadius: "4px", bgcolor: "rgba(0,0,0,0.06)" }}
           />
         </Paper>
       ))}

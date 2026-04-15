@@ -90,11 +90,46 @@ export class SearchOpenTasksDto {
 
   @ApiPropertyOptional({
     description: 'Sort column',
-    enum: ['createdAt', 'daysOpen', 'level', 'trade', 'priority', 'description', 'user'],
+    enum: [
+      'createdAt',
+      'title',
+      'projectName',
+      'daysOpen',
+      'level',
+      'trade',
+      'priority',
+      'description',
+      'user',
+      'assignedUser',
+    ],
   })
   @IsOptional()
-  @IsIn(['createdAt', 'daysOpen', 'level', 'trade', 'priority', 'description', 'user'])
-  sortBy?: 'createdAt' | 'daysOpen' | 'level' | 'trade' | 'priority' | 'description' | 'user';
+  @IsIn([
+    'createdAt',
+    'title',
+    'projectName',
+    'daysOpen',
+    'level',
+    'trade',
+    'priority',
+    'description',
+    'user',
+    'assignedUser',
+    'assignedUserName',
+  ])
+  sortBy?:
+    | 'createdAt'
+    | 'title'
+    | 'projectName'
+    | 'daysOpen'
+    | 'level'
+    | 'trade'
+    | 'priority'
+    | 'description'
+    | 'user'
+    | 'assignedUser'
+    // Back-compat: older frontend key
+    | 'assignedUserName';
 
   @ApiPropertyOptional({ description: 'Sort order', enum: ['asc', 'desc'] })
   @IsOptional()

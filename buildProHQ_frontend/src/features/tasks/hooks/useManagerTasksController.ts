@@ -20,7 +20,17 @@ import {
 } from "@/features/tasks/storage/taskListFiltersStorage";
 
 type ConfirmAction = "completeSelected" | "deleteSelected" | "deleteSingle";
-type SortKey = "level" | "trade" | "user" | "priority" | "description" | "daysOpen" | "createdAt";
+type SortKey =
+  | "projectName"
+  | "title"
+  | "level"
+  | "trade"
+  | "user"
+  | "assignees"
+  | "priority"
+  | "description"
+  | "daysOpen"
+  | "createdAt";
 
 function initSearchFromStorage(): string {
   if (typeof window === "undefined") return "";
@@ -33,6 +43,8 @@ function initArrFromStorage(key: TaskListFilterKey): string[] {
   const v = loadTaskListFilters()?.[key];
   return Array.isArray(v) ? v : [];
 }
+
+const ALLOWED_STATUS_NAMES = new Set(["Open", "In Progress", "Completed"]);
 
 export function useManagerTasksController(opts?: { mode?: "manager" | "super" }) {
   const mode = opts?.mode ?? "manager";
@@ -53,6 +65,9 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
   const [tradeOptions, setTradeOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [levelOptions, setLevelOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [statusOptions, setStatusOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [priorityOptions, setPriorityOptions] = useState<Array<{ value: string; label: string }>>(
+    [],
+  );
   const [userOptions, setUserOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [projectOptions, setProjectOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [assignUsers, setAssignUsers] = useState<UserListItem[]>([]);
@@ -65,6 +80,9 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
   const [levelFilters, setLevelFilters] = useState<string[]>(() => initArrFromStorage("levelFilters"));
   const [userFilters, setUserFilters] = useState<string[]>(() => initArrFromStorage("userFilters"));
   const [statusFilters, setStatusFilters] = useState<string[]>(() => initArrFromStorage("statusFilters"));
+  const [priorityFilters, setPriorityFilters] = useState<string[]>(() =>
+    initArrFromStorage("priorityFilters"),
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -84,23 +102,36 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
   const [assignTaskId, setAssignTaskId] = useState<string | null>(null);
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignSubmitting, setAssignSubmitting] = useState(false);
-  const [assigneeUserId, setAssigneeUserId] = useState<string | null>(null);
+  const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
+
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [statusTaskId, setStatusTaskId] = useState<string | null>(null);
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [statusValue, setStatusValue] = useState<string>("Open");
 
   const pageSize = UI_DEFAULTS.TASK_PAGE_SIZE;
   const showSuperTaskRoutes = mode === "super";
 
   const loadLookups = useCallback(async () => {
     try {
-      const [trades, levels, statuses, users, projects] = await Promise.all([
+      const [trades, levels, statusesAll, priorities, users, projects] = await Promise.all([
         lookupsApi.getTrades(),
         lookupsApi.getLevels(),
         lookupsApi.getTaskStatuses(),
+        lookupsApi.getTaskPriorities(),
         usersApi.list(),
         mode === "super" ? projectsApi.listMine() : Promise.resolve([]),
       ]);
       setTradeOptions(trades.map((t) => ({ value: t.id, label: t.name })));
       setLevelOptions(levels.map((l) => ({ value: l.id, label: l.name })));
+      const statuses = statusesAll.filter((s) => ALLOWED_STATUS_NAMES.has(s.name));
       setStatusOptions(statuses.map((s) => ({ value: s.id, label: s.name })));
+      setPriorityOptions(
+        priorities.map((p) => ({
+          value: p.id,
+          label: p.name.toLowerCase() === "critical" ? "Urgent" : p.name,
+        })),
+      );
       setAssignUsers(users);
       setUsersCount(users.length);
       setUserOptions(
@@ -118,12 +149,25 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
 
   const loadStats = useCallback(async () => {
     try {
-      const res = await tasksApi.getStats();
+      const res = await tasksApi.getStats({
+        search: search.trim() || undefined,
+        filters: {
+          projectIds: mode === "super" ? projectFilters : undefined,
+          tradeIds: tradeFilters,
+          levelIds: levelFilters,
+          createdByUserIds: userFilters,
+          statusIds: statusFilters.length ? statusFilters : undefined,
+          priorityIds: priorityFilters.length ? priorityFilters : undefined,
+        },
+      });
+      // Debug: verify backend keys (open/today/total vs legacy totals)
+      // eslint-disable-next-line no-console
+      console.log("TASK STATS:", res);
       setStats(res);
     } catch {
       // Non-fatal.
     }
-  }, []);
+  }, [levelFilters, mode, priorityFilters, projectFilters, search, statusFilters, tradeFilters, userFilters]);
 
   const loadTasks = useCallback(
     async (opts?: { pageOverride?: number }) => {
@@ -143,10 +187,12 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
             levelIds: levelFilters,
             createdByUserIds: userFilters,
             statusIds: statusFilters.length ? statusFilters : undefined,
+            priorityIds: priorityFilters.length ? priorityFilters : undefined,
           },
         };
-        const res = await tasksApi.listOpen(query);
-        setRows(res.items.map((r) => mapRow(r, { withProject: mode === "super" })));
+        const res = await tasksApi.listAll(query);
+        // Debug logs removed for production readiness.
+        setRows(res.items.map((r) => mapRow(r, { withProject: mode === "super", users: assignUsers })));
         setTotal(res.meta.total);
       } catch {
         appToast.error(MESSAGES.task.loadFailed);
@@ -155,6 +201,7 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
       }
     },
     [
+      assignUsers,
       levelFilters,
       mode,
       page,
@@ -166,6 +213,7 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
       statusFilters,
       tradeFilters,
       userFilters,
+      priorityFilters,
     ],
   );
 
@@ -173,6 +221,14 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
     loadLookups();
     loadStats();
   }, [loadLookups, loadStats]);
+
+  // Keep cards in sync with filters/search (debounced like list load)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void loadStats();
+    }, 250);
+    return () => clearTimeout(t);
+  }, [search, projectFilters, tradeFilters, levelFilters, userFilters, statusFilters, priorityFilters, loadStats]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -198,10 +254,11 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
         levelFilters,
         userFilters,
         statusFilters,
+        priorityFilters,
       });
     }, 300);
     return () => clearTimeout(t);
-  }, [search, projectFilters, tradeFilters, levelFilters, userFilters, statusFilters]);
+  }, [search, projectFilters, tradeFilters, levelFilters, userFilters, statusFilters, priorityFilters]);
 
   const toggleFilterValue = (current: string[], value: string) =>
     current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
@@ -262,15 +319,23 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
     [assignUsers],
   );
 
-  const openAssign = useCallback(async (taskId: string) => {
+  const openAssign = useCallback(async (taskId: string, preselectIds?: string[]) => {
     setAssignOpen(true);
     setAssignTaskId(taskId);
     setAssignLoading(true);
     try {
+      // Prefer row-provided assignees (fast + correct). Fall back to task detail.
+      if (Array.isArray(preselectIds) && preselectIds.length) {
+        setAssigneeUserIds(Array.from(new Set(preselectIds.filter(Boolean))));
+        return;
+      }
       const task = await tasksApi.getById(taskId);
-      setAssigneeUserId((task.assigned_to_user_id as string | null) ?? null);
+      const ids =
+        (task.assigned_to_user_ids as string[] | undefined) ??
+        ((task.assigned_to_user_id ? [task.assigned_to_user_id] : []) as string[]);
+      setAssigneeUserIds(Array.from(new Set((ids ?? []).filter(Boolean))));
     } catch {
-      setAssigneeUserId(null);
+      setAssigneeUserIds([]);
     } finally {
       setAssignLoading(false);
     }
@@ -279,18 +344,14 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
   const closeAssign = () => {
     setAssignOpen(false);
     setAssignTaskId(null);
-    setAssigneeUserId(null);
+    setAssigneeUserIds([]);
   };
 
   const saveAssign = useCallback(async () => {
     if (!assignTaskId) return;
     setAssignSubmitting(true);
     try {
-      if (assigneeUserId) {
-        await tasksApi.assign(assignTaskId, { assigneeUserId });
-      } else {
-        await tasksApi.update(assignTaskId, { assignedToUserId: null });
-      }
+      await tasksApi.update(assignTaskId, { assignedToUserIds: assigneeUserIds });
       appToast.success(MESSAGES.task.updated);
       closeAssign();
       await loadStats();
@@ -301,7 +362,7 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
     } finally {
       setAssignSubmitting(false);
     }
-  }, [assignTaskId, assigneeUserId, loadStats, loadTasks]);
+  }, [assignTaskId, assigneeUserIds, loadStats, loadTasks]);
 
   const goToEdit = useCallback(
     (taskId: string) => {
@@ -319,6 +380,39 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
     [router, showSuperTaskRoutes],
   );
 
+  const openStatusChange = useCallback(
+    (taskId: string, currentStatusName?: string) => {
+      if (!showSuperTaskRoutes) return;
+      setStatusTaskId(taskId);
+      setStatusValue(currentStatusName ?? "Open");
+      setStatusOpen(true);
+    },
+    [showSuperTaskRoutes],
+  );
+
+  const closeStatusChange = () => {
+    setStatusOpen(false);
+    setStatusTaskId(null);
+  };
+
+  const saveStatusChange = useCallback(async () => {
+    if (!statusTaskId) return;
+    setStatusSubmitting(true);
+    try {
+      await tasksApi.updateStatus(statusTaskId, { status: statusValue as any });
+      setRows((prev) =>
+        prev.map((r) => (r.id === statusTaskId ? { ...r, status: statusValue } : r)),
+      );
+      appToast.success(MESSAGES.task.updated);
+      void loadStats();
+    } catch {
+      appToast.error(MESSAGES.common.saveFailed);
+    } finally {
+      setStatusSubmitting(false);
+      closeStatusChange();
+    }
+  }, [loadStats, statusTaskId, statusValue]);
+
   return {
     showProjectColumn: mode === "super",
     showSuperTaskRoutes,
@@ -331,28 +425,33 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
     tradeOptions,
     levelOptions,
     statusOptions,
+    priorityOptions,
     userOptions,
     projectFilters,
     tradeFilters,
     levelFilters,
     userFilters,
     statusFilters,
+    priorityFilters,
     setProjectFiltersDirect: setProjectFilters,
     setTradeFiltersDirect: setTradeFilters,
     setLevelFiltersDirect: setLevelFilters,
     setUserFiltersDirect: setUserFilters,
     setStatusFiltersDirect: setStatusFilters,
+    setPriorityFiltersDirect: setPriorityFilters,
     setProjectFilters: (value: string) => setProjectFilters((prev) => toggleFilterValue(prev, value)),
     setTradeFilters: (value: string) => setTradeFilters((prev) => toggleFilterValue(prev, value)),
     setLevelFilters: (value: string) => setLevelFilters((prev) => toggleFilterValue(prev, value)),
     setUserFilters: (value: string) => setUserFilters((prev) => toggleFilterValue(prev, value)),
     setStatusFilters: (value: string) => setStatusFilters((prev) => toggleFilterValue(prev, value)),
+    setPriorityFilters: (value: string) => setPriorityFilters((prev) => toggleFilterValue(prev, value)),
     clearFilters: () => {
       setProjectFilters([]);
       setTradeFilters([]);
       setLevelFilters([]);
       setUserFilters([]);
       setStatusFilters([]);
+      setPriorityFilters([]);
       setSortKey("createdAt");
       setSortDirection("desc");
     },
@@ -406,13 +505,20 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
     onConfirm,
     goToEdit,
     goToView,
+    openStatusChange,
+    statusOpen,
+    statusValue,
+    setStatusValue,
+    statusSubmitting,
+    closeStatusChange,
+    saveStatusChange,
     openAssign,
     assignOpen,
     assignLoading,
     assignSubmitting,
     assignUserOptions,
-    assigneeUserId,
-    setAssigneeUserId,
+    assigneeUserIds,
+    setAssigneeUserIds,
     closeAssign,
     saveAssign,
     rows,
@@ -421,10 +527,9 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
     total,
     onPageChange: setPage,
     stats: {
-      totalOpen: stats.totalOpen,
-      overdue: stats.overdue10,
-      completedStub: stats.totalCompleted,
-      activeUsers: usersCount,
+      totalOpen: stats.open ?? stats.totalOpen ?? 0,
+      today: stats.today ?? 0,
+      totalTasks: stats.total ?? stats.totalTasks ?? 0,
     },
   };
 }
@@ -438,24 +543,56 @@ const toInitials = (name: string) =>
     .slice(0, 4)
     .toUpperCase();
 
-const mapRow = (row: TaskListItem, opts?: { withProject?: boolean }) => ({
+const mapRow = (
+  row: TaskListItem,
+  opts?: { withProject?: boolean; users?: UserListItem[] },
+) => {
+  const assignedUsers = Array.isArray(row.assigned_users) ? row.assigned_users : [];
+  const namesFromApi = assignedUsers.map((u) => String(u?.fullName ?? "").trim()).filter(Boolean);
+
+  const idsRaw =
+    (Array.isArray(row.assigned_to_user_ids) ? row.assigned_to_user_ids : null) ??
+    (row.assigned_to_user_id ? [row.assigned_to_user_id] : []);
+  const ids = Array.isArray(idsRaw) ? idsRaw.filter(Boolean) : [];
+  const users = Array.isArray(opts?.users) ? opts?.users : [];
+  const namesFromLookup = ids
+    .map((id) => users.find((u) => u.id === id))
+    .filter(Boolean)
+    .map((u) => u!.full_name);
+
+  const names = namesFromApi.length ? namesFromApi : namesFromLookup;
+  const visible = names.slice(0, 2);
+  const more = Math.max(0, names.length - visible.length);
+  const assigneesLabel = names.length
+    ? `${visible.join(", ")}${more > 0 ? ` +${more} more` : ""}`
+    : "Unassigned";
+
+  return {
   id: row.id,
+  title: (row.title ?? "").trim() || "-",
   project: opts?.withProject ? (row.project_name ?? "-") : undefined,
   level: row.level_name ?? "-",
   trade: row.trade_name ?? "-",
   user:
     row.created_by_initials ??
     (row.created_by_full_name ? toInitials(row.created_by_full_name) : "-"),
+  assignees: assigneesLabel,
+  assigneeIds: ids,
   priority: row.priority_name ?? "-",
+  status: row.status_name ?? "Open",
   desc: row.description,
   /** Days since opened (legacy / secondary). */
   days: row.days_open ?? 0,
   dueAt: row.due_at ?? null,
   daysToDeadline: computeDaysToDeadline(row.due_at),
-});
+  };
+};
 
 const mapSortKey = (key: SortKey): ListOpenTasksBody["sortBy"] => {
   if (key === "user") return "user";
+  if (key === "assignees") return "assignedUser";
+  if (key === "title") return "title";
+  if (key === "projectName") return "projectName";
   if (key === "priority") return "priority";
   if (key === "daysOpen") return "daysOpen";
   if (key === "description") return "description";

@@ -65,7 +65,6 @@ export function useSuperProjectsController() {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      loadProjects({ pageOverride: 1 });
       setPage(1);
     }, 250);
     return () => clearTimeout(t);

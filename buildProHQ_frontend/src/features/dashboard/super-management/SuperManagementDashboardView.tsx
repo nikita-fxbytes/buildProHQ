@@ -6,20 +6,21 @@ import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { STYLE_TOKENS } from "@/constants/style-tokens";
-import type { ManagerAnalytics, TaskListItem, TaskStats } from "@/services/tasksApi.service";
+import type { ManagerAnalytics, RecentTaskItem, TaskListItem, TaskStats } from "@/services/tasksApi.service";
 import { DashStatTile } from "@/features/dashboard/super-admin/components/DashStatTile";
 import { BarChartList } from "@/features/dashboard/super-management/components/BarChartList";
 import { SuperExportBar } from "@/features/dashboard/super-management/components/SuperExportBar";
+import { formatRelativeTime } from "@/utils/relativeTime";
 
 export type SuperManagementDashboardViewProps = {
   loading: boolean;
   stats: TaskStats | null;
   analytics: ManagerAnalytics | null;
   recentLoading: boolean;
-  recentTasks: TaskListItem[];
+  recentTasks: RecentTaskItem[];
 
   exportLoading: boolean;
-  onExportCSV: () => Promise<{ stats: TaskStats; analytics: ManagerAnalytics; recentTasks: TaskListItem[] }>;
+  onExportCSV: () => Promise<{ stats: TaskStats; analytics: ManagerAnalytics; recentTasks: RecentTaskItem[] }>;
   onBuildPrintableReport: () => Promise<string>;
 };
 
@@ -89,31 +90,31 @@ export function SuperManagementDashboardView(props: SuperManagementDashboardView
           ))
         ) : (
           <>
-            <DashStatTile value={s.totalOpen} label="My Open Tasks" tone="orange" />
-            <DashStatTile value={s.overdue10} label="Overdue" tone="red" />
-            <DashStatTile value={s.totalCompleted} label="Completed" tone="green" />
-            <DashStatTile value={s.urgent} label="High Priority" tone="blue" />
+            <DashStatTile value={s.open ?? s.totalOpen ?? 0} label="Open" tone="orange" />
+            <DashStatTile value={s.today ?? 0} label="Today" tone="red" />
+            <DashStatTile value={s.completed ?? s.totalCompleted ?? 0} label="Completed" tone="green" />
+            <DashStatTile value={s.total ?? 0} label="Total" tone="blue" />
           </>
         )}
       </Box>
 
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: "20px" }}>
-        <DashboardCard title="🔴 Overdue Tasks (10+ Days)">
+        <DashboardCard title="🔴 Overdue Tasks">
           {props.loading ? (
             <Stack spacing={1}>
               {Array.from({ length: 4 }).map((_, idx) => (
                 <Skeleton key={idx} variant="rounded" height={38} sx={{ borderRadius: "8px" }} />
               ))}
             </Stack>
-          ) : (a?.overdueTop?.length ?? 0) === 0 ? (
+          ) : (a?.overdueDueTop?.length ?? 0) === 0 ? (
             <Typography sx={{ fontSize: 13, color: STYLE_TOKENS.colors.greenDark, padding: "8px" }}>
               ✅ No overdue tasks!
             </Typography>
           ) : (
             <Stack spacing={1}>
-              {a!.overdueTop.slice(0, 6).map((t, idx) => (
+              {a!.overdueDueTop!.slice(0, 6).map((t, idx) => (
                 <Box
-                  key={`${t.description}-${idx}`}
+                  key={`${t.id}-${idx}`}
                   sx={{
                     display: "flex",
                     alignItems: "center",
@@ -124,11 +125,11 @@ export function SuperManagementDashboardView(props: SuperManagementDashboardView
                     borderLeft: `3px solid ${STYLE_TOKENS.colors.red}`,
                   }}
                 >
-                  <Typography sx={{ fontFamily: STYLE_TOKENS.typography.fontDisplay, fontSize: 14, fontWeight: 700, color: STYLE_TOKENS.colors.red, minWidth: 36 }}>
-                    {t.daysOpen}d
+                  <Typography sx={{ fontFamily: STYLE_TOKENS.typography.fontDisplay, fontSize: 14, fontWeight: 700, color: STYLE_TOKENS.colors.red, minWidth: 52 }}>
+                    Due
                   </Typography>
                   <Typography sx={{ fontSize: 12, color: STYLE_TOKENS.colors.text, flex: 1 }}>
-                    {(t.level ? `${t.level} · ` : "") + t.description}
+                    {(t.level ? `${t.level} · ` : "") + (t.title?.trim() || t.description)}
                   </Typography>
                 </Box>
               ))}
@@ -145,45 +146,54 @@ export function SuperManagementDashboardView(props: SuperManagementDashboardView
             </Stack>
           ) : props.recentTasks.length === 0 ? (
             <Typography sx={{ fontSize: 13, color: STYLE_TOKENS.colors.textMuted, padding: "8px" }}>
-              No open tasks.
+              No recent tasks.
             </Typography>
           ) : (
             <Box>
-              {props.recentTasks.map((t) => (
+              {props.recentTasks.slice(0, 5).map((t) => (
                 <Box
                   key={t.id}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    padding: "9px 0",
+                    padding: "10px 0",
                     borderBottom: `1px solid ${STYLE_TOKENS.colors.border}`,
                     "&:last-of-type": { borderBottom: "none" },
                   }}
                 >
-                  <Typography sx={{ fontFamily: STYLE_TOKENS.typography.fontDisplay, fontWeight: 700, fontSize: 13, minWidth: 32, color: STYLE_TOKENS.colors.text }}>
-                    {t.level_name ?? "—"}
-                  </Typography>
-                  <Typography sx={{ flex: 1, fontSize: 13, color: STYLE_TOKENS.colors.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {t.description}
-                  </Typography>
-                  <Box sx={{ flexShrink: 0 }}>
-                    <Box
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "12px",
+                      minWidth: 0,
+                    }}
+                  >
+                    <Typography
                       sx={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "3px 9px",
-                        borderRadius: "20px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        fontFamily: STYLE_TOKENS.typography.fontDisplay,
-                        background: t.days_open > 6 ? "#FFF7ED" : "#F0F9FF",
-                        color: t.days_open > 6 ? "#C2410C" : STYLE_TOKENS.colors.blue,
+                        fontSize: 13.5,
+                        fontWeight: 800,
+                        color: STYLE_TOKENS.colors.text,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                      title={String(t.title ?? "").trim() || "—"}
+                    >
+                      {String(t.title ?? "").trim() || "—"}
+                    </Typography>
+
+                    <Typography
+                      sx={{
+                        fontSize: 11.5,
+                        color: STYLE_TOKENS.colors.textMuted,
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
                       }}
                     >
-                      {t.days_open}d
-                    </Box>
+                      {formatRelativeTime(t.created_at)}
+                    </Typography>
                   </Box>
                 </Box>
               ))}

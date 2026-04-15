@@ -2,6 +2,8 @@
  * Calendar days from today to the due date (local midnight).
  * Negative = overdue, 0 = due today, positive = upcoming.
  */
+import { formatDate } from "@/utils/date";
+
 export function computeDaysToDeadline(iso: string | null | undefined): number | null {
   if (!iso) return null;
   const raw = new Date(iso);
@@ -14,8 +16,8 @@ export function computeDaysToDeadline(iso: string | null | undefined): number | 
 }
 
 export function formatDeadlineDate(iso: string | null | undefined): string {
+  // Use global formatter for consistent app-wide display.
   if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  const out = formatDate(iso);
+  return out === "-" ? "" : out;
 }

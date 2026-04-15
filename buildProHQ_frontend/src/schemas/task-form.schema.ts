@@ -24,7 +24,7 @@ export const taskFormSchema = z.object({
   tradeId: z.string().min(1, MESSAGES.validation.selectTrade).uuid(MESSAGES.validation.selectTrade),
   priorityId: z.string().min(1, MESSAGES.validation.selectPriority).uuid(MESSAGES.validation.selectPriority),
   dueDate: z.string().optional(),
-  assignedToUserId: z.union([z.string().uuid(), z.literal(""), z.null()]).optional(),
+  assignedToUserIds: z.array(z.string().uuid()).optional(),
 });
 
 export type TaskFormValues = z.infer<typeof taskFormSchema>;

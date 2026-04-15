@@ -10,7 +10,7 @@ import Typography from "@mui/material/Typography";
 import { AppIcon } from "@/components/common/AppIcon";
 import { AppButton } from "@/components/common/AppButton";
 import type { NotificationItem } from "@/services/notificationsApi.service";
-import { formatIndianLongDate } from "@/utils/date";
+import { formatDateTime } from "@/utils/date";
 
 export type NotificationsPanelProps = {
   loading: boolean;
@@ -104,7 +104,7 @@ export function NotificationsPanel({
                   </Typography>
                 ) : null}
                 <Typography sx={{ fontSize: 11, color: "#7B89A8", mt: 0.75 }}>
-                  {formatIndianLongDate(n.createdAt)}
+                  {formatDateTime(n.createdAt)}
                 </Typography>
               </Box>
             ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
@@ -11,12 +12,31 @@ import { STYLE_TOKENS } from "@/constants/style-tokens";
 import { MESSAGES } from "@/constants/messages";
 import type { TaskAttachmentItem, TaskDetailResponse } from "@/services/tasksApi.service";
 import { sanitizeRichHtml } from "@/utils/richText";
+import { TaskStatusBadge } from "@/components/common/badges/TaskStatusBadge";
+import { PriorityBadge } from "@/components/common/badges/PriorityBadge";
+import { TaskTimeline, type TaskTimelineItem } from "@/features/tasks/components/TaskTimeline";
+import { timeAgo } from "@/utils/timeAgo";
 
 type Props = {
   loading: boolean;
   task: TaskDetailResponse | null;
-  comments: Array<{ id: string; comment: string; createdAt: string; createdBy: string }>;
-  history: Array<{ id: string; changeReason?: string | null; changedAt?: string | null; notes?: string | null }>;
+  comments: Array<{
+    id: string;
+    comment: string;
+    created_at: string;
+    created_by_full_name?: string | null;
+    attachments?: Array<{ url: string; name: string }>;
+  }>;
+  history: Array<{
+    id: string;
+    change_reason?: string;
+    changed_at?: string;
+    changed_by_full_name?: string | null;
+    old_status_name?: string | null;
+    new_status_name?: string | null;
+    metadata?: unknown;
+    notes?: string | null;
+  }>;
   attachments: TaskAttachmentItem[];
   assigneeLabel: string;
   daysToDeadline: number | null;
@@ -47,43 +67,23 @@ function FieldBlock(props: { label: string; children: ReactNode }) {
 
 export function SuperTaskView(props: Props) {
   const t = props.task;
+  const comments = Array.isArray(props.comments) ? props.comments : [];
+  const history = Array.isArray(props.history) ? props.history : [];
+
+  const avatarLetter = (fullName?: string | null) => {
+    const s = String(fullName ?? "").trim();
+    return (s[0] ?? "U").toUpperCase();
+  };
 
   return (
-    <Box sx={{ maxWidth: "840px" }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }} spacing={2}>
-        <Typography
-          sx={{
-            fontFamily: STYLE_TOKENS.typography.fontDisplay,
-            fontSize: 22,
-            fontWeight: 800,
-            color: STYLE_TOKENS.colors.text,
-          }}
-        >
-          View Task
-        </Typography>
-        <Stack direction="row" spacing={1}>
-          <AppButton type="button" variant="outlined" size="small" onClick={props.onBack}>
-            Back
-          </AppButton>
-          <AppButton
-            type="button"
-            variant="contained"
-            size="small"
-            onClick={props.onEdit}
-            disabled={!t || props.loading}
-          >
-            Edit
-          </AppButton>
-        </Stack>
-      </Stack>
-
+    <Box sx={{ maxWidth: "640px" }}>
       <Paper
         elevation={0}
         sx={{
           background: "#fff",
           borderRadius: "12px",
-          boxShadow: STYLE_TOKENS.shadow.card,
-          padding: "22px 22px",
+          boxShadow: "0 2px 16px rgba(0,0,0,0.08)",
+          padding: "28px 32px",
           position: "relative",
         }}
       >
@@ -112,9 +112,39 @@ export function SuperTaskView(props: Props) {
 
         {t ? (
           <>
-            <FieldBlock label="Title">
-              <Typography sx={{ fontSize: 16, fontWeight: 800 }}>{String(t.title ?? "").trim() || "—"}</Typography>
-            </FieldBlock>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{ mb: 2, pb: 1.25, borderBottom: "2px solid #E4E8F0" }}
+              spacing={2}
+            >
+              <Typography
+                sx={{
+                  fontFamily: "Rajdhani, sans-serif",
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: "#1A2035",
+                }}
+              >
+                {String(t.title ?? "").trim() || "Task"}
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <AppButton type="button" variant="outlined" size="small" onClick={props.onBack}>
+                  Back
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="contained"
+                  size="small"
+                  onClick={props.onEdit}
+                  disabled={!t || props.loading}
+                  sx={{ background: "#F5A623", color: "#fff", "&:hover": { background: "#E09010" } }}
+                >
+                  Edit
+                </AppButton>
+              </Stack>
+            </Stack>
 
             <FieldBlock label="Project">
               <Typography sx={{ fontSize: 15, fontWeight: 700 }}>{t.project_name ?? "—"}</Typography>
@@ -140,10 +170,10 @@ export function SuperTaskView(props: Props) {
                 <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{String(t.trade_name ?? "—")}</Typography>
               </FieldBlock>
               <FieldBlock label="Status">
-                <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{String(t.status_name ?? "—")}</Typography>
+                <TaskStatusBadge label={String(t.status_name ?? "Open")} />
               </FieldBlock>
               <FieldBlock label="Priority">
-                <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{String(t.priority_name ?? "—")}</Typography>
+                <PriorityBadge label={String(t.priority_name ?? "-")} />
               </FieldBlock>
             </Box>
 
@@ -210,59 +240,114 @@ export function SuperTaskView(props: Props) {
 
             <FieldBlock label="Comments">
               <Stack spacing={1} sx={{ mb: 1 }}>
-                {props.comments.length === 0 ? (
+                {comments.length === 0 ? (
                   <Typography sx={{ fontSize: 13, color: STYLE_TOKENS.colors.textMuted }}>
                     {MESSAGES.task.commentsEmpty}
                   </Typography>
                 ) : (
-                  props.comments.map((c) => (
-                    <Box
-                      key={c.id}
-                      sx={{
-                        border: `1px solid ${STYLE_TOKENS.colors.border}`,
-                        borderRadius: "10px",
-                        padding: "10px 12px",
-                        background: "#FAFBFC",
-                      }}
-                    >
-                      <Typography sx={{ fontSize: 12, color: STYLE_TOKENS.colors.textMuted }}>
-                        {c.createdAt ? new Date(c.createdAt).toLocaleString() : ""} · {c.createdBy}
-                      </Typography>
-                      <Typography sx={{ fontSize: 13.5, mt: 0.25 }}>{c.comment}</Typography>
-                    </Box>
-                  ))
+                  comments.map((c) => {
+                    const who = String(c.created_by_full_name ?? "Unknown").trim() || "Unknown";
+                    const when = timeAgo(c.created_at);
+                    const attachments = Array.isArray(c.attachments) ? c.attachments : [];
+                    return (
+                      <Box
+                        key={c.id}
+                        sx={{
+                          background: "#fff",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "8px",
+                          padding: "10px 12px",
+                          borderLeft: "3px solid #e0e0e0",
+                        }}
+                      >
+                        <Stack direction="row" spacing={1.25} alignItems="flex-start">
+                          <Avatar
+                            sx={{
+                              width: 30,
+                              height: 30,
+                              fontSize: 12,
+                              fontWeight: 800,
+                              bgcolor: "#EEF2FF",
+                              color: "#3730A3",
+                            }}
+                          >
+                            {avatarLetter(c.created_by_full_name)}
+                          </Avatar>
+                          <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Stack
+                              direction="row"
+                              alignItems="baseline"
+                              justifyContent="space-between"
+                              sx={{ gap: 1 }}
+                            >
+                              <Typography
+                                sx={{
+                                  fontSize: 13.5,
+                                  fontWeight: 800,
+                                  color: STYLE_TOKENS.colors.text,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                                title={who}
+                              >
+                                {who}
+                              </Typography>
+                              <Typography sx={{ fontSize: 11.5, color: STYLE_TOKENS.colors.textMuted }} title={when.title}>
+                                {when.label}
+                              </Typography>
+                            </Stack>
+                            <Typography
+                              sx={{
+                                fontSize: 13.5,
+                                mt: 0.5,
+                                color: STYLE_TOKENS.colors.text,
+                                lineHeight: 1.55,
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {String(c.comment ?? "").trim() || "—"}
+                            </Typography>
+                            {attachments.length ? (
+                              <Stack spacing={0.5} sx={{ mt: 0.75 }}>
+                                {attachments.map((a) => (
+                                  <Box
+                                    key={`${c.id}:${a.url}`}
+                                    component="a"
+                                    href={a.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    sx={{
+                                      fontSize: 12.5,
+                                      color: STYLE_TOKENS.colors.blue,
+                                      fontWeight: 700,
+                                      textDecoration: "none",
+                                      "&:hover": { textDecoration: "underline" },
+                                    }}
+                                  >
+                                    📎 {a.name}
+                                  </Box>
+                                ))}
+                              </Stack>
+                            ) : null}
+                          </Box>
+                        </Stack>
+                      </Box>
+                    );
+                  })
                 )}
               </Stack>
             </FieldBlock>
 
             <FieldBlock label="History">
-              <Stack spacing={1}>
-                {props.history.length === 0 ? (
-                  <Typography sx={{ fontSize: 13, color: STYLE_TOKENS.colors.textMuted }}>
-                    {MESSAGES.task.historyEmpty}
-                  </Typography>
-                ) : (
-                  props.history.map((h) => (
-                    <Box
-                      key={h.id}
-                      sx={{
-                        border: `1px solid ${STYLE_TOKENS.colors.border}`,
-                        borderRadius: "10px",
-                        padding: "10px 12px",
-                        background: "#FAFBFC",
-                      }}
-                    >
-                      <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{h.changeReason || "Update"}</Typography>
-                      <Typography sx={{ fontSize: 12, color: STYLE_TOKENS.colors.textMuted }}>
-                        {h.changedAt ? new Date(h.changedAt).toLocaleString() : ""}
-                      </Typography>
-                      {h.notes ? (
-                        <Typography sx={{ fontSize: 12.5, mt: 0.5 }}>{h.notes}</Typography>
-                      ) : null}
-                    </Box>
-                  ))
-                )}
-              </Stack>
+              {history.length === 0 ? (
+                <Typography sx={{ fontSize: 13, color: STYLE_TOKENS.colors.textMuted }}>
+                  {MESSAGES.task.historyEmpty}
+                </Typography>
+              ) : (
+                <TaskTimeline items={history.slice(0, 40) as TaskTimelineItem[]} />
+              )}
             </FieldBlock>
           </>
         ) : null}

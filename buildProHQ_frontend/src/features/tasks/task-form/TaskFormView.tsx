@@ -11,6 +11,7 @@ import { FormLookupAutocompleteField } from "@/components/common/FormLookupAutoc
 import { FormTextField } from "@/components/common/FormTextField";
 import { TaskDescriptionField } from "@/features/tasks/components/TaskDescriptionField";
 import { TaskPrioritySelectField } from "@/features/tasks/components/TaskPrioritySelectField";
+import { UserMultiSelectField } from "@/features/tasks/components/UserMultiSelectField";
 import type { TaskFormValues } from "@/schemas/task-form.schema";
 import type { LookupItem } from "@/services/lookupsApi.service";
 import type { TaskAttachmentItem } from "@/services/tasksApi.service";
@@ -169,52 +170,71 @@ export function TaskFormView(props: TaskFormViewProps) {
         />
       </Box>
 
-      <Box sx={{ gridColumn: "span 2" }}>
-        <TaskPrioritySelectField
-          control={form.control}
-          name="priorityId"
-          priorities={props.priorities}
-          disabled={disabled}
-          required
-        />
-      </Box>
-
-      <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        <FormFieldLabel>📅 Due Date / Deadline</FormFieldLabel>
+      {/* Assign Users (single compact field) */}
+      <Box
+        sx={{
+          gridColumn: "span 2",
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+          width: "100%",
+          minWidth: 0,
+        }}
+      >
+        <FormFieldLabel>Assign Users</FormFieldLabel>
         <Controller
           control={form.control}
-          name="dueDate"
-          render={({ field, fieldState }) => (
-            <FormTextField
-              {...field}
-              type="date"
-              disabled={disabled}
-              error={!!fieldState.error}
-              helperText={fieldState.error?.message}
-              InputLabelProps={{ shrink: true }}
-            />
-          )}
-        />
-      </Box>
-
-      <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        <FormFieldLabel>👤 Assign To User</FormFieldLabel>
-        <Controller
-          control={form.control}
-          name="assignedToUserId"
+          name="assignedToUserIds"
           render={({ field }) => (
-            <AppAutocomplete<{ value: string; label: string }>
+            <UserMultiSelectField
               options={props.userOptions}
-              value={props.userOptions.find((o) => o.value === field.value) ?? null}
-              onChange={(opt) => field.onChange(opt?.value ?? null)}
-              getOptionLabel={(o) => o.label}
-              isOptionEqualToValue={(a, b) => a.value === b.value}
-              textFieldProps={{ placeholder: "Select user…" }}
+              valueIds={Array.isArray(field.value) ? field.value : []}
+              onChangeIds={(next) => field.onChange(next)}
               disabled={disabled}
-              noOptionsText={MESSAGES.taskForm.autocompleteNoOptions}
+              placeholder="Select Assignees"
+              maxChips={3}
             />
           )}
         />
+      </Box>
+
+      {/* Compact row: Priority + Due Date */}
+      <Box
+        sx={{
+          gridColumn: "span 2",
+          display: "grid",
+          gap: "12px",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+          alignItems: "start",
+        }}
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <TaskPrioritySelectField
+            control={form.control}
+            name="priorityId"
+            priorities={props.priorities}
+            disabled={disabled}
+            required
+          />
+        </Box>
+
+        <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <FormFieldLabel>Due Date</FormFieldLabel>
+          <Controller
+            control={form.control}
+            name="dueDate"
+            render={({ field, fieldState }) => (
+              <FormTextField
+                {...field}
+                type="date"
+                disabled={disabled}
+                error={!!fieldState.error}
+                helperText={fieldState.error?.message}
+                InputLabelProps={{ shrink: true }}
+              />
+            )}
+          />
+        </Box>
       </Box>
 
       <Box sx={{ gridColumn: "span 2" }}>

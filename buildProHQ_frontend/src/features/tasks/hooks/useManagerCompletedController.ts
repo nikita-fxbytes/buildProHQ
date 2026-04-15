@@ -8,7 +8,7 @@ import { lookupsApi } from "@/services/lookupsApi.service";
 import { tasksApi, type CompletedTaskListItem, type ListCompletedTasksBody } from "@/services/tasksApi.service";
 import { usersApi } from "@/services/usersApi.service";
 import { appToast } from "@/utils/toast";
-import { formatShortDate } from "@/utils/date";
+import { formatDate } from "@/utils/date";
 
 type SortKey = "level" | "trade" | "user" | "description" | "date" | "duration";
 
@@ -31,7 +31,7 @@ function mapRow(task: CompletedTaskListItem) {
     trade: task.trade_name ?? "–",
     user: initials ?? "–",
     desc: task.description,
-    date: formatShortDate(task.closed_at),
+    date: formatDate(task.closed_at),
     durationDays: task.days_open,
   };
 }

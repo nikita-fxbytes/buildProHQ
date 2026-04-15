@@ -7,6 +7,7 @@ export type TaskListFiltersSnapshot = {
   levelFilters: string[];
   userFilters: string[];
   statusFilters: string[];
+  priorityFilters: string[];
 };
 
 export type TaskListFilterKey = keyof TaskListFiltersSnapshot;

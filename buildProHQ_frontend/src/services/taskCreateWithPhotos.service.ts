@@ -15,7 +15,7 @@ export type CreateTaskWithPhotosValues = {
   priorityId: string;
   description: string;
   dueAt?: string | null;
-  assignedToUserId?: string | null;
+  assignedToUserIds?: string[];
 };
 
 /**
@@ -54,7 +54,7 @@ export async function createTaskWithOptionalPhotos(
     priorityId: values.priorityId,
     description: sanitizeRichHtml(values.description),
     dueAt: values.dueAt?.trim() ? values.dueAt.trim() : null,
-    assignedToUserId: values.assignedToUserId ?? null,
+    assignedToUserIds: values.assignedToUserIds ?? [],
   });
 
   const taskId = created.id;

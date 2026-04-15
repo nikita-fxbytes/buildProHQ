@@ -1,5 +1,6 @@
 import { ApiV1 } from "@/constants/apiEndpoints";
 import { apiClient } from "@/services/apiClient";
+import { safeListMeta } from "@/services/pagination";
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -65,7 +66,7 @@ export const usersApi = {
     body: SearchUsersBody,
   ): Promise<{ items: UserListItem[]; meta: UsersListMeta }> {
     const { data } = await apiClient.post<ApiEnvelope<UserListItem[]>>(ApiV1.users.list, body);
-    return { items: data.data, meta: (data.meta || {}) as UsersListMeta };
+    return { items: Array.isArray(data.data) ? data.data : [], meta: safeListMeta(data.meta) as UsersListMeta };
   },
 
   async getById(id: string): Promise<UserListItem> {

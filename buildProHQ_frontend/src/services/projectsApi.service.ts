@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/apiClient";
+import { safeListMeta } from "@/services/pagination";
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -87,8 +88,8 @@ export const projectsApi = {
 
   async search(body: SearchProjectsBody): Promise<{ items: ProjectListItem[]; meta: ListProjectsResponseMeta }> {
     const { data } = await apiClient.post<ApiEnvelope<ProjectListItem[]>>("/v1/projects/search", body);
-    const meta = (data.meta || {}) as ListProjectsResponseMeta;
-    return { items: data.data, meta };
+    const meta = safeListMeta(data.meta) as ListProjectsResponseMeta;
+    return { items: Array.isArray(data.data) ? data.data : [], meta };
   },
 
   async create(body: CreateProjectBody): Promise<ProjectListItem> {
@@ -110,7 +111,7 @@ export const projectsApi = {
         limit: safeLimit,
       },
     );
-    return { items: data.data, meta: (data.meta || {}) as ListProjectMembersMeta };
+    return { items: Array.isArray(data.data) ? data.data : [], meta: safeListMeta(data.meta, { page: safePage, limit: safeLimit }) as ListProjectMembersMeta };
   },
 
   async listMembersGet(
@@ -123,7 +124,7 @@ export const projectsApi = {
       `/v1/projects/${projectId}/members`,
       { params: { ...params, page: safePage, limit: safeLimit } },
     );
-    return { items: data.data, meta: (data.meta || {}) as ListProjectMembersMeta };
+    return { items: Array.isArray(data.data) ? data.data : [], meta: safeListMeta(data.meta, { page: safePage, limit: safeLimit }) as ListProjectMembersMeta };
   },
 
   async assignMember(projectId: string, body: AssignProjectMemberBody): Promise<{ message: string }> {

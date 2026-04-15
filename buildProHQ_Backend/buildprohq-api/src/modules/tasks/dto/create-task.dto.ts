@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsDateString,
   IsOptional,
   IsString,
@@ -65,6 +66,16 @@ export class CreateTaskDto {
   @ValidateIf((_, v) => v !== undefined && v !== null)
   @IsUUID('4', { message: MESSAGES.TASK_VALIDATION.ASSIGNED_USER_ID_INVALID })
   assignedToUserId?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'User ids to assign the task to (multi-assign).',
+    type: [String],
+    example: ['15004760-efa3-406e-9a24-18a6c64f8d51'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true, message: MESSAGES.TASK_VALIDATION.ASSIGNED_USER_ID_INVALID })
+  assignedToUserIds?: string[];
 
   @ApiPropertyOptional({
     description: 'Due date / deadline (optional). ISO date string, e.g. 2026-04-15.',

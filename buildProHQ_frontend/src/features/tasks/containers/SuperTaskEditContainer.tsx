@@ -9,7 +9,6 @@ import { AppButton } from "@/components/common/AppButton";
 import { TaskFormView } from "@/features/tasks/task-form/TaskFormView";
 import { TaskEditCommentsPanels } from "@/features/tasks/task-form/TaskEditCommentsPanels";
 import { useTaskFormController } from "@/features/tasks/task-form/taskFormController";
-import { STYLE_TOKENS } from "@/constants/style-tokens";
 import { isUuidV4 } from "@/utils/taskRouteParams";
 
 export function SuperTaskEditContainer(props: { taskId: string }) {
@@ -24,26 +23,14 @@ export function SuperTaskEditContainer(props: { taskId: string }) {
   const c = useTaskFormController({ mode: "edit", taskId: props.taskId });
 
   return (
-    <Box sx={{ maxWidth: "840px" }}>
-      <Typography
-        sx={{
-          fontFamily: STYLE_TOKENS.typography.fontDisplay,
-          fontSize: 22,
-          fontWeight: 800,
-          color: STYLE_TOKENS.colors.text,
-          mb: 2,
-        }}
-      >
-        Edit Task
-      </Typography>
-
+    <Box sx={{ maxWidth: "640px" }}>
       <Paper
         elevation={0}
         sx={{
           background: "#fff",
           borderRadius: "12px",
-          boxShadow: STYLE_TOKENS.shadow.card,
-          padding: "22px 22px",
+          boxShadow: "0 2px 16px rgba(0,0,0,0.08)",
+          padding: "28px 32px",
           position: "relative",
         }}
       >
@@ -60,22 +47,25 @@ export function SuperTaskEditContainer(props: { taskId: string }) {
               borderRadius: "12px",
             }}
           >
-            <CircularProgress size={28} sx={{ color: STYLE_TOKENS.colors.orange }} />
+            <CircularProgress size={28} sx={{ color: "#F5A623" }} />
           </Box>
         ) : null}
 
         <Typography
           sx={{
-            fontFamily: STYLE_TOKENS.typography.fontDisplay,
+            fontFamily: "Rajdhani, sans-serif",
             fontSize: 16,
             fontWeight: 700,
-            color: STYLE_TOKENS.colors.text,
+            color: "#1A2035",
             marginBottom: "14px",
             paddingBottom: "10px",
-            borderBottom: `2px solid ${STYLE_TOKENS.colors.border}`,
+            borderBottom: "2px solid #E4E8F0",
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
           }}
         >
-          ✏️ Edit Task
+          Edit Task
         </Typography>
 
         <form onSubmit={c.onSubmit} noValidate>
@@ -86,15 +76,34 @@ export function SuperTaskEditContainer(props: { taskId: string }) {
               history={c.history}
               commentText={c.commentText}
               setCommentText={c.setCommentText}
+              commentFiles={c.commentFiles}
+              setCommentFiles={c.setCommentFiles}
               addComment={c.addComment}
+              loadMoreComments={c.loadMoreComments}
+              commentsHasNext={c.commentsHasNext}
+              commentsLoadingMore={c.commentsLoadingMore}
+              loadMoreHistory={c.loadMoreHistory}
+              historyHasNext={c.historyHasNext}
+              historyLoadingMore={c.historyLoadingMore}
             />
           </TaskFormView>
 
-          <Stack direction="row" justifyContent="flex-end" spacing={1.25} sx={{ mt: 3 }}>
-            <AppButton variant="contained" type="submit" disabled={c.disabled}>
-              💾 Save Changes
+          <Stack direction="row" spacing={1.25} sx={{ mt: "22px" }}>
+            <AppButton
+              type="submit"
+              variant="contained"
+              disabled={c.disabled}
+              sx={{ background: "#F5A623", color: "#fff", "&:hover": { background: "#E09010" } }}
+            >
+              Save Changes
             </AppButton>
-            <AppButton variant="outlined" type="button" onClick={c.onCancel} disabled={c.disabled}>
+            <AppButton
+              type="button"
+              variant="outlined"
+              disabled={c.disabled}
+              onClick={c.onCancel}
+              sx={{ borderColor: "#E4E8F0", color: "#1A2035", "&:hover": { borderColor: "#F5A623", color: "#F5A623" } }}
+            >
               Cancel
             </AppButton>
           </Stack>

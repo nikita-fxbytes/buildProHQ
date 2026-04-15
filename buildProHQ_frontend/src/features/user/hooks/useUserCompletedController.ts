@@ -11,7 +11,7 @@ import {
   type ListCompletedTasksBody,
 } from "@/services/tasksApi.service";
 import type { FieldCompletedTaskRow } from "@/types/domain";
-import { formatIndianLongDate } from "@/utils/date";
+import { formatDate } from "@/utils/date";
 import { appToast } from "@/utils/toast";
 
 type CompletedSortKey = NonNullable<ListCompletedTasksBody["sortBy"]>;
@@ -22,7 +22,7 @@ function mapCompletedRow(row: CompletedTaskListItem): FieldCompletedTaskRow {
     level: row.level_name ?? "—",
     trade: row.trade_name ?? "—",
     desc: row.description,
-    date: formatIndianLongDate(row.closed_at),
+    date: formatDate(row.closed_at),
     duration: row.days_open ?? 0,
   };
 }

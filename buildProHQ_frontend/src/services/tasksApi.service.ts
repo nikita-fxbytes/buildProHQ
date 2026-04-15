@@ -1,6 +1,7 @@
 import { ApiV1 } from "@/constants/apiEndpoints";
 import { apiClient } from "@/services/apiClient";
 import { resolvePublicUrl } from "@/utils/urls";
+import { safeListMeta } from "@/services/pagination";
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -21,6 +22,8 @@ export type TaskListItem = {
   opened_at: string;
   closed_at: string | null;
   assigned_to_user_id: string | null;
+  assigned_to_user_ids?: string[] | null;
+  assigned_users?: Array<{ id: string; fullName: string; role?: string | null }> | null;
   created_by_user_id: string;
   created_by_initials?: string | null;
   created_by_full_name?: string | null;
@@ -39,6 +42,23 @@ export type PaginationMeta = {
   page: number;
   limit: number;
   total: number;
+};
+
+export type PagedMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  hasNext: boolean;
+};
+
+export const safeMeta = (meta: unknown): PagedMeta => {
+  const m = (meta ?? {}) as Partial<PagedMeta>;
+  return {
+    page: typeof m.page === "number" && m.page > 0 ? m.page : 1,
+    limit: typeof m.limit === "number" && m.limit > 0 ? m.limit : 10,
+    total: typeof m.total === "number" && m.total >= 0 ? m.total : 0,
+    hasNext: typeof m.hasNext === "boolean" ? m.hasNext : false,
+  };
 };
 
 export type ListTasksResponseMeta = {
@@ -65,7 +85,19 @@ export type ListOpenTasksBody = {
   page: number;
   limit: number;
   search?: string;
-  sortBy?: "createdAt" | "daysOpen" | "level" | "trade" | "priority" | "description" | "user";
+  sortBy?:
+    | "createdAt"
+    | "title"
+    | "projectName"
+    | "daysOpen"
+    | "level"
+    | "trade"
+    | "priority"
+    | "description"
+    | "user"
+    | "assignedUser"
+    // Back-compat: older key
+    | "assignedUserName";
   sortOrder?: "asc" | "desc";
   filters?: OpenTasksFilters;
 };
@@ -99,6 +131,7 @@ export type CompletedTaskListItem = {
 
 export type TaskStats = {
   totalOpen: number;
+  total?: number;
   totalCompleted: number;
   urgent: number;
   overdue: number;
@@ -106,6 +139,12 @@ export type TaskStats = {
   midRange7to10: number;
   fresh0to6: number;
   tradesActive: number;
+  /** Optional: simplified stats used by HTML cards */
+  open?: number;
+  today?: number;
+  totalTasks?: number;
+  completed?: number;
+  overdueDue?: number;
 };
 
 export type ManagerAnalytics = {
@@ -115,7 +154,28 @@ export type ManagerAnalytics = {
   byTrade: Array<{ trade: string; count: number }>;
   byLevel: Array<{ level: string; count: number }>;
   overdueTop: Array<{ daysOpen: number; level: string | null; description: string; user: string | null }>;
+  overdueDueCount?: number;
+  overdueDueTop?: Array<{
+    id: string;
+    title?: string | null;
+    description: string;
+    dueAt: string;
+    level?: string | null;
+    project?: string | null;
+    status?: string | null;
+  }>;
   byUser: Array<{ user: string; completed: number }>;
+};
+
+export type RecentTaskItem = {
+  id: string;
+  title?: string | null;
+  description: string;
+  created_at: string;
+  project_name?: string | null;
+  level_name?: string | null;
+  trade_name?: string | null;
+  status_name?: string | null;
 };
 
 export type CreateTaskPayload = {
@@ -128,6 +188,7 @@ export type CreateTaskPayload = {
   description: string;
   notes?: string;
   assignedToUserId?: string | null;
+  assignedToUserIds?: string[];
   dueAt?: string | null;
 };
 
@@ -136,15 +197,21 @@ export type TaskDetailResponse = {
   title?: string | null;
   description?: string;
   status_id?: string;
+  status_name?: string | null;
+  status_code?: string | null;
   project_id?: string | null;
   project_name?: string | null;
   priority_id?: string | null;
+  priority_name?: string | null;
   level_id?: string | null;
   trade_id?: string | null;
   assigned_to_user_id?: string | null;
+  assigned_to_user_ids?: string[];
   due_at?: string | null;
   [key: string]: unknown;
 };
+
+export type AllowedTaskStatusName = "Open" | "In Progress" | "Completed";
 
 export type AddTaskAttachmentPayload = {
   fileUrl: string;
@@ -168,9 +235,48 @@ export type TaskAttachmentItem = {
 };
 
 export const tasksApi = {
-  async getStats(): Promise<TaskStats> {
-    const { data } = await apiClient.get<ApiEnvelope<TaskStats>>(ApiV1.tasks.stats);
-    return data.data;
+  async getStats(params?: {
+    search?: string;
+    filters?: OpenTasksFilters;
+    scope?: "open" | "all";
+  }): Promise<TaskStats> {
+    const q = params ?? {};
+    const f = q.filters ?? {};
+    const qp = new URLSearchParams();
+    if (q.search) qp.set("search", q.search);
+    if (q.scope) qp.set("scope", q.scope);
+    const pushCsv = (key: string, arr?: string[]) => {
+      const v = Array.isArray(arr) ? arr.filter(Boolean) : [];
+      if (v.length) qp.set(key, v.join(","));
+    };
+    pushCsv("filters.projectIds", f.projectIds);
+    pushCsv("filters.tradeIds", f.tradeIds);
+    pushCsv("filters.levelIds", f.levelIds);
+    pushCsv("filters.createdByUserIds", f.createdByUserIds);
+    pushCsv("filters.statusIds", f.statusIds);
+    pushCsv("filters.priorityIds", f.priorityIds);
+
+    const url = qp.toString() ? `${ApiV1.tasks.stats}?${qp.toString()}` : ApiV1.tasks.stats;
+    const { data } = await apiClient.get<ApiEnvelope<unknown>>(url, {
+      headers: { "Cache-Control": "no-cache" },
+    });
+    const raw = (data as any)?.data ?? {};
+    return {
+      totalOpen: Number((raw as any)?.totalOpen ?? (raw as any)?.open ?? 0),
+      total: Number((raw as any)?.total ?? 0),
+      totalCompleted: Number((raw as any)?.totalCompleted ?? (raw as any)?.completed ?? 0),
+      urgent: Number((raw as any)?.urgent ?? 0),
+      overdue: Number((raw as any)?.overdue ?? 0),
+      overdue10: Number((raw as any)?.overdue10 ?? 0),
+      midRange7to10: Number((raw as any)?.midRange7to10 ?? 0),
+      fresh0to6: Number((raw as any)?.fresh0to6 ?? 0),
+      tradesActive: Number((raw as any)?.tradesActive ?? 0),
+      open: Number((raw as any)?.open ?? (raw as any)?.totalOpen ?? 0),
+      today: Number((raw as any)?.today ?? 0),
+      totalTasks: Number((raw as any)?.total ?? (raw as any)?.totalTasks ?? 0),
+      completed: Number((raw as any)?.completed ?? (raw as any)?.totalCompleted ?? 0),
+      overdueDue: Number((raw as any)?.overdueDue ?? (raw as any)?.overdue ?? 0),
+    };
   },
 
   async getAnalytics(): Promise<ManagerAnalytics> {
@@ -178,12 +284,25 @@ export const tasksApi = {
     return data.data;
   },
 
+  async listRecentTasks(limit = 6): Promise<RecentTaskItem[]> {
+    const { data } = await apiClient.get<ApiEnvelope<RecentTaskItem[]>>(`/v1/tasks/recent?limit=${limit}`);
+    return Array.isArray(data.data) ? data.data : [];
+  },
+
+  async listAll(
+    body: ListOpenTasksBody,
+  ): Promise<{ items: TaskListItem[]; meta: ListTasksResponseMeta }> {
+    const { data } = await apiClient.post<ApiEnvelope<TaskListItem[]>>("/v1/tasks/search", body);
+    const meta = safeListMeta(data.meta, { page: body.page, limit: body.limit }) as ListTasksResponseMeta;
+    return { items: Array.isArray(data.data) ? data.data : [], meta };
+  },
+
   async listOpen(
     body: ListOpenTasksBody,
   ): Promise<{ items: TaskListItem[]; meta: ListTasksResponseMeta }> {
     const { data } = await apiClient.post<ApiEnvelope<TaskListItem[]>>(ApiV1.tasks.open, body);
-    const meta = (data.meta || {}) as ListTasksResponseMeta;
-    return { items: data.data, meta };
+    const meta = safeListMeta(data.meta, { page: body.page, limit: body.limit }) as ListTasksResponseMeta;
+    return { items: Array.isArray(data.data) ? data.data : [], meta };
   },
 
   async listCompleted(
@@ -193,8 +312,8 @@ export const tasksApi = {
       "/v1/tasks/completed",
       body,
     );
-    const meta = (data.meta || {}) as ListTasksResponseMeta;
-    return { items: data.data, meta };
+    const meta = safeListMeta(data.meta, { page: body.page, limit: body.limit }) as ListTasksResponseMeta;
+    return { items: Array.isArray(data.data) ? data.data : [], meta };
   },
 
   async bulkComplete(ids: string[]): Promise<Array<{ id: string; status: "success" | "error"; message?: string }>> {
@@ -234,10 +353,16 @@ export const tasksApi = {
       priorityId?: string;
       dueAt?: string | null;
       assignedToUserId?: string | null;
+      assignedToUserIds?: string[];
       notes?: string;
     },
   ): Promise<TaskDetailResponse> {
     const { data } = await apiClient.patch<ApiEnvelope<TaskDetailResponse>>(`/v1/tasks/${id}`, body);
+    return data.data;
+  },
+
+  async updateStatus(id: string, body: { status: AllowedTaskStatusName }): Promise<TaskDetailResponse> {
+    const { data } = await apiClient.patch<ApiEnvelope<TaskDetailResponse>>(`/v1/tasks/${id}/status`, body);
     return data.data;
   },
 
@@ -246,28 +371,92 @@ export const tasksApi = {
     return data.data;
   },
 
-  async addComment(id: string, body: { comment: string }): Promise<{ taskId: string; commentAdded: true; message: string }> {
-    const { data } = await apiClient.post<ApiEnvelope<{ taskId: string; commentAdded: true; message: string }>>(
+  async addComment(
+    id: string,
+    body: { comment: string; files?: File[] },
+  ): Promise<{ comment: string; attachments: Array<{ url: string; name: string }> }> {
+    const formData = new FormData();
+    formData.append("comment", body.comment);
+    (Array.isArray(body.files) ? body.files : []).forEach((f) => formData.append("files", f));
+    const { data } = await apiClient.post<ApiEnvelope<{ comment: string; attachments: Array<{ url: string; name: string }> }>>(
       `/v1/tasks/${id}/comments`,
-      body,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
     );
     return data.data;
   },
 
   async getComments(
     id: string,
-  ): Promise<Array<{ id: string; taskId: string; comment: string; createdAt: string; createdBy: string }>> {
+    opts?: { page?: number; limit?: number },
+  ): Promise<{
+    items: Array<{
+      id: string;
+      task_id: string;
+      comment: string;
+      created_at: string;
+      created_by_full_name?: string | null;
+      attachments?: Array<{ url: string; name: string }>;
+    }>;
+    meta: PagedMeta;
+  }> {
+    const page = opts?.page ?? 1;
+    const limit = opts?.limit ?? 10;
     const { data } = await apiClient.get<
-      ApiEnvelope<Array<{ id: string; taskId: string; comment: string; createdAt: string; createdBy: string }>>
-    >(`/v1/tasks/${id}/comments`);
-    return data.data;
+      ApiEnvelope<{
+        data: Array<{
+          id: string;
+          task_id: string;
+          comment: string;
+          created_at: string;
+          created_by_full_name?: string | null;
+          attachments?: Array<{ url: string; name: string }>;
+        }>;
+        meta: PagedMeta;
+      }>
+    >(`/v1/tasks/${id}/comments?page=${page}&limit=${limit}`);
+    // ResponseInterceptor can place meta at top-level, and data can be either:
+    // - an array (data: items, meta: {...})
+    // - an object (data: { data: items, meta: {...} })
+    const payload = (data as any)?.data;
+    const topMeta = safeMeta((data as any)?.meta);
+    const nestedMeta = safeMeta((payload as any)?.meta);
+    const items =
+      Array.isArray(payload)
+        ? payload
+        : Array.isArray((payload as any)?.data)
+          ? (payload as any).data
+          : [];
+    const meta = topMeta.total || topMeta.page !== 1 || topMeta.limit !== 10 || topMeta.hasNext ? topMeta : nestedMeta;
+    return { items, meta };
   },
 
-  async getHistory(id: string): Promise<Array<{ id: string; changedAt?: string; changeReason?: string; notes?: string }>> {
-    const { data } = await apiClient.get<ApiEnvelope<Array<{ id: string; changedAt?: string; changeReason?: string; notes?: string }>>>(
-      `/v1/tasks/${id}/history`,
-    );
-    return data.data;
+  async getHistory(
+    id: string,
+    opts?: { page?: number; limit?: number },
+  ): Promise<{
+    items: Array<{ id: string; change_reason?: string; changed_at?: string; changed_by_full_name?: string | null; old_status_name?: string | null; new_status_name?: string | null; metadata?: unknown; notes?: string | null }>;
+    meta: PagedMeta;
+  }> {
+    const page = opts?.page ?? 1;
+    const limit = opts?.limit ?? 10;
+    const { data } = await apiClient.get<
+      ApiEnvelope<{
+        data: Array<{ id: string; change_reason?: string; changed_at?: string; changed_by_full_name?: string | null; old_status_name?: string | null; new_status_name?: string | null; metadata?: unknown; notes?: string | null }>;
+        meta: PagedMeta;
+      }>
+    >(`/v1/tasks/${id}/history?page=${page}&limit=${limit}`);
+    const payload = (data as any)?.data;
+    const topMeta = safeMeta((data as any)?.meta);
+    const nestedMeta = safeMeta((payload as any)?.meta);
+    const items =
+      Array.isArray(payload)
+        ? payload
+        : Array.isArray((payload as any)?.data)
+          ? (payload as any).data
+          : [];
+    const meta = topMeta.total || topMeta.page !== 1 || topMeta.limit !== 10 || topMeta.hasNext ? topMeta : nestedMeta;
+    return { items, meta };
   },
 
   async createTask(body: CreateTaskPayload): Promise<TaskDetailResponse> {

@@ -22,7 +22,7 @@ export const managerAddTaskService = {
     priorityId: string;
     description: string;
     dueAt?: string | null;
-    assignedToUserId?: string | null;
+    assignedToUserIds?: string[];
   }, files: File[]): Promise<{ id: string }> {
     return createTaskWithOptionalPhotos(values, files);
   },
