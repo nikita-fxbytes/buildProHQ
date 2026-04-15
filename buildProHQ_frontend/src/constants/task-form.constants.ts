@@ -11,6 +11,14 @@ export const TASK_PRIORITY_LABEL: Record<TaskPriorityCode, string> = {
   critical: "⚠ CRITICAL / SAFETY",
 };
 
+/** Select / compact labels (create & edit forms): critical is shown as "Urgent". */
+export const TASK_PRIORITY_SELECT_LABEL: Record<TaskPriorityCode, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  critical: "Urgent",
+};
+
 /** MUI-oriented styles aligned with mockup `.priority-*` classes. */
 export const TASK_PRIORITY_SX: Record<
   TaskPriorityCode,

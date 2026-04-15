@@ -14,12 +14,15 @@ export const managerAddTaskService = {
     return loadAddTaskLookups();
   },
   async createTaskWithOptionalPhotos(values: {
+    title: string;
     projectId: string;
     statusId: string;
     levelId: string;
     tradeId: string;
     priorityId: string;
     description: string;
+    dueAt?: string | null;
+    assignedToUserId?: string | null;
   }, files: File[]): Promise<{ id: string }> {
     return createTaskWithOptionalPhotos(values, files);
   },

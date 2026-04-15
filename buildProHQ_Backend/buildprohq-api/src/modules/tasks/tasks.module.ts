@@ -10,6 +10,7 @@ import {
   TaskComment,
   TaskCompletion,
   TaskHistory,
+  TaskPriority,
   TaskStatus,
 } from '../../infrastructure/persistence/typeorm/entities';
 import { TaskAttachmentsService } from './task-attachments.service';
@@ -23,6 +24,7 @@ import { TaskAttachmentsService } from './task-attachments.service';
       TaskCompletion,
       TaskComment,
       TaskHistory,
+      TaskPriority,
       Attachment,
       ProjectUser,
     ]),

@@ -13,7 +13,6 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
-import { DaysBadge } from "@/components/common/badges/DaysBadge";
 import { InitialsBadge } from "@/components/common/badges/InitialsBadge";
 import { PriorityBadge } from "@/components/common/badges/PriorityBadge";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
@@ -33,6 +32,7 @@ import { StatCard } from "@/components/common/StatCard";
 import { STYLE_TOKENS } from "@/constants/style-tokens";
 import { htmlToPlainText } from "@/utils/richText";
 import { AppAutocomplete } from "@/components/common/AppAutocomplete";
+import { TaskDaysToDueCell, TaskDeadlineDateCell } from "@/components/tasks/TaskDeadlineCells";
 
 type Props = {
   addTaskHref?: string;
@@ -50,6 +50,8 @@ type Props = {
   tradeFilters: string[];
   levelFilters: string[];
   userFilters: string[];
+  statusOptions?: Array<string | { value: string; label: string }>;
+  statusFilters?: string[];
   setProjectFilters?: (value: string) => void;
   setProjectFiltersDirect?: (value: string[]) => void;
   setTradeFilters: (value: string) => void;
@@ -58,6 +60,8 @@ type Props = {
   setLevelFiltersDirect?: (value: string[]) => void;
   setUserFilters: (value: string) => void;
   setUserFiltersDirect?: (value: string[]) => void;
+  setStatusFiltersDirect?: (value: string[]) => void;
+  setStatusFilters?: (value: string) => void;
   clearFilters: () => void;
   sortDays: "asc" | "desc" | null;
   setSortDays: (dir: "asc" | "desc") => void;
@@ -78,6 +82,8 @@ type Props = {
     priority: string;
     desc: string;
     days: number;
+    dueAt: string | null;
+    daysToDeadline: number | null;
   }) => void;
   confirmOpen: boolean;
   confirmTitle: string;
@@ -87,6 +93,8 @@ type Props = {
   closeConfirm: () => void;
   onConfirm: () => void;
   goToEdit: (taskId: string) => void;
+  goToView?: (taskId: string) => void;
+  showSuperTaskRoutes?: boolean;
   openAssign: (taskId: string) => void;
   assignOpen: boolean;
   assignLoading: boolean;
@@ -96,7 +104,18 @@ type Props = {
   setAssigneeUserId: (v: string | null) => void;
   closeAssign: () => void;
   saveAssign: () => void;
-  rows: Array<{ id: string; project: string | undefined; level: string; trade: string; user: string; priority: string; desc: string; days: number }>;
+  rows: Array<{
+    id: string;
+    project: string | undefined;
+    level: string;
+    trade: string;
+    user: string;
+    priority: string;
+    desc: string;
+    days: number;
+    dueAt: string | null;
+    daysToDeadline: number | null;
+  }>;
   page: number;
   pageSize: number;
   total: number;
@@ -111,11 +130,14 @@ type Props = {
 
 export function ManagerTasksView(props: Props) {
   type SortKey = NonNullable<Props["sortKey"]>;
+  const statusOpts = props.statusOptions ?? [];
+  const statusSel = props.statusFilters ?? [];
   const filterCount =
     (props.showProjectColumn ? props.projectFilters?.length ?? 0 : 0) +
     props.tradeFilters.length +
     props.levelFilters.length +
     props.userFilters.length +
+    statusSel.length +
     (props.sortDays ? 1 : 0);
   const initialLoading = props.loading && props.rows.length === 0;
 
@@ -180,7 +202,20 @@ export function ManagerTasksView(props: Props) {
       </PageToolbar>
 
       <FilterPanel open={props.showFilters}>
-          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: "16px" }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns:
+                statusOpts.length > 0
+                  ? props.showProjectColumn
+                    ? "repeat(5,minmax(0,1fr))"
+                    : "repeat(4,minmax(0,1fr))"
+                  : props.showProjectColumn
+                    ? "repeat(4,minmax(0,1fr))"
+                    : "repeat(3,minmax(0,1fr))",
+              gap: "16px",
+            }}
+          >
             {props.showProjectColumn ? (
               <FilterMultiSelect
                 label="Project"
@@ -211,7 +246,16 @@ export function ManagerTasksView(props: Props) {
               onChange={(next) => props.setUserFiltersDirect?.(next)}
               placeholder="Search users..."
             />
-            <Box sx={{ gridColumn: props.showProjectColumn ? "span 4" : undefined }}>
+            {statusOpts.length > 0 ? (
+              <FilterMultiSelect
+                label="Status"
+                options={statusOpts}
+                selected={statusSel}
+                onChange={(next) => props.setStatusFiltersDirect?.(next)}
+                placeholder="Search status..."
+              />
+            ) : null}
+            <Box sx={{ gridColumn: "1 / -1" }}>
               <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#7B89A8", textTransform: "uppercase", mb: 1 }}>
                 Sort by Days
               </Typography>
@@ -298,8 +342,8 @@ export function ManagerTasksView(props: Props) {
         <AppTableHeader
           columnsTemplate={
             props.showProjectColumn
-              ? "36px 170px 80px 130px 50px 80px 1fr 100px 140px"
-              : "36px 80px 130px 50px 80px 1fr 100px 140px"
+              ? "36px 170px 80px 130px 50px 80px 1fr 76px 104px 200px"
+              : "36px 80px 130px 50px 80px 1fr 76px 104px 200px"
           }
           columns={[
             { key: "select", label: "" },
@@ -309,7 +353,8 @@ export function ManagerTasksView(props: Props) {
             { key: "user", label: "User", sortable: true, sortKey: "user" },
             { key: "priority", label: "Priority", sortable: true, sortKey: "priority" },
             { key: "description", label: "Description", sortable: true, sortKey: "description" },
-            { key: "daysOpen", label: "Days Open", sortable: true, sortKey: "daysOpen" },
+            { key: "days", label: "Days", sortable: true, sortKey: "daysOpen" },
+            { key: "deadline", label: "Deadline", sortable: false },
             { key: "actions", label: "Actions" },
           ]}
           sortKey={props.sortKey ?? null}
@@ -322,8 +367,8 @@ export function ManagerTasksView(props: Props) {
           <AppGridTableSkeleton
             columnsTemplate={
               props.showProjectColumn
-                ? "36px 170px 80px 130px 50px 80px 1fr 100px 36px"
-                : "36px 80px 130px 50px 80px 1fr 100px 36px"
+                ? "36px 170px 80px 130px 50px 80px 1fr 76px 104px 200px"
+                : "36px 80px 130px 50px 80px 1fr 76px 104px 200px"
             }
             rowCount={8}
           />
@@ -335,8 +380,8 @@ export function ManagerTasksView(props: Props) {
               key={task.id}
               columnsTemplate={
                 props.showProjectColumn
-                  ? "36px 170px 80px 130px 50px 80px 1fr 100px 140px"
-                  : "36px 80px 130px 50px 80px 1fr 100px 140px"
+                  ? "36px 170px 80px 130px 50px 80px 1fr 76px 104px 200px"
+                  : "36px 80px 130px 50px 80px 1fr 76px 104px 200px"
               }
               className="task-row-item mgmt"
             >
@@ -358,7 +403,12 @@ export function ManagerTasksView(props: Props) {
                 <PriorityBadge label={task.priority} />
               </AppTableCell>
               <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
-              <DaysBadge days={task.days} />
+              <AppTableCell variant="default">
+                <TaskDaysToDueCell daysToDeadline={task.daysToDeadline} />
+              </AppTableCell>
+              <AppTableCell variant="default">
+                <TaskDeadlineDateCell dueAt={task.dueAt} />
+              </AppTableCell>
               <Box
                 className="table-cell-actions"
                 sx={{
@@ -369,28 +419,54 @@ export function ManagerTasksView(props: Props) {
                   alignItems: "center",
                 }}
               >
-                <Tooltip title="Edit Task" arrow>
-                  <IconButton
-                    aria-label="Edit Task"
-                    size="small"
-                    onClick={() => props.goToEdit(task.id)}
-                    sx={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: "8px",
-                      border: `1.5px solid ${STYLE_TOKENS.colors.border}`,
-                      color: STYLE_TOKENS.colors.text,
-                      background: "#fff",
-                      "&:hover": {
-                        borderColor: STYLE_TOKENS.colors.orange,
-                        color: STYLE_TOKENS.colors.orange,
+                {props.showSuperTaskRoutes && props.goToView ? (
+                  <Tooltip title="View Task" arrow>
+                    <IconButton
+                      aria-label="View Task"
+                      size="small"
+                      onClick={() => props.goToView?.(task.id)}
+                      sx={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: "8px",
+                        border: `1.5px solid ${STYLE_TOKENS.colors.border}`,
+                        color: STYLE_TOKENS.colors.text,
                         background: "#fff",
-                      },
-                    }}
-                  >
-                    <AppIcon name="edit" size={16} />
-                  </IconButton>
-                </Tooltip>
+                        "&:hover": {
+                          borderColor: STYLE_TOKENS.colors.orange,
+                          color: STYLE_TOKENS.colors.orange,
+                          background: "#fff",
+                        },
+                      }}
+                    >
+                      <AppIcon name="view" size={16} />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+                {props.showSuperTaskRoutes ? (
+                  <Tooltip title="Edit Task" arrow>
+                    <IconButton
+                      aria-label="Edit Task"
+                      size="small"
+                      onClick={() => props.goToEdit(task.id)}
+                      sx={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: "8px",
+                        border: `1.5px solid ${STYLE_TOKENS.colors.border}`,
+                        color: STYLE_TOKENS.colors.text,
+                        background: "#fff",
+                        "&:hover": {
+                          borderColor: STYLE_TOKENS.colors.orange,
+                          color: STYLE_TOKENS.colors.orange,
+                          background: "#fff",
+                        },
+                      }}
+                    >
+                      <AppIcon name="edit" size={16} />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
                 <Tooltip title="Assign" arrow>
                   <IconButton
                     aria-label="Assign"

@@ -28,6 +28,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import SettingsIcon from "@mui/icons-material/Settings";
 import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
 import TuneIcon from "@mui/icons-material/Tune";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ComponentType } from "react";
 
@@ -65,7 +66,8 @@ type IconName =
   | "assignedTasks"
   | "myCompleted"
   | "logoutSidebar"
-  | "photos";
+  | "photos"
+  | "view";
 
 const ICON_MAP = {
   search: SearchIcon,
@@ -102,6 +104,7 @@ const ICON_MAP = {
   myCompleted: CheckCircleOutlineIcon,
   logoutSidebar: LogoutOutlinedIcon,
   photos: PhotoCameraOutlinedIcon,
+  view: VisibilityOutlinedIcon,
 } as const satisfies Record<IconName, ComponentType<{ sx?: SxProps<Theme> }>>;
 
 export type AppIconProps = {

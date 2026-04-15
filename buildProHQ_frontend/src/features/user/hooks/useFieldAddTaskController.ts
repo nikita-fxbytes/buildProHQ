@@ -35,6 +35,7 @@ export function useFieldAddTaskController() {
   const form = useForm<FieldAddTaskFormValues>({
     resolver: zodResolver(fieldAddTaskSchema),
     defaultValues: {
+      title: "",
       projectId: "",
       description: "",
       levelId: "",

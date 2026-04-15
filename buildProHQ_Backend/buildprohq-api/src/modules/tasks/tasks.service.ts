@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -18,6 +19,7 @@ import {
   TaskCompletion,
   TaskFilterValue,
   TaskHistory,
+  TaskPriority,
   TaskStatus,
 } from '../../infrastructure/persistence/typeorm/entities';
 import { AddAttachmentDto } from './dto/add-attachment.dto';
@@ -33,6 +35,9 @@ import { SearchOpenTasksDto } from './dto/search-open-tasks.dto';
 import { SearchCompletedTasksDto } from './dto/search-completed-tasks.dto';
 import { TaskAttachmentsService } from './task-attachments.service';
 import { sanitizeRichHtml } from '../../infrastructure/common/utils/rich-text';
+
+/** Standard task priority lookup codes (DB `task_priorities.code`); "Urgent" maps to `critical` in UI. */
+const ALLOWED_TASK_PRIORITY_CODES = new Set(['low', 'medium', 'high', 'critical']);
 
 @Injectable()
 export class TasksService {
@@ -55,6 +60,8 @@ export class TasksService {
     private readonly attachmentRepository: Repository<Attachment>,
     @InjectRepository(ProjectUser)
     private readonly projectUserRepository: Repository<ProjectUser>,
+    @InjectRepository(TaskPriority)
+    private readonly taskPriorityRepository: Repository<TaskPriority>,
     private readonly taskAttachments: TaskAttachmentsService,
     private readonly audit: AuditService,
   ) {}
@@ -97,15 +104,18 @@ export class TasksService {
       .leftJoin('task_priorities', 'tp', 'tp.id = t.priority_id')
       .leftJoin('trades', 'tr', 'tr.id = t.trade_id')
       .leftJoin('levels', 'lv', 'lv.id = t.level_id')
+      .leftJoin('projects', 'pr', 'pr.id = t.project_id')
       .select([
         't.id AS id',
         't.project_id AS project_id',
+        'pr.name AS project_name',
         't.status_id AS status_id',
         't.priority_id AS priority_id',
         't.level_id AS level_id',
         't.trade_id AS trade_id',
         't.created_by_user_id AS created_by_user_id',
         't.assigned_to_user_id AS assigned_to_user_id',
+        't.title AS title',
         't.description AS description',
         't.notes AS notes',
         't.due_at AS due_at',
@@ -132,21 +142,13 @@ export class TasksService {
   }
 
   async create(dto: CreateTaskDto, user: AuthUser) {
-    if (user.role !== 'super_admin') {
-      const membership = await this.projectUserRepository.findOne({
-        where: {
-          projectId: dto.projectId,
-          userId: user.id,
-          deletedAt: IsNull(),
-        },
-        select: { id: true },
-      });
-      if (!membership) {
-        throw new ForbiddenException(MESSAGES.COMMON.FORBIDDEN);
-      }
+    await this.assertProjectMembership(user, dto.projectId);
+    if (dto.priorityId) {
+      await this.assertAllowedPriorityId(dto.priorityId);
     }
 
     const task = this.taskRepository.create({
+      title: dto.title.trim(),
       projectId: dto.projectId,
       statusId: dto.statusId,
       priorityId: dto.priorityId ?? null,
@@ -205,11 +207,19 @@ export class TasksService {
     const oldStatusId = existing.status_id as string | null;
     const oldAssigneeId = existing.assigned_to_user_id as string | null;
 
+    if (dto.projectId !== undefined && dto.projectId !== existing.project_id) {
+      await this.assertProjectMembership(user, dto.projectId);
+    }
+    if (dto.priorityId !== undefined && dto.priorityId !== null) {
+      await this.assertAllowedPriorityId(dto.priorityId);
+    }
+
     const updatePayload: Partial<Task> = {
       updatedBy: user.id,
     };
     if (dto.statusId !== undefined) updatePayload.statusId = dto.statusId;
     if (dto.priorityId !== undefined) updatePayload.priorityId = dto.priorityId;
+    if (dto.projectId !== undefined) updatePayload.projectId = dto.projectId;
     if (dto.levelId !== undefined) updatePayload.levelId = dto.levelId;
     if (dto.tradeId !== undefined) updatePayload.tradeId = dto.tradeId;
     if (dto.assignedToUserId !== undefined)
@@ -219,6 +229,7 @@ export class TasksService {
     if (dto.notes !== undefined) updatePayload.notes = dto.notes;
     if (dto.dueAt !== undefined)
       updatePayload.dueAt = dto.dueAt ? new Date(dto.dueAt) : null;
+    if (dto.title !== undefined) updatePayload.title = dto.title.trim();
 
     await this.taskRepository.update(id, updatePayload);
 
@@ -858,7 +869,9 @@ export class TasksService {
         't.id AS id',
         't.project_id AS project_id',
         'p.name AS project_name',
+        't.title AS title',
         't.description AS description',
+        't.due_at AS due_at',
         't.days_open AS days_open',
         't.created_at AS created_at',
         't.opened_at AS opened_at',
@@ -1095,6 +1108,37 @@ export class TasksService {
     if (user.role === 'field_user' && task.created_by_user_id === user.id)
       return;
     throw new ForbiddenException(MESSAGES.TASKS.COMPLETE_SCOPE_DENIED);
+  }
+
+  private async assertProjectMembership(
+    user: AuthUser,
+    projectId: string,
+  ): Promise<void> {
+    if (user.role === 'super_admin') return;
+    const membership = await this.projectUserRepository.findOne({
+      where: {
+        projectId,
+        userId: user.id,
+        deletedAt: IsNull(),
+      },
+      select: { id: true },
+    });
+    if (!membership) {
+      throw new ForbiddenException(MESSAGES.COMMON.FORBIDDEN);
+    }
+  }
+
+  private async assertAllowedPriorityId(priorityId: string): Promise<void> {
+    const row = await this.taskPriorityRepository.findOne({
+      where: { id: priorityId, deletedAt: IsNull() },
+      select: { id: true, code: true },
+    });
+    if (!row) {
+      throw new BadRequestException(MESSAGES.TASK_VALIDATION.PRIORITY_ID_INVALID);
+    }
+    if (!ALLOWED_TASK_PRIORITY_CODES.has(row.code.toLowerCase())) {
+      throw new BadRequestException(MESSAGES.TASK_VALIDATION.PRIORITY_NOT_ALLOWED);
+    }
   }
 
   private daysBetween(from: string, to: string): number {

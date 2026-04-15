@@ -36,6 +36,12 @@ export const ROUTES = {
   SUPER_FILTER_NEW: "/super/filters/new",
 } as const;
 
+/** Super Admin task deep links (dynamic segments). */
+export const taskRoutes = {
+  superView: (taskId: string) => `/super/tasks/view/${taskId}`,
+  superEdit: (taskId: string) => `/super/tasks/edit/${taskId}`,
+} as const;
+
 export const ROLE_HOME_ROUTES: Record<Role, string> = {
   [ROLES.FIELD_USER]: ROUTES.FIELD_TASKS,
   [ROLES.TRADE_USER]: ROUTES.TRADE_TASKS,

@@ -81,6 +81,9 @@ export class Task extends SoftDeleteTimestamps {
   @ManyToOne(() => User, (u) => u.assignedTasks)
   @JoinColumn({ name: 'assigned_to_user_id' })
   assignedToUser?: User | null;
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'title' })
+  title?: string | null;
+
   @Column({ type: 'text' })
   description!: string;
   @Column({ type: 'text', nullable: true })

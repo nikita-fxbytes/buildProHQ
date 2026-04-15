@@ -6,6 +6,7 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { Controller, type UseFormReturn } from "react-hook-form";
+import { FormTextField } from "@/components/common/FormTextField";
 import { FormLookupAutocompleteField } from "@/components/common/FormLookupAutocompleteField";
 import { AppButton } from "@/components/common/AppButton";
 import { AppIcon } from "@/components/common/AppIcon";
@@ -115,6 +116,23 @@ export function FieldAddTaskView({
 
         <form onSubmit={onSubmit} noValidate>
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
+            <Box sx={{ gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "6px" }}>
+              <FormFieldLabel required>Title</FormFieldLabel>
+              <Controller
+                control={form.control}
+                name="title"
+                render={({ field, fieldState }) => (
+                  <FormTextField
+                    {...field}
+                    disabled={disabled}
+                    placeholder="Short summary for lists and reports"
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                  />
+                )}
+              />
+            </Box>
+
             <Box sx={{ gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "6px" }}>
               <FormFieldLabel required>Project</FormFieldLabel>
               <FormLookupAutocompleteField

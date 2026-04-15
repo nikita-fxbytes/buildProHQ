@@ -4,6 +4,10 @@ import { TASK_BEFORE_PHOTOS_MAX } from "@/constants/task-form.constants";
 import { htmlToPlainText } from "@/utils/richText";
 
 export const fieldAddTaskSchema = z.object({
+  title: z
+    .string()
+    .min(1, MESSAGES.validation.taskTitleRequired)
+    .max(500, MESSAGES.validation.taskTitleMaxLength),
   projectId: z
     .string()
     .min(1, MESSAGES.validation.selectProject)

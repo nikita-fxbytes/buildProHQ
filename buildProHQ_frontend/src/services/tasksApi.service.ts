@@ -12,6 +12,7 @@ type ApiEnvelope<T> = {
 
 export type TaskListItem = {
   id: string;
+  title?: string | null;
   project_id?: string | null;
   project_name?: string | null;
   description: string;
@@ -31,6 +32,7 @@ export type TaskListItem = {
   priority_id: string | null;
   priority_code: string | null;
   priority_name: string | null;
+  due_at?: string | null;
 };
 
 export type PaginationMeta = {
@@ -117,6 +119,7 @@ export type ManagerAnalytics = {
 };
 
 export type CreateTaskPayload = {
+  title: string;
   projectId: string;
   statusId: string;
   priorityId?: string;
@@ -124,13 +127,17 @@ export type CreateTaskPayload = {
   tradeId: string;
   description: string;
   notes?: string;
+  assignedToUserId?: string | null;
+  dueAt?: string | null;
 };
 
 export type TaskDetailResponse = {
   id: string;
+  title?: string | null;
   description?: string;
   status_id?: string;
   project_id?: string | null;
+  project_name?: string | null;
   priority_id?: string | null;
   level_id?: string | null;
   trade_id?: string | null;
@@ -219,6 +226,8 @@ export const tasksApi = {
   async update(
     id: string,
     body: {
+      title?: string;
+      projectId?: string;
       description?: string;
       levelId?: string;
       tradeId?: string;

@@ -43,7 +43,11 @@ export const MESSAGES = {
     DESCRIPTION_REQUIRED: 'Description is required',
     DESCRIPTION_MIN: 'Description must be at least 3 characters',
     ASSIGNED_USER_ID_INVALID: 'Assigned user must be a valid identifier',
+    PRIORITY_NOT_ALLOWED:
+      'Priority must be one of the standard levels (Low, Medium, High, Urgent)',
     DUE_AT_INVALID: 'Due date must be a valid ISO date string',
+    TITLE_REQUIRED: 'Title is required',
+    TITLE_MAX_LENGTH: 'Title must be at most 500 characters',
     FILE_URL_INVALID: 'Attachment URL must be a valid http(s) address',
   },
   FILES: {

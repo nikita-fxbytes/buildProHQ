@@ -66,29 +66,14 @@ export function FilterMultiSelect({
         disabled={disabled}
         noOptionsText={MESSAGES.taskForm.autocompleteNoOptions}
         renderTags={(tagValue, getTagProps) =>
-          tagValue.map((option, index) => {
-            const { key, ...tagProps } = getTagProps({ index });
-            return (
-              <Chip
-                {...tagProps}
-                key={key ?? option.value}
-                label={option.label}
-                size="small"
-              />
-            );
-          })
+          tagValue.map((option, index) => <Chip {...getTagProps({ index })} label={option.label} size="small" />)
         }
-        renderOption={(props, option, { selected: isSelected }) => {
-          // React keys must be passed directly, not via `{...props}`.
-          // Prefer MUI-provided key, otherwise fall back to stable unique option.value.
-          const { key, ...liProps } = props as unknown as { key?: React.Key } & Record<string, unknown>;
-          return (
-            <li {...liProps} key={key ?? option.value}>
-              <Checkbox size="small" checked={isSelected} sx={{ mr: 1, p: 0 }} />
-              {option.label}
-            </li>
-          );
-        }}
+        renderOption={(props, option, { selected: isSelected }) => (
+          <li {...props}>
+            <Checkbox size="small" checked={isSelected} sx={{ mr: 1, p: 0 }} />
+            {option.label}
+          </li>
+        )}
         renderInput={(params) => (
           <TextField
             {...params}

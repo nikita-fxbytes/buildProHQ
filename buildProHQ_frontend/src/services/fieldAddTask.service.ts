@@ -23,6 +23,7 @@ export const fieldAddTaskService = {
   ): Promise<void> {
     await createTaskWithOptionalPhotos(
       {
+      title: values.title.trim(),
       projectId: values.projectId,
       statusId: openStatusId,
       levelId: values.levelId,

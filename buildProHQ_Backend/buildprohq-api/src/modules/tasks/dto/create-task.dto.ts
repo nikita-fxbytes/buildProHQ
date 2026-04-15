@@ -1,9 +1,28 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsOptional, IsString, IsUUID, Validate, ValidateIf } from 'class-validator';
+import {
+  IsDateString,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+  Validate,
+  ValidateIf,
+} from 'class-validator';
 import { MESSAGES } from '../../../infrastructure/common/constants/messages';
 import { IsRichTaskDescriptionConstraint } from '../../../infrastructure/common/validators/rich-description.constraint';
 
 export class CreateTaskDto {
+  @ApiProperty({
+    description: 'Short task title shown in lists and headers.',
+    example: 'Patch drywall in unit 12B',
+    maxLength: 500,
+  })
+  @IsString({ message: MESSAGES.TASK_VALIDATION.TITLE_REQUIRED })
+  @MinLength(1, { message: MESSAGES.TASK_VALIDATION.TITLE_REQUIRED })
+  @MaxLength(500, { message: MESSAGES.TASK_VALIDATION.TITLE_MAX_LENGTH })
+  title!: string;
+
   @ApiProperty({
     description: 'Project id this task belongs to.',
     example: '15004760-efa3-406e-9a24-18a6c64f8d51',
@@ -19,7 +38,8 @@ export class CreateTaskDto {
   statusId!: string;
 
   @ApiPropertyOptional({
-    description: 'Priority id (optional; omit for no priority).',
+    description:
+      'Priority id from GET /lookups/task-priorities. Must reference a standard level: codes `low`, `medium`, `high`, or `critical` (UI may show `critical` as Urgent). Omit for no priority.',
   })
   @IsOptional()
   @IsUUID('4', { message: MESSAGES.TASK_VALIDATION.PRIORITY_ID_INVALID })

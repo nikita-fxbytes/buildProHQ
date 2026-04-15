@@ -32,14 +32,10 @@ import { Roles } from '../../infrastructure/common/decorators/roles.decorator';
 import { Public } from '../../infrastructure/common/decorators/public.decorator';
 import { MESSAGES } from '../../infrastructure/common/constants/messages';
 import { FilesService } from './files.service';
-
-const IMAGE_MIMES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-]);
+import {
+  ALLOWED_IMAGE_MIME_TYPES,
+  assertImageUploadAllowed,
+} from '../../infrastructure/common/file-upload/image-upload.validation';
 
 function extFromOriginal(name: string): string {
   const n = path.extname(name).toLowerCase();
@@ -113,7 +109,7 @@ export class FilesController {
       }),
       limits: { fileSize: 12 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
-        const okMime = IMAGE_MIMES.has(file.mimetype);
+        const okMime = ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype);
         const okExt = /\.(jpe?g|png|webp|heic|heif)$/i.test(file.originalname);
         if (!okMime && !okExt) {
           return cb(
@@ -133,9 +129,11 @@ export class FilesController {
     if (!file) {
       throw new BadRequestException(MESSAGES.FILES.REQUIRED);
     }
-    if (file.size > maxBytes) {
+    try {
+      assertImageUploadAllowed(file.mimetype, file.originalname, file.size, maxBytes);
+    } catch (e) {
       fs.unlink(this.filesService.resolveStoredPath(file.filename), () => {});
-      throw new BadRequestException(MESSAGES.FILES.TOO_LARGE);
+      throw e;
     }
 
     const host = req.get('host') ?? 'localhost';

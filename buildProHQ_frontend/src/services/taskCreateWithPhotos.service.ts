@@ -7,37 +7,21 @@ import { sanitizeRichHtml } from "@/utils/richText";
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
 export type CreateTaskWithPhotosValues = {
+  title: string;
   projectId: string;
   statusId: string;
   levelId: string;
   tradeId: string;
   priorityId: string;
   description: string;
+  dueAt?: string | null;
+  assignedToUserId?: string | null;
 };
 
-export async function createTaskWithOptionalPhotos(
-  values: CreateTaskWithPhotosValues,
-  files: File[],
-): Promise<{ id: string }> {
-  const photoErr = validateBeforePhotos(files, MAX_PHOTO_BYTES);
-  if (photoErr) {
-    throw new Error(photoErr);
-  }
-
-  const created = await tasksApi.createTask({
-    projectId: values.projectId,
-    statusId: values.statusId,
-    levelId: values.levelId,
-    tradeId: values.tradeId,
-    priorityId: values.priorityId,
-    description: sanitizeRichHtml(values.description),
-  });
-
-  const taskId = created.id;
-  if (!taskId) {
-    throw new Error(MESSAGES.common.somethingWrong);
-  }
-
+/**
+ * Uploads local image files and links them as "before" attachments on an existing task (create or edit flows).
+ */
+export async function uploadBeforePhotosForTask(taskId: string, files: File[]): Promise<void> {
   for (const file of files) {
     const uploaded = await uploadsApi.uploadImage(file);
     await tasksApi.addAttachment(taskId, {
@@ -50,6 +34,35 @@ export async function createTaskWithOptionalPhotos(
       isAfter: false,
     });
   }
+}
+
+export async function createTaskWithOptionalPhotos(
+  values: CreateTaskWithPhotosValues,
+  files: File[],
+): Promise<{ id: string }> {
+  const photoErr = validateBeforePhotos(files, MAX_PHOTO_BYTES);
+  if (photoErr) {
+    throw new Error(photoErr);
+  }
+
+  const created = await tasksApi.createTask({
+    title: values.title.trim(),
+    projectId: values.projectId,
+    statusId: values.statusId,
+    levelId: values.levelId,
+    tradeId: values.tradeId,
+    priorityId: values.priorityId,
+    description: sanitizeRichHtml(values.description),
+    dueAt: values.dueAt?.trim() ? values.dueAt.trim() : null,
+    assignedToUserId: values.assignedToUserId ?? null,
+  });
+
+  const taskId = created.id;
+  if (!taskId) {
+    throw new Error(MESSAGES.common.somethingWrong);
+  }
+
+  await uploadBeforePhotosForTask(taskId, files);
 
   return { id: taskId };
 }
