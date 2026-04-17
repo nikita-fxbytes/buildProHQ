@@ -18,6 +18,9 @@ import type { TaskAttachmentItem } from "@/services/tasksApi.service";
 import { MESSAGES } from "@/constants/messages";
 import { TASK_BEFORE_PHOTOS_MAX } from "@/constants/task-form.constants";
 import type { ProjectOptionRow } from "@/features/tasks/utils/projectAutocompleteOptions";
+import type { ProjectFilterDefinition } from "@/services/projectsApi.service";
+import { TaskDynamicFiltersFields } from "@/features/tasks/task-form/TaskDynamicFiltersFields";
+import type { TaskFilterValueForm } from "@/utils/taskFilterValues";
 
 export type TaskFormViewProps = {
   form: UseFormReturn<TaskFormValues>;
@@ -31,8 +34,8 @@ export type TaskFormViewProps = {
     setInput: (v: string) => void;
     setSelectedLabel: (v: string) => void;
   };
-  levels: LookupItem[];
-  trades: LookupItem[];
+  projectFilterDefinitions: ProjectFilterDefinition[];
+  loadingProjectFilters: boolean;
   priorities: LookupItem[];
   userOptions: Array<{ value: string; label: string }>;
   /** File section: create = single upload state; edit = existing server files + new uploads. */
@@ -62,13 +65,11 @@ function sortLookups(items: LookupItem[]): LookupItem[] {
 }
 
 /**
- * Pure presentational task form: title, rich description, project, level, trade, priority, due date,
+ * Pure presentational task form: title, rich description, project, dynamic filters, priority, due date,
  * assignee, and attachments. No API calls — parent controller supplies all handlers and options.
  */
 export function TaskFormView(props: TaskFormViewProps) {
   const { form, disabled } = props;
-  const sortedLevels = sortLookups(props.levels);
-  const sortedTrades = sortLookups(props.trades);
   const sortedProjects = props.projectLookupOptions ? sortLookups(props.projectLookupOptions) : [];
 
   const maxNewFiles =
@@ -146,28 +147,26 @@ export function TaskFormView(props: TaskFormViewProps) {
 
       <TaskDescriptionField form={form} disabled={disabled} required />
 
-      <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        <FormFieldLabel required>Level</FormFieldLabel>
-        <FormLookupAutocompleteField
+      <Box sx={{ gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "10px" }}>
+        <FormFieldLabel>Filters</FormFieldLabel>
+        <Controller
           control={form.control}
-          name="levelId"
-          options={sortedLevels}
-          placeholder={MESSAGES.taskForm.selectLevelPlaceholder}
-          noOptionsText={MESSAGES.taskForm.autocompleteNoOptions}
-          disabled={disabled}
+          name="taskFilterValues"
+          render={({ field }) => (
+            <TaskDynamicFiltersFields
+              definitions={props.projectFilterDefinitions}
+              value={(field.value as TaskFilterValueForm[] | undefined) ?? []}
+              onChange={(next) => field.onChange(next)}
+              disabled={disabled || props.loadingProjectFilters || !form.getValues("projectId")}
+              loading={props.loadingProjectFilters}
+            />
+          )}
         />
-      </Box>
-
-      <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        <FormFieldLabel required>Trade</FormFieldLabel>
-        <FormLookupAutocompleteField
-          control={form.control}
-          name="tradeId"
-          options={sortedTrades}
-          placeholder={MESSAGES.taskForm.selectTradePlaceholder}
-          noOptionsText={MESSAGES.taskForm.autocompleteNoOptions}
-          disabled={disabled}
-        />
+        <Typography sx={{ fontSize: 12, color: "#7B89A8" }}>
+          {form.getValues("projectId")
+            ? "Select values for each filter as needed. Nothing is pre-selected."
+            : "Select a project to load filters."}
+        </Typography>
       </Box>
 
       {/* Assign Users (single compact field) */}

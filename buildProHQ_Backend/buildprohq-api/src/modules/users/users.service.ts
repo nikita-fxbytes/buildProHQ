@@ -18,7 +18,10 @@ import {
 } from '../../infrastructure/persistence/typeorm/entities';
 import { Role } from '../../infrastructure/persistence/typeorm/entities';
 import { MESSAGES } from '../../infrastructure/common/constants/messages';
-import { Task, TaskStatus } from '../../infrastructure/persistence/typeorm/entities';
+import {
+  Task,
+  TaskStatus,
+} from '../../infrastructure/persistence/typeorm/entities';
 import { SearchUsersDto } from './dto/search-users.dto';
 import type { AuthUser } from '../../infrastructure/common/interfaces/auth-user.interface';
 
@@ -42,7 +45,11 @@ export class UsersService {
       .createQueryBuilder('u')
       .innerJoin(UserType, 'ut', 'ut.id = u.user_type_id')
       .innerJoin(UserStatus, 'us', 'us.id = u.user_status_id')
-      .leftJoin(Task, 't', 't.created_by_user_id = u.id AND t.deleted_at IS NULL')
+      .leftJoin(
+        Task,
+        't',
+        't.created_by_user_id = u.id AND t.deleted_at IS NULL',
+      )
       .leftJoin(
         TaskStatus,
         'ts',
@@ -69,9 +76,7 @@ export class UsersService {
       .addGroupBy('ut.name')
       .addGroupBy('us.code')
       .addGroupBy('us.name')
-      .orderBy('u.created_at', 'DESC')
-      ;
-
+      .orderBy('u.created_at', 'DESC');
     // Super Admin can see all users. Managers are scoped to users they created.
     if (actor.role !== 'super_admin') {
       qb.andWhere('u.created_by = :actorId', { actorId: actor.id });
@@ -87,7 +92,11 @@ export class UsersService {
       .innerJoin(UserStatus, 'us', 'us.id = u.user_status_id')
       .leftJoin(UserRole, 'ur', 'ur.user_id = u.id AND ur.deleted_at IS NULL')
       .leftJoin(Role, 'r', 'r.id = ur.role_id AND r.deleted_at IS NULL')
-      .leftJoin(Task, 't', 't.created_by_user_id = u.id AND t.deleted_at IS NULL')
+      .leftJoin(
+        Task,
+        't',
+        't.created_by_user_id = u.id AND t.deleted_at IS NULL',
+      )
       .leftJoin(
         TaskStatus,
         'ts',
@@ -205,8 +214,7 @@ export class UsersService {
     const qbCount = this.userRepository
       .createQueryBuilder('u')
       .innerJoin(UserType, 'ut', 'ut.id = u.user_type_id')
-      .where('u.deleted_at IS NULL')
-      ;
+      .where('u.deleted_at IS NULL');
     if (actor.role !== 'super_admin') {
       qbCount.andWhere('u.created_by = :actorId', { actorId: actor.id });
     }
@@ -330,7 +338,9 @@ export class UsersService {
       .slice(0, 4)
       .toUpperCase();
 
-    const passwordHash = dto.password ? await bcrypt.hash(dto.password, 10) : null;
+    const passwordHash = dto.password
+      ? await bcrypt.hash(dto.password, 10)
+      : null;
     const user = this.userRepository.create({
       userTypeId: dto.userTypeId,
       userStatusId: dto.userStatusId,
@@ -380,7 +390,11 @@ export class UsersService {
     id: string,
     dto: UpdateUserDto,
     actorId: string,
-    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+    meta?: {
+      ipAddress?: string | null;
+      requestId?: string | null;
+      userAgent?: string | null;
+    },
   ) {
     const current = await this.userRepository.findOne({
       where: { id, deletedAt: IsNull() },
@@ -434,7 +448,10 @@ export class UsersService {
     await this.userRepository.update(id, updatePayload);
 
     if (dto.roleId) {
-      await this.userRoleRepository.softDelete({ userId: id, deletedAt: IsNull() });
+      await this.userRoleRepository.softDelete({
+        userId: id,
+        deletedAt: IsNull(),
+      });
       const userRole = this.userRoleRepository.create({
         userId: id,
         roleId: dto.roleId,
@@ -455,7 +472,10 @@ export class UsersService {
         avatarUrl: current.avatarUrl ?? null,
         roleId: currentRole?.roleId ?? null,
       },
-      newValue: { ...dto, action: dto.roleId ? 'USER_ROLE_CHANGED' : 'USER_UPDATED' },
+      newValue: {
+        ...dto,
+        action: dto.roleId ? 'USER_ROLE_CHANGED' : 'USER_UPDATED',
+      },
       performedBy: actorId,
       ipAddress: meta?.ipAddress ?? null,
       requestId: meta?.requestId ?? null,
@@ -468,7 +488,11 @@ export class UsersService {
   async remove(
     id: string,
     actorId: string,
-    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+    meta?: {
+      ipAddress?: string | null;
+      requestId?: string | null;
+      userAgent?: string | null;
+    },
   ) {
     const existing = await this.userRepository.findOne({
       where: { id, deletedAt: IsNull() },
@@ -490,7 +514,13 @@ export class UsersService {
       tableName: 'users',
       recordId: id,
       actionType: 'DELETE',
-      oldValue: existing ? { id: existing.id, email: existing.email, fullName: existing.fullName } : null,
+      oldValue: existing
+        ? {
+            id: existing.id,
+            email: existing.email,
+            fullName: existing.fullName,
+          }
+        : null,
       newValue: { action: 'USER_DELETED', id },
       performedBy: actorId,
       ipAddress: meta?.ipAddress ?? null,

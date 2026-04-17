@@ -59,19 +59,18 @@ export function SuperExportBar(props: SuperExportBarProps) {
           rows.push(["Summary", "High Priority (urgent)", String(data.stats.urgent)]);
 
           rows.push([]);
-          rows.push(["OverdueTop", "Days", "Level", "Description", "User"]);
+          rows.push(["OverdueTop", "Days", "Description", "User"]);
           for (const t of data.analytics.overdueTop.slice(0, 25)) {
-            rows.push([String(t.daysOpen), t.level ?? "", t.description ?? "", t.user ?? ""]);
+            rows.push([String(t.daysOpen), t.description ?? "", t.user ?? ""]);
           }
 
           rows.push([]);
-          rows.push(["RecentTasks", "Level", "Trade", "Title", "Project", "CreatedAt"]);
+          rows.push(["RecentTasks", "Title", "Project", "Status", "CreatedAt"]);
           for (const t of data.recentTasks) {
             rows.push([
-              t.level_name ?? "",
-              t.trade_name ?? "",
               t.title ?? t.description ?? "",
               t.project_name ?? "",
+              t.status_name ?? "",
               t.created_at ?? "",
             ]);
           }

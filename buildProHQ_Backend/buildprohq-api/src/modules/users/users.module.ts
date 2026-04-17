@@ -11,7 +11,10 @@ import {
 } from '../../infrastructure/persistence/typeorm/entities';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, UserRole, Task, TaskStatus]), AuthModule],
+  imports: [
+    TypeOrmModule.forFeature([User, UserRole, Task, TaskStatus]),
+    AuthModule,
+  ],
   controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],

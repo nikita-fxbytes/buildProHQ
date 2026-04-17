@@ -341,7 +341,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"statusId\": \"{{openStatusId}}\",\n  \"priorityId\": \"{{priorityMediumId}}\",\n  \"levelId\": \"{{levelId}}\",\n  \"tradeId\": \"{{tradeId}}\",\n  \"description\": \"Inspect site A\"\n}"
+              "raw": "{\n  \"statusId\": \"{{openStatusId}}\",\n  \"priorityId\": \"{{priorityMediumId}}\",\n  \"projectId\": \"{{projectId}}\",\n  \"description\": \"Inspect site A\",\n  \"taskFilterValues\": [\n    {\n      \"filterId\": \"{{filterId}}\",\n      \"subFilterIds\": [\"{{subFilterId}}\"]\n    }\n  ]\n}"
             }
           },
           "response": []
@@ -381,13 +381,13 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"page\": 1,\n  \"limit\": 10,\n  \"search\": \"painting\",\n  \"sortBy\": \"priority\",\n  \"sortOrder\": \"desc\",\n  \"filters\": {\n    \"createdByUserIds\": [\"{{managerUserId}}\"],\n    \"tradeIds\": [\"{{tradeId}}\"],\n    \"levelIds\": [\"{{levelId}}\"],\n    \"priorityIds\": [\"{{priorityMediumId}}\"],\n    \"statusIds\": [\"{{openStatusId}}\"]\n  }\n}"
+              "raw": "{\n  \"page\": 1,\n  \"limit\": 10,\n  \"search\": \"painting\",\n  \"sortBy\": \"priority\",\n  \"sortOrder\": \"desc\",\n  \"filters\": {\n    \"createdByUserIds\": [\"{{managerUserId}}\"],\n    \"priorityIds\": [\"{{priorityMediumId}}\"],\n    \"statusIds\": [\"{{openStatusId}}\"],\n    \"projectIds\": [\"{{projectId}}\"]\n  }\n}"
             }
           },
           "response": []
         },
         {
-          "name": "Search Completed Tasks (POST body)",
+          "name": "Search Tasks (All statuses; example: Completed) (POST /tasks/search)",
           "request": {
             "method": "POST",
             "header": [
@@ -395,13 +395,33 @@
               { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/tasks/completed",
+              "raw": "{{base_url}}/api/v1/tasks/search",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "tasks", "completed"]
+              "path": ["api", "v1", "tasks", "search"]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"page\": 1,\n  \"limit\": 10,\n  \"search\": \"drywall\",\n  \"sortBy\": \"date\",\n  \"sortOrder\": \"desc\",\n  \"filters\": {\n    \"completedByUserIds\": [\"{{managerUserId}}\"],\n    \"tradeIds\": [\"{{tradeId}}\"],\n    \"levelIds\": [\"{{levelId}}\"]\n  }\n}"
+              "raw": "{\n  \"page\": 1,\n  \"limit\": 10,\n  \"search\": \"drywall\",\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"desc\",\n  \"filters\": {\n    \"createdByUserIds\": [\"{{managerUserId}}\"],\n    \"statusIds\": [\"{{completedStatusId}}\"],\n    \"projectIds\": [\"{{projectId}}\"]\n  }\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Analytics (Dynamic, project-scoped) (POST /analytics/tasks)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/analytics/tasks",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "analytics", "tasks"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"dateRange\": {\n    \"from\": \"2026-01-01\",\n    \"to\": \"2026-12-31\"\n  }\n}"
             }
           },
           "response": []
@@ -526,36 +546,6 @@
     {
       "name": "Lookups",
       "item": [
-        {
-          "name": "List Trades",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/lookups/trades",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "lookups", "trades"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "List Levels",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/lookups/levels",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "lookups", "levels"]
-            }
-          },
-          "response": []
-        },
         {
           "name": "List Task Statuses",
           "request": {
@@ -688,46 +678,6 @@
           "response": []
         },
         {
-          "name": "Quick Add Level",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/filters/levels",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "filters", "levels"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"levelName\": \"L11\"\n}"
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Quick Add Trade",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/filters/trades",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "filters", "trades"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tradeName\": \"Tiler\"\n}"
-            }
-          },
-          "response": []
-        },
-        {
           "name": "Delete Filter Category",
           "request": {
             "method": "DELETE",
@@ -758,6 +708,86 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Project Filters (Dynamic)",
+      "item": [
+        {
+          "name": "Search Project Filters (POST /project-filters/search)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/project-filters/search",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "project-filters", "search"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"limit\": 20,\n  \"search\": \"zone\",\n  \"projectIds\": [\"{{projectId}}\"]\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Project Filter (POST /project-filters)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/project-filters",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "project-filters"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Zone\",\n  \"projectIds\": [\"{{projectId}}\"],\n  \"hasSubFilters\": true,\n  \"isMultiSelect\": true,\n  \"subFilterNames\": [\"North\", \"South\", \"East\", \"West\"]\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Project Filter (PATCH /project-filters/:id)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/project-filters/{{filterId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "project-filters", "{{filterId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Zone\",\n  \"projectIds\": [\"{{projectId}}\"],\n  \"hasSubFilters\": true,\n  \"isMultiSelect\": true,\n  \"subFilterNames\": [\"North\", \"South\", \"East\", \"West\", \"Lobby\"]\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Project Filter (DELETE /project-filters/:id)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/project-filters/{{filterId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "project-filters", "{{filterId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "event": [],
@@ -765,21 +795,21 @@
     { "key": "base_url", "value": "http://localhost:3001" },
     { "key": "jwt_token", "value": "" },
     { "key": "projectId", "value": "" },
+    { "key": "filterId", "value": "" },
+    { "key": "subFilterId", "value": "" },
     { "key": "me_role", "value": "" },
     { "key": "me_user_id", "value": "" },
     { "key": "taskId", "value": "" },
     { "key": "fileUrl", "value": "" },
     { "key": "uploadFilePath", "value": "" },
-    { "key": "tradeId", "value": "" },
-    { "key": "levelId", "value": "" },
     { "key": "openStatusId", "value": "" },
+    { "key": "completedStatusId", "value": "" },
     { "key": "priorityMediumId", "value": "" },
     { "key": "managerUserId", "value": "" },
     { "key": "notificationId", "value": "" },
     { "key": "userTypeFieldId", "value": "" },
     { "key": "userStatusActiveId", "value": "" },
-    { "key": "roleFieldUserId", "value": "" }
-    ,
+    { "key": "roleFieldUserId", "value": "" },
     { "key": "filterCategoryId", "value": "" },
     { "key": "filterOptionId", "value": "" }
   ]

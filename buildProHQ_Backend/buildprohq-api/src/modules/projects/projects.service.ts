@@ -103,7 +103,11 @@ export class ProjectsService {
     // For now: super_admin can see all projects; manager can see all projects (existing app behavior).
     // Next step (project-wise): restrict non-super to memberships.
     if (actor.role !== 'super_admin' && actor.role !== 'manager') {
-      return { message: 'Projects fetched successfully', data: [], meta: { page: dto.page, limit: dto.limit, total: 0, totalPages: 1 } };
+      return {
+        message: 'Projects fetched successfully',
+        data: [],
+        meta: { page: dto.page, limit: dto.limit, total: 0, totalPages: 1 },
+      };
     }
 
     // Project list needs assignment counts (HTML spec): managers / trades / field / total.
@@ -112,8 +116,16 @@ export class ProjectsService {
     // Note: manager role code in seed is `manager_admin` so we use ILIKE '%manager%'.
     const qb = this.projectRepo
       .createQueryBuilder('p')
-      .leftJoin(ProjectUser, 'pu', 'pu.project_id = p.id AND pu.deleted_at IS NULL')
-      .leftJoin(UserRole, 'ur', 'ur.user_id = pu.user_id AND ur.deleted_at IS NULL')
+      .leftJoin(
+        ProjectUser,
+        'pu',
+        'pu.project_id = p.id AND pu.deleted_at IS NULL',
+      )
+      .leftJoin(
+        UserRole,
+        'ur',
+        'ur.user_id = pu.user_id AND ur.deleted_at IS NULL',
+      )
       .leftJoin(Role, 'r', 'r.id = ur.role_id AND r.deleted_at IS NULL')
       .where('p.deleted_at IS NULL');
 
@@ -136,11 +148,20 @@ export class ProjectsService {
     qb.groupBy('p.id');
 
     if (sortBy === 'name') {
-      qb.orderBy('p.name', sortOrder.toUpperCase() as any).addOrderBy('p.created_at', 'DESC');
+      qb.orderBy('p.name', sortOrder.toUpperCase() as any).addOrderBy(
+        'p.created_at',
+        'DESC',
+      );
     } else if (sortBy === 'code') {
-      qb.orderBy('p.code', sortOrder.toUpperCase() as any).addOrderBy('p.created_at', 'DESC');
+      qb.orderBy('p.code', sortOrder.toUpperCase() as any).addOrderBy(
+        'p.created_at',
+        'DESC',
+      );
     } else if (sortBy === 'members') {
-      qb.orderBy('"membersTotal"', sortOrder.toUpperCase() as any).addOrderBy('p.created_at', 'DESC');
+      qb.orderBy('"membersTotal"', sortOrder.toUpperCase() as any).addOrderBy(
+        'p.created_at',
+        'DESC',
+      );
     } else {
       qb.orderBy('p.created_at', sortOrder.toUpperCase() as any);
     }
@@ -220,7 +241,10 @@ export class ProjectsService {
       return { message: 'Project created', data: saved };
     } catch (e) {
       // Handle DB-level uniqueness (race conditions / concurrent requests)
-      if (e instanceof QueryFailedError && (e as any).driverError?.code === '23505') {
+      if (
+        e instanceof QueryFailedError &&
+        (e as any).driverError?.code === '23505'
+      ) {
         throw new ConflictException('Project with this name already exists');
       }
       throw e;
@@ -230,7 +254,11 @@ export class ProjectsService {
   async deleteProject(
     actor: AuthUser,
     projectId: string,
-    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+    meta?: {
+      ipAddress?: string | null;
+      requestId?: string | null;
+      userAgent?: string | null;
+    },
   ) {
     if (actor.role !== 'super_admin') {
       throw new ConflictException(MESSAGES.COMMON.FORBIDDEN);
@@ -358,13 +386,21 @@ export class ProjectsService {
     return { message: 'Project deleted' };
   }
 
-  async listMembers(actor: AuthUser, projectId: string, dto: SearchProjectMembersDto) {
+  async listMembers(
+    actor: AuthUser,
+    projectId: string,
+    dto: SearchProjectMembersDto,
+  ) {
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 10;
     const role = dto.role?.toLowerCase() as any;
 
     if (actor.role !== 'super_admin' && actor.role !== 'manager') {
-      return { message: 'Members fetched successfully', data: [], meta: { page, limit, total: 0, totalPages: 1 } };
+      return {
+        message: 'Members fetched successfully',
+        data: [],
+        meta: { page, limit, total: 0, totalPages: 1 },
+      };
     }
 
     try {
@@ -398,11 +434,25 @@ export class ProjectsService {
         ? await this.userRepo.find({
             where: term
               ? [
-                  { id: In(userIds), fullName: ILike(`%${term}%`), deletedAt: IsNull() },
-                  { id: In(userIds), email: ILike(`%${term}%`), deletedAt: IsNull() },
+                  {
+                    id: In(userIds),
+                    fullName: ILike(`%${term}%`),
+                    deletedAt: IsNull(),
+                  },
+                  {
+                    id: In(userIds),
+                    email: ILike(`%${term}%`),
+                    deletedAt: IsNull(),
+                  },
                 ]
               : { id: In(userIds), deletedAt: IsNull() },
-            select: { id: true, fullName: true, email: true, initials: true, avatarUrl: true },
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              initials: true,
+              avatarUrl: true,
+            },
           })
         : [];
       const usersById = new Map(users.map((u) => [u.id, u]));
@@ -450,7 +500,9 @@ export class ProjectsService {
         })
         .filter(Boolean);
 
-      const filtered = role ? items.filter((i: any) => (i.roleCode || '').includes(role)) : items;
+      const filtered = role
+        ? items.filter((i: any) => (i.roleCode || '').includes(role))
+        : items;
 
       return {
         message: 'Members fetched successfully',
@@ -464,11 +516,19 @@ export class ProjectsService {
       };
     } catch {
       // Never hard-crash the UI for member listing
-      return { message: 'Members fetched successfully', data: [], meta: { page, limit, total: 0, totalPages: 1 } };
+      return {
+        message: 'Members fetched successfully',
+        data: [],
+        meta: { page, limit, total: 0, totalPages: 1 },
+      };
     }
   }
 
-  async assignMember(actor: AuthUser, projectId: string, dto: AssignProjectMemberDto) {
+  async assignMember(
+    actor: AuthUser,
+    projectId: string,
+    dto: AssignProjectMemberDto,
+  ) {
     if (actor.role !== 'super_admin') {
       throw new ConflictException(MESSAGES.COMMON.FORBIDDEN);
     }
@@ -478,7 +538,9 @@ export class ProjectsService {
     });
     if (!project) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
 
-    const ids = (dto.userIds?.length ? dto.userIds : dto.userId ? [dto.userId] : []).filter(Boolean) as string[];
+    const ids = (
+      dto.userIds?.length ? dto.userIds : dto.userId ? [dto.userId] : []
+    ).filter(Boolean);
     if (ids.length === 0) {
       throw new ConflictException('userId or userIds is required');
     }
@@ -490,7 +552,8 @@ export class ProjectsService {
     });
     const found = new Set(users.map((u) => u.id));
     const missing = ids.filter((id) => !found.has(id));
-    if (missing.length > 0) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
+    if (missing.length > 0)
+      throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
 
     // Skip already assigned.
     const existing = await this.projectUserRepo.find({
@@ -526,4 +589,3 @@ export class ProjectsService {
     return { message: 'User unassigned' };
   }
 }
-

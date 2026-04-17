@@ -1,6 +1,6 @@
 import { MESSAGES } from "@/constants/messages";
 import { validateBeforePhotos } from "@/schemas/field-add-task.schema";
-import { tasksApi } from "@/services/tasksApi.service";
+import { tasksApi, type TaskFilterValuePayload } from "@/services/tasksApi.service";
 import { uploadsApi } from "@/services/uploadsApi.service";
 import { sanitizeRichHtml } from "@/utils/richText";
 
@@ -10,12 +10,11 @@ export type CreateTaskWithPhotosValues = {
   title: string;
   projectId: string;
   statusId: string;
-  levelId: string;
-  tradeId: string;
   priorityId: string;
   description: string;
   dueAt?: string | null;
   assignedToUserIds?: string[];
+  taskFilterValues?: TaskFilterValuePayload[];
 };
 
 /**
@@ -49,12 +48,11 @@ export async function createTaskWithOptionalPhotos(
     title: values.title.trim(),
     projectId: values.projectId,
     statusId: values.statusId,
-    levelId: values.levelId,
-    tradeId: values.tradeId,
     priorityId: values.priorityId,
     description: sanitizeRichHtml(values.description),
     dueAt: values.dueAt?.trim() ? values.dueAt.trim() : null,
     assignedToUserIds: values.assignedToUserIds ?? [],
+    taskFilterValues: values.taskFilterValues ?? [],
   });
 
   const taskId = created.id;

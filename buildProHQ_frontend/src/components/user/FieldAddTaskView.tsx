@@ -24,17 +24,20 @@ import {
 import type { UploadItem } from "@/components/common/FormUploadField";
 import { FormUploadField } from "@/components/common/FormUploadField";
 import { FieldAddTaskFormSkeleton } from "@/components/common/skeletons/FieldAddTaskFormSkeleton";
+import type { ProjectFilterDefinition } from "@/services/projectsApi.service";
+import { TaskDynamicFiltersFields } from "@/features/tasks/task-form/TaskDynamicFiltersFields";
+import type { TaskFilterValueForm } from "@/utils/taskFilterValues";
 
 type Props = {
   form: UseFormReturn<FieldAddTaskFormValues>;
   projects: LookupItem[];
-  levels: LookupItem[];
-  trades: LookupItem[];
   priorityOptions: LookupItem[];
   photos: UploadItem[];
   setPhotos: (items: UploadItem[]) => void;
   loadingLookups: boolean;
   submitting: boolean;
+  projectFilterDefinitions: ProjectFilterDefinition[];
+  loadingProjectFilters: boolean;
   onSubmit: () => void;
   onCancel: () => void;
   onPaste: () => void;
@@ -62,13 +65,13 @@ function priorityCodeFromLookup(p: LookupItem): TaskPriorityCode | null {
 export function FieldAddTaskView({
   form,
   projects,
-  levels,
-  trades,
   priorityOptions,
   photos,
   setPhotos,
   loadingLookups,
   submitting,
+  projectFilterDefinitions,
+  loadingProjectFilters,
   onSubmit,
   onCancel,
   onPaste,
@@ -76,8 +79,6 @@ export function FieldAddTaskView({
   voiceActive,
 }: Props) {
   const sortedProjects = useMemo(() => sortLookups(projects), [projects]);
-  const sortedLevels = useMemo(() => sortLookups(levels), [levels]);
-  const sortedTrades = useMemo(() => sortLookups(trades), [trades]);
 
   if (loadingLookups) {
     return <FieldAddTaskFormSkeleton />;
@@ -233,28 +234,26 @@ export function FieldAddTaskView({
               </Typography>
             </Box>
 
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <FormFieldLabel required>Level</FormFieldLabel>
-              <FormLookupAutocompleteField
+            <Box sx={{ gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "10px" }}>
+              <FormFieldLabel>Filters</FormFieldLabel>
+              <Controller
                 control={form.control}
-                name="levelId"
-                options={sortedLevels}
-                placeholder={MESSAGES.taskForm.selectLevelPlaceholder}
-                noOptionsText={MESSAGES.taskForm.autocompleteNoOptions}
-                disabled={disabled}
+                name="taskFilterValues"
+                render={({ field }) => (
+                  <TaskDynamicFiltersFields
+                    definitions={projectFilterDefinitions}
+                    value={(field.value as TaskFilterValueForm[] | undefined) ?? []}
+                    onChange={(next) => field.onChange(next)}
+                    disabled={disabled || loadingProjectFilters || !form.getValues("projectId")}
+                    loading={loadingProjectFilters}
+                  />
+                )}
               />
-            </Box>
-
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <FormFieldLabel required>Trade</FormFieldLabel>
-              <FormLookupAutocompleteField
-                control={form.control}
-                name="tradeId"
-                options={sortedTrades}
-                placeholder={MESSAGES.taskForm.selectTradePlaceholder}
-                noOptionsText={MESSAGES.taskForm.autocompleteNoOptions}
-                disabled={disabled}
-              />
+              <Typography sx={{ fontSize: "11px", color: "#7B89A8", marginTop: "4px" }}>
+                {form.getValues("projectId")
+                  ? "Select values for each filter as needed."
+                  : "Select a project to load filters."}
+              </Typography>
             </Box>
 
             <Box sx={{ gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "6px" }}>

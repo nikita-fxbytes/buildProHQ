@@ -2,6 +2,12 @@ import { z } from "zod";
 import { MESSAGES } from "@/constants/messages";
 import { htmlToPlainText } from "@/utils/richText";
 
+const taskFilterValueSchema = z.object({
+  filterId: z.string().uuid(),
+  subFilterIds: z.array(z.string().uuid()).optional(),
+  textValue: z.string().max(4000).optional().nullable(),
+});
+
 /**
  * Shared task form values for create + edit (manager/super portals).
  * Single source of truth so new fields appear in both flows automatically.
@@ -20,8 +26,7 @@ export const taskFormSchema = z.object({
     }
   }),
   projectId: z.string().min(1, MESSAGES.validation.selectProject).uuid(MESSAGES.validation.selectProject),
-  levelId: z.string().min(1, MESSAGES.validation.selectLevel).uuid(MESSAGES.validation.selectLevel),
-  tradeId: z.string().min(1, MESSAGES.validation.selectTrade).uuid(MESSAGES.validation.selectTrade),
+  taskFilterValues: z.array(taskFilterValueSchema).optional(),
   priorityId: z.string().min(1, MESSAGES.validation.selectPriority).uuid(MESSAGES.validation.selectPriority),
   dueDate: z.string().optional(),
   assignedToUserIds: z.array(z.string().uuid()).optional(),

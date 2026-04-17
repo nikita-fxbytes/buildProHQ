@@ -72,6 +72,13 @@ export function resolvePortalPageMeta(pathname: string): PortalPageMeta {
       breadcrumb: "Management",
     };
   }
+  if (/^\/super\/users\/[^/]+\/edit$/.test(pathname)) {
+    return {
+      role: ROLES.SUPER_ADMIN,
+      title: "Edit User",
+      breadcrumb: "Super Admin",
+    };
+  }
   if (/^\/super\/filters\/[^/]+\/edit$/.test(pathname)) {
     return {
       role: ROLES.SUPER_ADMIN,

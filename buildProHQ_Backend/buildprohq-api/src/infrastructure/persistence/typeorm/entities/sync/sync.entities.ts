@@ -28,9 +28,19 @@ export class DeviceSyncState extends SoftDeleteTimestamps {
   @ManyToOne(() => UserDeviceToken)
   @JoinColumn({ name: 'device_token_id' })
   deviceToken?: UserDeviceToken | null;
-  @Column({ type: 'timestamp', precision: 6, name: 'last_pull_at', nullable: true })
+  @Column({
+    type: 'timestamp',
+    precision: 6,
+    name: 'last_pull_at',
+    nullable: true,
+  })
   lastPullAt?: Date | null;
-  @Column({ type: 'timestamp', precision: 6, name: 'last_push_at', nullable: true })
+  @Column({
+    type: 'timestamp',
+    precision: 6,
+    name: 'last_push_at',
+    nullable: true,
+  })
   lastPushAt?: Date | null;
   @Column({
     type: 'uuid',
@@ -75,7 +85,12 @@ export class SyncLog extends SoftDeleteTimestamps {
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
   syncStartedAt!: Date;
-  @Column({ type: 'timestamp', precision: 6, name: 'sync_finished_at', nullable: true })
+  @Column({
+    type: 'timestamp',
+    precision: 6,
+    name: 'sync_finished_at',
+    nullable: true,
+  })
   syncFinishedAt?: Date | null;
   @Column({
     type: 'varchar',
@@ -122,7 +137,12 @@ export class ChangeQueue extends SoftDeleteTimestamps {
   changedAt!: Date;
   @Column({ type: 'json', nullable: true })
   payload?: Record<string, any> | null;
-  @Column({ type: 'timestamp', precision: 6, name: 'processed_at', nullable: true })
+  @Column({
+    type: 'timestamp',
+    precision: 6,
+    name: 'processed_at',
+    nullable: true,
+  })
   processedAt?: Date | null;
   @Column({
     type: 'varchar',
@@ -167,9 +187,19 @@ export class ExportJob extends SoftDeleteTimestamps {
   fileUrl?: string | null;
   @Column({ type: 'varchar', length: 30, default: () => "'queued'" })
   status!: string;
-  @Column({ type: 'timestamp', precision: 6, name: 'started_at', nullable: true })
+  @Column({
+    type: 'timestamp',
+    precision: 6,
+    name: 'started_at',
+    nullable: true,
+  })
   startedAt?: Date | null;
-  @Column({ type: 'timestamp', precision: 6, name: 'completed_at', nullable: true })
+  @Column({
+    type: 'timestamp',
+    precision: 6,
+    name: 'completed_at',
+    nullable: true,
+  })
   completedAt?: Date | null;
   @Column({ type: 'text', name: 'error_message', nullable: true })
   errorMessage?: string | null;

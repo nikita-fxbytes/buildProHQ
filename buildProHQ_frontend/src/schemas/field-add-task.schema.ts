@@ -20,14 +20,15 @@ export const fieldAddTaskSchema = z.object({
       ctx.addIssue({ code: "custom", message: MESSAGES.validation.taskDescriptionMin });
     }
   }),
-  levelId: z
-    .string()
-    .min(1, MESSAGES.validation.selectLevel)
-    .uuid(MESSAGES.validation.selectLevel),
-  tradeId: z
-    .string()
-    .min(1, MESSAGES.validation.selectTrade)
-    .uuid(MESSAGES.validation.selectTrade),
+  taskFilterValues: z
+    .array(
+      z.object({
+        filterId: z.string().uuid(),
+        subFilterIds: z.array(z.string().uuid()).optional(),
+        textValue: z.string().max(4000).optional().nullable(),
+      }),
+    )
+    .optional(),
   priorityId: z
     .string()
     .min(1, MESSAGES.validation.selectPriority)

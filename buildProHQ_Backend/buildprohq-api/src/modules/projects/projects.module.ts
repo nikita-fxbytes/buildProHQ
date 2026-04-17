@@ -9,12 +9,15 @@ import {
 } from '../../infrastructure/persistence/typeorm/entities';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
+import { ProjectFiltersModule } from '../project-filters/project-filters.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Project, ProjectUser, User, UserRole, Role])],
+  imports: [
+    ProjectFiltersModule,
+    TypeOrmModule.forFeature([Project, ProjectUser, User, UserRole, Role]),
+  ],
   controllers: [ProjectsController],
   providers: [ProjectsService],
   exports: [ProjectsService],
 })
 export class ProjectsModule {}
-

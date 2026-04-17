@@ -18,7 +18,9 @@ export class SearchUsersDto {
   @Max(100)
   limit = 10;
 
-  @ApiPropertyOptional({ description: 'Search term (name/email/role/initials)' })
+  @ApiPropertyOptional({
+    description: 'Search term (name/email/role/initials)',
+  })
   @IsOptional()
   @IsString()
   search?: string;
@@ -44,4 +46,3 @@ export class SearchUsersDto {
   @IsIn(['asc', 'desc'])
   sortOrder?: 'asc' | 'desc';
 }
-

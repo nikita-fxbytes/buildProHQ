@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class ProjectUsersAndProjectScopedFilters1775135000000
-  implements MigrationInterface
-{
+export class ProjectUsersAndProjectScopedFilters1775135000000 implements MigrationInterface {
   name = 'ProjectUsersAndProjectScopedFilters1775135000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -88,4 +86,3 @@ export class ProjectUsersAndProjectScopedFilters1775135000000
     await queryRunner.query(`DROP TABLE IF EXISTS "project_users"`);
   }
 }
-

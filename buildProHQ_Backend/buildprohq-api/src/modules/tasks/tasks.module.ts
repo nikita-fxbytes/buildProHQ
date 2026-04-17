@@ -17,9 +17,11 @@ import {
   TaskStatus,
 } from '../../infrastructure/persistence/typeorm/entities';
 import { TaskAttachmentsService } from './task-attachments.service';
+import { ProjectFiltersModule } from '../project-filters/project-filters.module';
 
 @Module({
   imports: [
+    ProjectFiltersModule,
     TypeOrmModule.forFeature([
       Task,
       TaskStatus,

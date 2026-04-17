@@ -5,7 +5,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
-import { HttpExceptionFilter, ResponseInterceptor } from './infrastructure/common';
+import {
+  HttpExceptionFilter,
+  ResponseInterceptor,
+} from './infrastructure/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -68,7 +71,11 @@ async function bootstrap() {
   SwaggerModule.setup(swaggerPath, app, swaggerDoc);
 
   await app.listen(port);
-  console.log(`\n🚀 BuildPro HQ API is running on: http://localhost:${port}/api`);
-  console.log(`📖 Documentation available at: http://localhost:${port}/${swaggerPath}\n`);
+  console.log(
+    `\n🚀 BuildPro HQ API is running on: http://localhost:${port}/api`,
+  );
+  console.log(
+    `📖 Documentation available at: http://localhost:${port}/${swaggerPath}\n`,
+  );
 }
 bootstrap();

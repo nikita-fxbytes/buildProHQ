@@ -35,7 +35,6 @@ import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../../infrastructure/common/decorators/current-user.decorator';
 import type { AuthUser } from '../../infrastructure/common/interfaces/auth-user.interface';
-import { QueryTasksDto } from './dto/query-tasks.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { Roles } from '../../infrastructure/common/decorators/roles.decorator';
@@ -46,7 +45,6 @@ import { CommentTaskDto } from './dto/comment-task.dto';
 import { AddAttachmentDto } from './dto/add-attachment.dto';
 import { BulkTasksDto } from './dto/bulk-tasks.dto';
 import { SearchOpenTasksDto } from './dto/search-open-tasks.dto';
-import { SearchCompletedTasksDto } from './dto/search-completed-tasks.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
 import { PagedQueryDto } from './dto/paged-query.dto';
 import { MESSAGES } from '../../infrastructure/common/constants/messages';
@@ -62,14 +60,17 @@ export class TasksController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Get task counts for dashboard' })
-  @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  @Header(
+    'Cache-Control',
+    'no-store, no-cache, must-revalidate, proxy-revalidate',
+  )
   @ApiOkResponse({
     description: 'Task stats fetched successfully',
     schema: {
       example: {
         success: true,
         statusCode: 200,
-        message: 'Success',
+        message: 'Task stats fetched successfully',
         data: {
           totalOpen: 12,
           totalCompleted: 5,
@@ -90,23 +91,22 @@ export class TasksController {
 
   @Get('analytics')
   @Roles('manager', 'super_admin')
-  @ApiOperation({ summary: 'Get grouped analytics for manager dashboard' })
+  @ApiOperation({
+    summary:
+      'Deprecated: legacy manager dashboard analytics. Use POST /v1/analytics/tasks for dynamic filter analytics.',
+  })
   @ApiOkResponse({
     description: 'Analytics fetched successfully',
     schema: {
       example: {
         success: true,
         statusCode: 200,
-        message: 'Success',
+        message: 'Analytics fetched successfully',
         data: {
           openTasks: 12,
           completedTotal: 42,
           avgCompletionDays: 6,
-          byTrade: [{ trade: 'Painter', count: 4 }],
-          byLevel: [{ level: 'L2', count: 3 }],
-          overdueTop: [
-            { daysOpen: 11, level: 'L10', description: 'Finish wall painting – north side', user: 'RG' },
-          ],
+          overdueTop: [{ daysOpen: 11, description: 'Finish wall painting – north side', user: 'RG' }],
           byUser: [{ user: 'RG', completed: 10 }],
           completionRate: [{ month: '2026-03', total: '20', completed: '12' }],
         },
@@ -115,16 +115,14 @@ export class TasksController {
     },
   })
   getAnalytics(@CurrentUser() user: AuthUser) {
+    // Legacy endpoint retained for routing/back-compat, but Level/Trade analytics are removed.
     return this.tasksService.getAnalytics(user);
   }
 
   @Get('recent')
   @Roles('manager', 'super_admin')
   @ApiOperation({ summary: 'Get recently added tasks (latest created)' })
-  getRecent(
-    @CurrentUser() user: AuthUser,
-    @Query('limit') limit?: string,
-  ) {
+  getRecent(@CurrentUser() user: AuthUser, @Query('limit') limit?: string) {
     const n = Math.min(10, Math.max(1, Number(limit ?? 6) || 6));
     return this.tasksService.getRecentTasks(user, n);
   }
@@ -146,8 +144,6 @@ export class TasksController {
           sortOrder: 'desc',
           filters: {
             createdByUserIds: ['9b7fdb4c-2c3a-4518-8e64-16412cb27f0c'],
-            tradeIds: ['8c2d41e3-5f5a-4b2d-9c6b-6e2d7c9b1a11'],
-            levelIds: ['0f1a2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b'],
           },
         },
       },
@@ -178,8 +174,7 @@ export class TasksController {
             status_name: 'Open',
             priority_code: null,
             priority_name: null,
-            trade_name: 'Painter',
-            level_name: 'L10',
+            filter_summary: 'Zone: North, Priority: High',
           },
         ],
         meta: {
@@ -207,120 +202,11 @@ export class TasksController {
   }
 
   @Post('search')
-  @ApiOperation({ summary: 'List/search all tasks (all statuses) with filters' })
+  @ApiOperation({
+    summary: 'List/search all tasks (all statuses) with filters',
+  })
   searchAll(@CurrentUser() user: AuthUser, @Body() dto: SearchOpenTasksDto) {
     return this.tasksService.searchAll(user, dto);
-  }
-
-  @Get('completed')
-  @ApiOperation({
-    summary: 'List completed tasks with pagination/filter/search (query string)',
-    description:
-      'Prefer POST /tasks/completed when sending many filter IDs. This endpoint remains for simple clients.',
-  })
-  @ApiOkResponse({
-    description: 'Completed tasks fetched successfully',
-    schema: {
-      example: {
-        success: true,
-        statusCode: 200,
-        message: 'Completed tasks fetched successfully',
-        data: [
-          {
-            id: '0b2f6a2d-4c79-4b52-9b5a-0b873ad58a52',
-            description: 'Finish wall painting – north side',
-            days_open: 11,
-            created_at: '2026-03-10T08:00:00.000Z',
-            opened_at: '2026-03-10T08:00:00.000Z',
-            closed_at: '2026-04-01T16:00:00.000Z',
-            status_code: 'completed',
-            status_name: 'Completed',
-            trade_name: 'Painter',
-            level_name: 'L10',
-          },
-        ],
-        meta: {
-          page: 1,
-          limit: 20,
-          total: 25,
-          totalPages: 2,
-        },
-      },
-    },
-  })
-  listCompleted(@CurrentUser() user: AuthUser, @Query() query: QueryTasksDto) {
-    return this.tasksService.listCompleted(user, query);
-  }
-
-  @Post('completed')
-  @Roles('manager', 'field_user', 'trade_user', 'super_admin')
-  @ApiOperation({
-    summary: 'List/search completed tasks with filters (POST body)',
-    description:
-      'Completed tasks listing with pagination, search, sorting, and manager filters (trade/level/completed-by user).',
-  })
-  @ApiBody({
-    type: SearchCompletedTasksDto,
-    examples: {
-      managerList: {
-        summary: 'Manager completed list (search + sort + filters)',
-        value: {
-          page: 1,
-          limit: 10,
-          search: 'drywall',
-          sortBy: 'date',
-          sortOrder: 'desc',
-          filters: {
-            completedByUserIds: ['9b7fdb4c-2c3a-4518-8e64-16412cb27f0c'],
-            tradeIds: ['8c2d41e3-5f5a-4b2d-9c6b-6e2d7c9b1a11'],
-            levelIds: ['0f1a2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b'],
-          },
-        },
-      },
-    },
-  })
-  @ApiOkResponse({
-    description: 'Completed tasks fetched successfully',
-    schema: {
-      example: {
-        success: true,
-        statusCode: 200,
-        message: 'Completed tasks fetched successfully',
-        data: [
-          {
-            id: '0b2f6a2d-4c79-4b52-9b5a-0b873ad58a52',
-            description: 'Finish wall painting – north side',
-            days_open: 11,
-            closed_at: '2026-04-01T16:00:00.000Z',
-            trade_name: 'Painter',
-            level_name: 'L10',
-            completed_by_user_id: null,
-            completed_by_initials: null,
-            completed_by_full_name: null,
-          },
-        ],
-        meta: {
-          page: 1,
-          limit: 20,
-          total: 25,
-          totalPages: 2,
-        },
-      },
-    },
-  })
-  @ApiBadRequestResponse({
-    description: 'Invalid request body',
-    schema: {
-      example: {
-        success: false,
-        statusCode: 400,
-        message: 'Validation failed',
-        error: { code: 'BAD_REQUEST', details: [] },
-      },
-    },
-  })
-  searchCompleted(@CurrentUser() user: AuthUser, @Body() dto: SearchCompletedTasksDto) {
-    return this.tasksService.searchCompleted(user, dto);
   }
 
   @Post('bulk-complete')
@@ -355,7 +241,29 @@ export class TasksController {
     description:
       'Creates an open action item. Send `statusId` for the `open` status from GET /lookups/task-statuses. Optional `priorityId` from GET /lookups/task-priorities.',
   })
-  @ApiBody({ type: CreateTaskDto })
+  @ApiBody({
+    type: CreateTaskDto,
+    examples: {
+      dynamicFilters: {
+        value: {
+          title: 'Patch drywall in unit 12B',
+          projectId: '15004760-efa3-406e-9a24-18a6c64f8d51',
+          statusId: '1b6a0fb1-2d3f-4f05-8c7f-5c9fdb1e3d42',
+          priorityId: 'b6aa624b-1ed1-449c-8118-1a47b1cbbe67',
+          assignedToUserIds: ['9b7fdb4c-2c3a-4518-8e64-16412cb27f0c'],
+          taskFilterValues: [
+            {
+              filterId: '3ef6b5be-2a0b-4a08-9c0a-2e64e2d7a8d2',
+              subFilterIds: ['7f5f5b27-f59d-4f47-b1d2-b99eb3c8bf6d'],
+            },
+          ],
+          dueAt: '2026-04-30',
+          description: '<p>Patch drywall in unit 12B</p>',
+          notes: 'Bring replacement mesh tape.',
+        },
+      },
+    },
+  })
   createTask(@Body() dto: CreateTaskDto, @CurrentUser() user: AuthUser) {
     return this.tasksService.create(dto, user);
   }
@@ -363,6 +271,27 @@ export class TasksController {
   @Patch(':id')
   @Roles('manager', 'field_user', 'super_admin')
   @ApiOperation({ summary: 'Update task (manager/field user/super admin)' })
+  @ApiBody({
+    type: UpdateTaskDto,
+    examples: {
+      updateFilters: {
+        value: {
+          title: 'Patch drywall in unit 12B',
+          projectId: '15004760-efa3-406e-9a24-18a6c64f8d51',
+          priorityId: 'b6aa624b-1ed1-449c-8118-1a47b1cbbe67',
+          assignedToUserIds: ['9b7fdb4c-2c3a-4518-8e64-16412cb27f0c'],
+          taskFilterValues: [
+            {
+              filterId: '3ef6b5be-2a0b-4a08-9c0a-2e64e2d7a8d2',
+              subFilterIds: ['7f5f5b27-f59d-4f47-b1d2-b99eb3c8bf6d'],
+            },
+          ],
+          dueAt: '2026-05-02',
+          description: '<p>Updated scope and due date.</p>',
+        },
+      },
+    },
+  })
   updateTask(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateTaskDto,
@@ -373,7 +302,9 @@ export class TasksController {
 
   @Patch(':taskId/status')
   @Roles('manager', 'field_user', 'super_admin')
-  @ApiOperation({ summary: 'Update task status (manager/field user/super admin)' })
+  @ApiOperation({
+    summary: 'Update task status (manager/field user/super admin)',
+  })
   @ApiBody({ type: UpdateTaskStatusDto })
   updateTaskStatus(
     @Param('taskId', new ParseUUIDPipe({ version: '4' })) taskId: string,
@@ -383,9 +314,6 @@ export class TasksController {
     @Headers('x-request-id') requestId?: string,
     @Headers('user-agent') userAgent?: string,
   ) {
-    // TEMP debug to prove route is registered/hit (remove after verifying).
-    // eslint-disable-next-line no-console
-    console.log('STATUS API HIT', { taskId, status: dto?.status });
     return this.tasksService.updateStatus(taskId, dto, user, {
       ipAddress: ipAddress || null,
       requestId: requestId || null,
@@ -474,8 +402,9 @@ export class TasksController {
           cb(null, dir);
         },
         filename: (_req, file, cb) => {
-          const ext = (path.extname(file.originalname).toLowerCase() || '.bin')
-            .replace('.jpeg', '.jpg');
+          const ext = (
+            path.extname(file.originalname).toLowerCase() || '.bin'
+          ).replace('.jpeg', '.jpg');
           cb(null, `${randomUUID()}${ext}`);
         },
       }),
@@ -491,7 +420,10 @@ export class TasksController {
           file.originalname,
         );
         if (!okMime && !okExt) {
-          return cb(new BadRequestException(MESSAGES.FILES.INVALID_TYPE), false);
+          return cb(
+            new BadRequestException(MESSAGES.FILES.INVALID_TYPE),
+            false,
+          );
         }
         cb(null, true);
       },
@@ -514,6 +446,9 @@ export class TasksController {
     @CurrentUser() user: AuthUser,
     @Query() query: PagedQueryDto,
   ) {
+    if (!id) {
+      throw new BadRequestException('taskId is required');
+    }
     return this.tasksService.getCommentsPaged(id, user, query);
   }
 
@@ -548,4 +483,3 @@ export class TasksController {
     return this.tasksService.addAttachment(id, dto, user);
   }
 }
-

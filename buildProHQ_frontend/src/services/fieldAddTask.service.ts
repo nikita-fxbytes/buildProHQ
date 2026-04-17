@@ -4,8 +4,6 @@ import { loadAddTaskLookups, type AddTaskLookups } from "@/services/addTaskLooku
 import { createTaskWithOptionalPhotos } from "@/services/taskCreateWithPhotos.service";
 
 export type FieldAddTaskLookups = {
-  levels: AddTaskLookups["levels"];
-  trades: AddTaskLookups["trades"];
   priorities: AddTaskLookups["priorities"];
   openStatusId: AddTaskLookups["openStatusId"];
   defaultPriorityId: AddTaskLookups["defaultPriorityId"];
@@ -26,10 +24,9 @@ export const fieldAddTaskService = {
       title: values.title.trim(),
       projectId: values.projectId,
       statusId: openStatusId,
-      levelId: values.levelId,
-      tradeId: values.tradeId,
       priorityId: values.priorityId,
       description: values.description,
+      taskFilterValues: values.taskFilterValues ?? [],
       },
       files,
     );

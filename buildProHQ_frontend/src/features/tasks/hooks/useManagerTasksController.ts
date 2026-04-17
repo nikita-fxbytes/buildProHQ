@@ -23,8 +23,6 @@ type ConfirmAction = "completeSelected" | "deleteSelected" | "deleteSingle";
 type SortKey =
   | "projectName"
   | "title"
-  | "level"
-  | "trade"
   | "user"
   | "assignees"
   | "priority"
@@ -59,11 +57,8 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
     overdue10: 0,
     midRange7to10: 0,
     fresh0to6: 0,
-    tradesActive: 0,
   });
   const [total, setTotal] = useState(0);
-  const [tradeOptions, setTradeOptions] = useState<Array<{ value: string; label: string }>>([]);
-  const [levelOptions, setLevelOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [statusOptions, setStatusOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [priorityOptions, setPriorityOptions] = useState<Array<{ value: string; label: string }>>(
     [],
@@ -76,8 +71,6 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
   const [projectFilters, setProjectFilters] = useState<string[]>(() =>
     initArrFromStorage("projectFilters"),
   );
-  const [tradeFilters, setTradeFilters] = useState<string[]>(() => initArrFromStorage("tradeFilters"));
-  const [levelFilters, setLevelFilters] = useState<string[]>(() => initArrFromStorage("levelFilters"));
   const [userFilters, setUserFilters] = useState<string[]>(() => initArrFromStorage("userFilters"));
   const [statusFilters, setStatusFilters] = useState<string[]>(() => initArrFromStorage("statusFilters"));
   const [priorityFilters, setPriorityFilters] = useState<string[]>(() =>
@@ -114,16 +107,12 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
 
   const loadLookups = useCallback(async () => {
     try {
-      const [trades, levels, statusesAll, priorities, users, projects] = await Promise.all([
-        lookupsApi.getTrades(),
-        lookupsApi.getLevels(),
+      const [statusesAll, priorities, users, projects] = await Promise.all([
         lookupsApi.getTaskStatuses(),
         lookupsApi.getTaskPriorities(),
         usersApi.list(),
         mode === "super" ? projectsApi.listMine() : Promise.resolve([]),
       ]);
-      setTradeOptions(trades.map((t) => ({ value: t.id, label: t.name })));
-      setLevelOptions(levels.map((l) => ({ value: l.id, label: l.name })));
       const statuses = statusesAll.filter((s) => ALLOWED_STATUS_NAMES.has(s.name));
       setStatusOptions(statuses.map((s) => ({ value: s.id, label: s.name })));
       setPriorityOptions(
@@ -153,21 +142,17 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
         search: search.trim() || undefined,
         filters: {
           projectIds: mode === "super" ? projectFilters : undefined,
-          tradeIds: tradeFilters,
-          levelIds: levelFilters,
           createdByUserIds: userFilters,
           statusIds: statusFilters.length ? statusFilters : undefined,
           priorityIds: priorityFilters.length ? priorityFilters : undefined,
         },
       });
       // Debug: verify backend keys (open/today/total vs legacy totals)
-      // eslint-disable-next-line no-console
-      console.log("TASK STATS:", res);
       setStats(res);
     } catch {
       // Non-fatal.
     }
-  }, [levelFilters, mode, priorityFilters, projectFilters, search, statusFilters, tradeFilters, userFilters]);
+  }, [mode, priorityFilters, projectFilters, search, statusFilters, userFilters]);
 
   const loadTasks = useCallback(
     async (opts?: { pageOverride?: number }) => {
@@ -183,8 +168,6 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
           sortOrder: sortDirection ?? undefined,
           filters: {
             projectIds: mode === "super" ? projectFilters : undefined,
-            tradeIds: tradeFilters,
-            levelIds: levelFilters,
             createdByUserIds: userFilters,
             statusIds: statusFilters.length ? statusFilters : undefined,
             priorityIds: priorityFilters.length ? priorityFilters : undefined,
@@ -202,7 +185,6 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
     },
     [
       assignUsers,
-      levelFilters,
       mode,
       page,
       pageSize,
@@ -211,7 +193,6 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
       sortDirection,
       sortKey,
       statusFilters,
-      tradeFilters,
       userFilters,
       priorityFilters,
     ],
@@ -228,7 +209,7 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
       void loadStats();
     }, 250);
     return () => clearTimeout(t);
-  }, [search, projectFilters, tradeFilters, levelFilters, userFilters, statusFilters, priorityFilters, loadStats]);
+  }, [search, projectFilters, userFilters, statusFilters, priorityFilters, loadStats]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -237,7 +218,7 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
     }, 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, projectFilters, tradeFilters, levelFilters, userFilters, statusFilters, sortKey, sortDirection]);
+  }, [search, projectFilters, userFilters, statusFilters, priorityFilters, sortKey, sortDirection]);
 
   useEffect(() => {
     loadTasks();
@@ -250,15 +231,15 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
       saveTaskListFilters({
         search,
         projectFilters,
-        tradeFilters,
-        levelFilters,
+        tradeFilters: [],
+        levelFilters: [],
         userFilters,
         statusFilters,
         priorityFilters,
       });
     }, 300);
     return () => clearTimeout(t);
-  }, [search, projectFilters, tradeFilters, levelFilters, userFilters, statusFilters, priorityFilters]);
+  }, [search, projectFilters, userFilters, statusFilters, priorityFilters]);
 
   const toggleFilterValue = (current: string[], value: string) =>
     current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
@@ -422,33 +403,23 @@ export function useManagerTasksController(opts?: { mode?: "manager" | "super" })
     showFilters,
     setShowFilters,
     projectOptions,
-    tradeOptions,
-    levelOptions,
     statusOptions,
     priorityOptions,
     userOptions,
     projectFilters,
-    tradeFilters,
-    levelFilters,
     userFilters,
     statusFilters,
     priorityFilters,
     setProjectFiltersDirect: setProjectFilters,
-    setTradeFiltersDirect: setTradeFilters,
-    setLevelFiltersDirect: setLevelFilters,
     setUserFiltersDirect: setUserFilters,
     setStatusFiltersDirect: setStatusFilters,
     setPriorityFiltersDirect: setPriorityFilters,
     setProjectFilters: (value: string) => setProjectFilters((prev) => toggleFilterValue(prev, value)),
-    setTradeFilters: (value: string) => setTradeFilters((prev) => toggleFilterValue(prev, value)),
-    setLevelFilters: (value: string) => setLevelFilters((prev) => toggleFilterValue(prev, value)),
     setUserFilters: (value: string) => setUserFilters((prev) => toggleFilterValue(prev, value)),
     setStatusFilters: (value: string) => setStatusFilters((prev) => toggleFilterValue(prev, value)),
     setPriorityFilters: (value: string) => setPriorityFilters((prev) => toggleFilterValue(prev, value)),
     clearFilters: () => {
       setProjectFilters([]);
-      setTradeFilters([]);
-      setLevelFilters([]);
       setUserFilters([]);
       setStatusFilters([]);
       setPriorityFilters([]);
@@ -568,23 +539,21 @@ const mapRow = (
     : "Unassigned";
 
   return {
-  id: row.id,
-  title: (row.title ?? "").trim() || "-",
-  project: opts?.withProject ? (row.project_name ?? "-") : undefined,
-  level: row.level_name ?? "-",
-  trade: row.trade_name ?? "-",
-  user:
-    row.created_by_initials ??
-    (row.created_by_full_name ? toInitials(row.created_by_full_name) : "-"),
-  assignees: assigneesLabel,
-  assigneeIds: ids,
-  priority: row.priority_name ?? "-",
-  status: row.status_name ?? "Open",
-  desc: row.description,
-  /** Days since opened (legacy / secondary). */
-  days: row.days_open ?? 0,
-  dueAt: row.due_at ?? null,
-  daysToDeadline: computeDaysToDeadline(row.due_at),
+    id: row.id,
+    title: (row.title ?? "").trim() || "-",
+    project: opts?.withProject ? (row.project_name ?? "-") : undefined,
+    user:
+      row.created_by_initials ??
+      (row.created_by_full_name ? toInitials(row.created_by_full_name) : "-"),
+    assignees: assigneesLabel,
+    assigneeIds: ids,
+    priority: row.priority_name ?? "-",
+    status: row.status_name ?? "Open",
+    desc: row.description,
+    /** Days since opened (legacy / secondary). */
+    days: row.days_open ?? 0,
+    dueAt: row.due_at ?? null,
+    daysToDeadline: computeDaysToDeadline(row.due_at),
   };
 };
 
@@ -596,7 +565,5 @@ const mapSortKey = (key: SortKey): ListOpenTasksBody["sortBy"] => {
   if (key === "priority") return "priority";
   if (key === "daysOpen") return "daysOpen";
   if (key === "description") return "description";
-  if (key === "trade") return "trade";
-  if (key === "level") return "level";
   return "createdAt";
 };

@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import Box from "@mui/material/Box";
+import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { AppButton } from "@/components/common/AppButton";
+import { AppIcon } from "@/components/common/AppIcon";
 import { AppGridTableSkeleton } from "@/components/common/skeletons/AppGridTableSkeleton";
 import { SearchInput } from "@/components/common/SearchInput";
 import { AppTableCell } from "@/components/common/table/AppTableCell";
@@ -19,7 +22,7 @@ import { ROUTES } from "@/constants/routes";
 import { useState } from "react";
 import type { SuperFilterListRow } from "@/features/filters/hooks/useSuperFiltersListController";
 
-const COLUMNS_TEMPLATE = "200px 180px 1fr 140px 150px";
+const COLUMNS_TEMPLATE = "200px 200px 120px 120px 1fr 150px";
 
 export type SuperFiltersListViewProps = {
   loading: boolean;
@@ -28,12 +31,11 @@ export type SuperFiltersListViewProps = {
   page: number;
   pageSize: number;
   search: string;
-  sortKey: "project" | "category" | "subFilters";
-  sortDirection: "asc" | "desc";
-  onSortColumn: (key: "project" | "category" | "subFilters") => void;
   onSearchChange: (v: string) => void;
   onPageChange: (p: number) => void;
   deleteCategory: (id: string) => void;
+  /** When set, show “Add filter” (defaults to super-admin route). */
+  addFilterHref?: string | null;
 };
 
 export function SuperFiltersListView(props: SuperFiltersListViewProps) {
@@ -50,24 +52,27 @@ export function SuperFiltersListView(props: SuperFiltersListViewProps) {
             onChange={props.onSearchChange}
           />
         </Box>
-        <AppButton component={Link} href={ROUTES.SUPER_FILTER_NEW} variant="contained">
-          + Add Filter
-        </AppButton>
+        {(() => {
+          const addHref = props.addFilterHref === undefined ? ROUTES.SUPER_FILTER_NEW : props.addFilterHref;
+          return addHref ? (
+            <AppButton component={Link} href={addHref} variant="contained">
+              + Add Filter
+            </AppButton>
+          ) : null;
+        })()}
       </PageToolbar>
 
       <AppTableShell>
         <AppTableHeader
           columnsTemplate={COLUMNS_TEMPLATE}
           columns={[
-            { key: "project", label: "Project", sortable: true },
-            { key: "category", label: "Category", sortable: true },
-            { key: "subFilters", label: "Sub-filters", sortable: true, sortKey: "subFilters" },
-            { key: "preview", label: "Preview" },
+            { key: "project", label: "Project", sortable: false },
+            { key: "name", label: "Name", sortable: false },
+            { key: "type", label: "Type", sortable: false },
+            { key: "multi", label: "Multi", sortable: false },
+            { key: "preview", label: "Details" },
             { key: "actions", label: "Actions" },
           ]}
-          sortKey={props.sortKey}
-          sortDirection={props.sortDirection}
-          onSort={(k) => props.onSortColumn(k as SuperFiltersListViewProps["sortKey"])}
           className="mgmt"
         />
 
@@ -79,11 +84,10 @@ export function SuperFiltersListView(props: SuperFiltersListViewProps) {
           <>
             {props.rows.map((r) => (
               <AppTableRow key={r.id} columnsTemplate={COLUMNS_TEMPLATE} className="mgmt">
-                <AppTableCell variant="trade">{r.projectName}</AppTableCell>
-                <AppTableCell variant="level">{r.categoryName}</AppTableCell>
-                <AppTableCell variant="text" sx={{ fontWeight: 900 }}>
-                  {r.subFiltersCount}
-                </AppTableCell>
+                <AppTableCell variant="trade">{r.projectName ?? "—"}</AppTableCell>
+                <AppTableCell variant="level">{r.name}</AppTableCell>
+                <AppTableCell variant="text">{r.type === "sub_filter" ? "Sub-filters" : "Simple"}</AppTableCell>
+                <AppTableCell variant="text">{r.hasSubFilters && r.isMultiSelect ? "Yes" : "—"}</AppTableCell>
                 <AppTableCell variant="muted" sx={{ minWidth: 0 }}>
                   <Typography
                     sx={{
@@ -94,26 +98,46 @@ export function SuperFiltersListView(props: SuperFiltersListViewProps) {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {r.subFiltersPreview}
+                    {r.type === "sub_filter" ? "Autocomplete options" : "Free text on task form"}
                   </Typography>
                 </AppTableCell>
                 <AppTableCell className="table-cell-actions">
-                  <AppButton
-                    component={Link}
-                    href={`/super/filters/${encodeURIComponent(r.id)}/edit`}
-                    variant="outlined"
-                    size="small"
-                  >
-                    Edit
-                  </AppButton>
-                  <AppButton
-                    variant="outlined"
-                    size="small"
-                    sx={{ ml: 1 }}
-                    onClick={() => setConfirm({ id: r.id, name: r.categoryName })}
-                  >
-                    Delete
-                  </AppButton>
+                  <Box sx={{ width: "100%", display: "inline-flex", justifyContent: "flex-end", gap: 0.5 }}>
+                    <Tooltip title="Edit" arrow>
+                      <IconButton
+                        component={Link as any}
+                        href={`/super/filters/${encodeURIComponent(r.id)}/edit`}
+                        aria-label="Edit filter"
+                        size="small"
+                        sx={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: "8px",
+                          border: "1.5px solid #E4E8F0",
+                          background: "#fff",
+                        }}
+                      >
+                        <AppIcon name="edit" size={16} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete" arrow>
+                      <IconButton
+                        aria-label="Delete filter"
+                        size="small"
+                        onClick={() => setConfirm({ id: r.id, name: r.name })}
+                        sx={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: "8px",
+                          border: "1.5px solid #FEE2E2",
+                          color: "#EF4444",
+                          background: "#fff",
+                        }}
+                      >
+                        <AppIcon name="delete" size={16} />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </AppTableCell>
               </AppTableRow>
             ))}

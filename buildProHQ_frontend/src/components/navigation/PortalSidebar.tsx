@@ -46,10 +46,8 @@ export function PortalSidebar({ role }: PortalSidebarProps) {
   const pathname = usePathname();
   const [badges, setBadges] = useState<SidebarBadgeState>({
     openTasks: 0,
-    completedTasks: 0,
     users: 0,
     tradeAssigned: 0,
-    tradeCompleted: 0,
   });
 
   const sections = useMemo(() => getPortalNavSections(role), [role]);
@@ -70,18 +68,14 @@ export function PortalSidebar({ role }: PortalSidebarProps) {
         const [stats, usersRes] = await Promise.all([statsPromise, usersPromise]);
         setBadges({
           openTasks: stats.totalOpen,
-          completedTasks: stats.totalCompleted,
           users: usersRes?.meta?.total ?? 0,
           tradeAssigned: stats.totalOpen,
-          tradeCompleted: stats.totalCompleted,
         });
       } catch {
         setBadges({
           openTasks: 0,
-          completedTasks: 0,
           users: 0,
           tradeAssigned: 0,
-          tradeCompleted: 0,
         });
         appToast.error(MESSAGES.common.somethingWrong);
       }

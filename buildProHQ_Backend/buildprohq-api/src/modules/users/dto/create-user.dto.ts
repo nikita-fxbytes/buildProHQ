@@ -9,7 +9,10 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { PASSWORD_POLICY_MESSAGE, PASSWORD_POLICY_REGEX } from '../../../infrastructure/common/validators/password-policy';
+import {
+  PASSWORD_POLICY_MESSAGE,
+  PASSWORD_POLICY_REGEX,
+} from '../../../infrastructure/common/validators/password-policy';
 
 export class CreateUserDto {
   @ApiProperty()
@@ -36,7 +39,9 @@ export class CreateUserDto {
   @IsString()
   @MaxLength(64)
   @MinLength(8)
-  @Matches(PASSWORD_POLICY_REGEX.NO_SPACES, { message: PASSWORD_POLICY_MESSAGE })
+  @Matches(PASSWORD_POLICY_REGEX.NO_SPACES, {
+    message: PASSWORD_POLICY_MESSAGE,
+  })
   @Matches(PASSWORD_POLICY_REGEX.LOWER, { message: PASSWORD_POLICY_MESSAGE })
   @Matches(PASSWORD_POLICY_REGEX.UPPER, { message: PASSWORD_POLICY_MESSAGE })
   @Matches(PASSWORD_POLICY_REGEX.NUMBER, { message: PASSWORD_POLICY_MESSAGE })
@@ -48,7 +53,10 @@ export class CreateUserDto {
   @IsUUID('4')
   roleId?: string;
 
-  @ApiProperty({ required: false, description: 'Profile photo URL (uploaded via /files/upload)' })
+  @ApiProperty({
+    required: false,
+    description: 'Profile photo URL (uploaded via /files/upload)',
+  })
   @IsOptional()
   @IsString()
   @IsUrl(

@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { Attachment } from '../../infrastructure/persistence/typeorm/entities';
@@ -22,7 +18,10 @@ export class TaskAttachmentsService {
     private readonly attachmentRepository: Repository<Attachment>,
   ) {}
 
-  private async ensureCanAdd(taskId: string, countToAdd: number): Promise<void> {
+  private async ensureCanAdd(
+    taskId: string,
+    countToAdd: number,
+  ): Promise<void> {
     if (countToAdd <= 0) return;
 
     const existingCount = await this.attachmentRepository.count({
@@ -108,4 +107,3 @@ export class TaskAttachmentsService {
     await this.attachmentRepository.save(rows);
   }
 }
-

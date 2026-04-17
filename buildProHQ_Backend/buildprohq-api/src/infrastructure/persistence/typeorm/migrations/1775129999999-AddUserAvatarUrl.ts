@@ -1,7 +1,7 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddUserAvatarUrl1775129999999 implements MigrationInterface {
-  name = "AddUserAvatarUrl1775129999999";
+  name = 'AddUserAvatarUrl1775129999999';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -10,7 +10,8 @@ export class AddUserAvatarUrl1775129999999 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "avatar_url"`);
+    await queryRunner.query(
+      `ALTER TABLE "users" DROP COLUMN IF EXISTS "avatar_url"`,
+    );
   }
 }
-

@@ -1,6 +1,8 @@
 "use client";
 
 import Box from "@mui/material/Box";
+import Checkbox from "@mui/material/Checkbox";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -18,9 +20,12 @@ export type SuperFilterFormViewProps = {
   projects: ProjectListItem[];
   projectIds: string[];
   setProjectIds: (ids: string[]) => void;
-  projectNameReadOnly: string;
-  categoryName: string;
-  setCategoryName: (v: string) => void;
+  name: string;
+  setName: (v: string) => void;
+  hasSubFilters: boolean;
+  setHasSubFilters: (v: boolean) => void;
+  isMultiSelect: boolean;
+  setIsMultiSelect: (v: boolean) => void;
   subsCsv: string;
   setSubsCsv: (v: string) => void;
   onCancel: () => void;
@@ -59,51 +64,68 @@ export function SuperFilterFormView(props: SuperFilterFormViewProps) {
         </Typography>
 
         <Stack spacing={1.75}>
-          {props.mode === "create" ? (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <FormFieldLabel required>Projects</FormFieldLabel>
-              <AppAutocomplete<ProjectOpt, true>
-                multiple
-                options={projectOptions}
-                value={selected}
-                onChange={(items) => props.setProjectIds(items.map((x) => x.id))}
-                getOptionLabel={(o) => o.name}
-                isOptionEqualToValue={(a, b) => a.id === b.id}
-                textFieldProps={{ placeholder: "Select projects..." }}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <FormFieldLabel required>Projects</FormFieldLabel>
+            <AppAutocomplete<ProjectOpt, true>
+              multiple
+              options={projectOptions}
+              value={selected}
+              onChange={(items) => props.setProjectIds(items.map((x) => x.id))}
+              getOptionLabel={(o) => o.name}
+              isOptionEqualToValue={(a, b) => a.id === b.id}
+              textFieldProps={{ placeholder: "Select projects..." }}
+              disabled={props.loading || props.saving}
+            />
+          </Box>
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <FormFieldLabel required>Filter name</FormFieldLabel>
+            <FormTextField
+              value={props.name}
+              onChange={(e) => props.setName(e.target.value)}
+              placeholder="e.g. Level, Zone, Trade…"
+              disabled={props.loading || props.saving}
+            />
+          </Box>
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={props.hasSubFilters}
+                onChange={(_, v) => {
+                  props.setHasSubFilters(v);
+                  if (!v) props.setIsMultiSelect(false);
+                }}
                 disabled={props.loading || props.saving}
               />
-              <Typography sx={{ fontSize: 12, color: STYLE_TOKENS.colors.textMuted }}>
-                A single filter category can be created in multiple projects.
-              </Typography>
-            </Box>
-          ) : (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <FormFieldLabel>Project</FormFieldLabel>
-              <FormTextField value={props.projectNameReadOnly} disabled />
-            </Box>
-          )}
+            }
+            label="Has sub-filters (autocomplete options)"
+          />
 
-          <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <FormFieldLabel required>Filter category name</FormFieldLabel>
-            <FormTextField
-              value={props.categoryName}
-              onChange={(e) => props.setCategoryName(e.target.value)}
-              placeholder="e.g. Zone, Floor, Area..."
-              disabled={props.loading || props.saving || props.mode === "edit"}
-              helperText={props.mode === "edit" ? "Category name is locked on edit." : "Name must be unique per project."}
-            />
-          </Box>
-
-          <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <FormFieldLabel>Sub-filters (comma-separated)</FormFieldLabel>
-            <FormTextField
-              value={props.subsCsv}
-              onChange={(e) => props.setSubsCsv(e.target.value)}
-              placeholder="e.g. North, South, East, West"
-              disabled={props.loading || props.saving}
-              helperText="Duplicates are ignored."
-            />
-          </Box>
+          {props.hasSubFilters ? (
+            <>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={props.isMultiSelect}
+                    onChange={(_, v) => props.setIsMultiSelect(v)}
+                    disabled={props.loading || props.saving}
+                  />
+                }
+                label="Allow multi-select"
+              />
+              <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <FormFieldLabel required>Sub-filter names (comma-separated)</FormFieldLabel>
+                <FormTextField
+                  value={props.subsCsv}
+                  onChange={(e) => props.setSubsCsv(e.target.value)}
+                  placeholder="e.g. Senior, Junior, Electrician"
+                  disabled={props.loading || props.saving}
+                  helperText="Duplicates are ignored."
+                />
+              </Box>
+            </>
+          ) : null}
 
           <Box sx={{ display: "flex", gap: 1 }}>
             <AppButton variant="contained" onClick={props.onSubmit} disabled={props.loading || props.saving}>
@@ -118,4 +140,3 @@ export function SuperFilterFormView(props: SuperFilterFormViewProps) {
     </Box>
   );
 }
-

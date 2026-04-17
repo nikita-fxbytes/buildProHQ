@@ -5,11 +5,9 @@ import { LookupsService } from './lookups.service';
 import {
   FilterCategory,
   FilterOption,
-  Level,
   Role,
   TaskPriority,
   TaskStatus,
-  Trade,
   UserStatus,
   UserType,
 } from '../../infrastructure/persistence/typeorm/entities';
@@ -17,8 +15,6 @@ import {
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Trade,
-      Level,
       TaskStatus,
       TaskPriority,
       FilterCategory,

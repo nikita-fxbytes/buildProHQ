@@ -24,7 +24,11 @@ export class MailerService {
     });
   }
 
-  async sendSetPasswordEmail(params: { to: string; fullName?: string; link: string }) {
+  async sendSetPasswordEmail(params: {
+    to: string;
+    fullName?: string;
+    link: string;
+  }) {
     const from = this.config.get<string>('SMTP_FROM') ?? '';
     const transport = this.getTransport();
     if (!transport || !from) {
@@ -59,4 +63,3 @@ export class MailerService {
     });
   }
 }
-

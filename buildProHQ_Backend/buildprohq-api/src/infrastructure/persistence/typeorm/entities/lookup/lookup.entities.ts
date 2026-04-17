@@ -109,49 +109,6 @@ export class InvitationStatus extends SoftDeleteTimestamps {
   name!: string;
 }
 
-@Entity('trades')
-export class Trade extends SoftDeleteTimestamps {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
-
-  @Index('uq_trades_code', { unique: true })
-  @Column({ type: 'varchar', length: 50 })
-  code!: string;
-
-  @Index('uq_trades_name', { unique: true })
-  @Column({ type: 'varchar', length: 100 })
-  name!: string;
-
-  @Column({
-    type: 'int',
-    unsigned: true,
-    name: 'sort_order',
-    default: () => '0',
-  })
-  sortOrder!: number;
-}
-
-@Entity('levels')
-export class Level extends SoftDeleteTimestamps {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
-
-  @Index('uq_levels_code', { unique: true })
-  @Column({ type: 'varchar', length: 50 })
-  code!: string;
-
-  @Index('uq_levels_name', { unique: true })
-  @Column({ type: 'varchar', length: 100 })
-  name!: string;
-
-  @Column({
-    type: 'int',
-    unsigned: true,
-    name: 'sort_order',
-    default: () => '0',
-  })
-  sortOrder!: number;
-}
 
 @Entity('roles')
 export class Role extends SoftDeleteTimestamps {
@@ -299,8 +256,6 @@ export const LOOKUP_TYPEORM_ENTITIES = [
   TaskStatus,
   TaskPriority,
   InvitationStatus,
-  Trade,
-  Level,
   Role,
   Permission,
   FilterCategory,

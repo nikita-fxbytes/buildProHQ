@@ -1,6 +1,6 @@
-import { ManagerAnalyticsContainer } from "@/features/analytics/containers/ManagerAnalyticsContainer";
+import { SuperDynamicAnalyticsContainer } from "@/features/analytics/containers/SuperDynamicAnalyticsContainer";
 
 export default function SuperAnalyticsPage() {
-  return <ManagerAnalyticsContainer />;
+  return <SuperDynamicAnalyticsContainer />;
 }
 

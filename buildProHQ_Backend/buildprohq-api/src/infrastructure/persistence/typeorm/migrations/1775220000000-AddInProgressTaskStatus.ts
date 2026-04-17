@@ -24,4 +24,3 @@ export class AddInProgressTaskStatus1775220000000 implements MigrationInterface 
     `);
   }
 }
-

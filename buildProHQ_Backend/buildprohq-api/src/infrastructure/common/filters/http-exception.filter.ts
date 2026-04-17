@@ -62,10 +62,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // Only log stacktraces for unexpected failures.
     if (status >= 500) {
       this.logger.error(`${request.method} ${request.url}`, exception as Error);
-    } else if (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN) {
-      this.logger.warn(`${request.method} ${request.url} -> ${status} ${message}`);
+    } else if (
+      status === HttpStatus.UNAUTHORIZED ||
+      status === HttpStatus.FORBIDDEN
+    ) {
+      this.logger.warn(
+        `${request.method} ${request.url} -> ${status} ${message}`,
+      );
     } else {
-      this.logger.log(`${request.method} ${request.url} -> ${status} ${message}`);
+      this.logger.log(
+        `${request.method} ${request.url} -> ${status} ${message}`,
+      );
     }
   }
 
@@ -96,4 +103,3 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
   }
 }
-

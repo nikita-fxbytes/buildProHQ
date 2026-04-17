@@ -2,9 +2,11 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -13,8 +15,6 @@ import { RolesGuard } from '../../infrastructure/common/guards/roles.guard';
 import { Roles } from '../../infrastructure/common/decorators/roles.decorator';
 import { FiltersService } from './filters.service';
 import { SaveFilterDto } from './dto/save-filter.dto';
-import { QuickAddLevelDto } from './dto/quick-add-level.dto';
-import { QuickAddTradeDto } from './dto/quick-add-trade.dto';
 
 @ApiTags('filters')
 @ApiBearerAuth()
@@ -23,28 +23,36 @@ import { QuickAddTradeDto } from './dto/quick-add-trade.dto';
 export class FiltersController {
   constructor(private readonly filtersService: FiltersService) {}
 
+  @Get()
+  @Roles('manager', 'super_admin')
+  @ApiOperation({
+    summary: 'List filter categories + options (supports multi-project merge)',
+  })
+  list(
+    @Query('projectId') projectId?: string,
+    @Query('projectIds') projectIds?: string[] | string,
+    @Query('projectIds[]') projectIdsBracket?: string[] | string,
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.filtersService.list({
+      projectId,
+      projectIds: projectIds ?? projectIdsBracket,
+      search,
+      page: Number(page ?? 1),
+      limit: Number(limit ?? 20),
+    });
+  }
+
   @Post()
   @Roles('manager', 'super_admin')
-  @ApiOperation({ summary: 'Create or update filter category/options (manager/super admin)' })
+  @ApiOperation({
+    summary: 'Create or update filter category/options (manager/super admin)',
+  })
   @ApiBody({ type: SaveFilterDto })
   save(@Body() dto: SaveFilterDto) {
     return this.filtersService.saveFilter(dto);
-  }
-
-  @Post('levels')
-  @Roles('manager')
-  @ApiOperation({ summary: 'Quick add a level (manager)' })
-  @ApiBody({ type: QuickAddLevelDto })
-  addLevel(@Body() dto: QuickAddLevelDto) {
-    return this.filtersService.quickAddLevel(dto.levelName);
-  }
-
-  @Post('trades')
-  @Roles('manager')
-  @ApiOperation({ summary: 'Quick add a trade (manager)' })
-  @ApiBody({ type: QuickAddTradeDto })
-  addTrade(@Body() dto: QuickAddTradeDto) {
-    return this.filtersService.quickAddTrade(dto.tradeName);
   }
 
   @Delete('categories/:id')
@@ -61,4 +69,3 @@ export class FiltersController {
     return this.filtersService.deleteOption(id);
   }
 }
-

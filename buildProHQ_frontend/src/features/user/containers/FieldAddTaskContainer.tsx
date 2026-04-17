@@ -10,13 +10,13 @@ export function FieldAddTaskContainer() {
     <FieldAddTaskView
       form={controller.form}
       projects={controller.projects.map((p) => ({ id: p.id, code: p.code, name: p.name }))}
-      levels={controller.levels}
-      trades={controller.trades}
       priorityOptions={controller.priorityOptions}
       photos={controller.photos}
       setPhotos={controller.setPhotos}
       loadingLookups={controller.loadingLookups}
       submitting={controller.submitting}
+      projectFilterDefinitions={controller.projectFilterDefinitions}
+      loadingProjectFilters={controller.loadingProjectFilters}
       onSubmit={controller.onSubmit}
       onCancel={controller.onCancel}
       onPaste={controller.onPaste}

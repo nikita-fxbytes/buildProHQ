@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
@@ -56,12 +60,19 @@ export class InvitationsService {
   async validateToken(token: string) {
     const invite = await this.findInviteByToken(token);
     if (!invite) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
-    if (invite.acceptedAt) throw new BadRequestException(MESSAGES.INVITES.ALREADY_USED);
-    if (invite.expiresAt.getTime() < Date.now()) throw new BadRequestException(MESSAGES.INVITES.EXPIRED);
+    if (invite.acceptedAt)
+      throw new BadRequestException(MESSAGES.INVITES.ALREADY_USED);
+    if (invite.expiresAt.getTime() < Date.now())
+      throw new BadRequestException(MESSAGES.INVITES.EXPIRED);
     return { message: MESSAGES.INVITES.TOKEN_VALID };
   }
 
-  async createAndSendInvite(params: { invitedUserId: string; invitedEmail: string; invitedByUserId: string; fullName?: string }) {
+  async createAndSendInvite(params: {
+    invitedUserId: string;
+    invitedEmail: string;
+    invitedByUserId: string;
+    fullName?: string;
+  }) {
     const pendingStatus = await this.ensureStatus('pending', 'Pending');
 
     const token = randomBytes(32).toString('hex');
@@ -82,7 +93,9 @@ export class InvitationsService {
     });
     await this.invitationRepository.save(invite);
 
-    const frontend = this.config.getOrThrow<string>('FRONTEND_BASE_URL').replace(/\/+$/, '');
+    const frontend = this.config
+      .getOrThrow<string>('FRONTEND_BASE_URL')
+      .replace(/\/+$/, '');
     const link = `${frontend}/set-password?token=${encodeURIComponent(token)}`;
 
     await this.mailer.sendSetPasswordEmail({
@@ -97,12 +110,15 @@ export class InvitationsService {
   async acceptInvite(token: string, password: string) {
     const match = await this.findInviteByToken(token);
     if (!match) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
-    if (match.acceptedAt) throw new BadRequestException(MESSAGES.INVITES.ALREADY_USED);
-    if (match.expiresAt.getTime() < Date.now()) throw new BadRequestException(MESSAGES.INVITES.EXPIRED);
+    if (match.acceptedAt)
+      throw new BadRequestException(MESSAGES.INVITES.ALREADY_USED);
+    if (match.expiresAt.getTime() < Date.now())
+      throw new BadRequestException(MESSAGES.INVITES.EXPIRED);
 
     const acceptedStatus = await this.ensureStatus('accepted', 'Accepted');
 
-    if (!match.invitedUserId) throw new BadRequestException(MESSAGES.COMMON.BAD_REQUEST);
+    if (!match.invitedUserId)
+      throw new BadRequestException(MESSAGES.COMMON.BAD_REQUEST);
     const user = await this.userRepository.findOne({
       where: { id: match.invitedUserId, deletedAt: IsNull() },
       select: { id: true },
@@ -120,4 +136,3 @@ export class InvitationsService {
     return { message: MESSAGES.INVITES.PASSWORD_SET_SUCCESS };
   }
 }
-

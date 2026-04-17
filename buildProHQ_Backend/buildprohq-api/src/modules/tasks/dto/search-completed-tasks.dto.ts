@@ -1,18 +1,16 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CompletedTasksFiltersDto {
-  @ApiPropertyOptional({ type: [String], description: 'Trade UUIDs' })
-  @IsOptional()
-  @IsUUID('4', { each: true })
-  tradeIds?: string[];
-
-  @ApiPropertyOptional({ type: [String], description: 'Level UUIDs' })
-  @IsOptional()
-  @IsUUID('4', { each: true })
-  levelIds?: string[];
-
   @ApiPropertyOptional({
     type: [String],
     description: 'Completed-by user UUIDs (manager filter)',
@@ -47,11 +45,11 @@ export class SearchCompletedTasksDto {
 
   @ApiPropertyOptional({
     description: 'Sort column',
-    enum: ['level', 'trade', 'user', 'description', 'date', 'duration'],
+    enum: ['user', 'description', 'date', 'duration'],
   })
   @IsOptional()
-  @IsIn(['level', 'trade', 'user', 'description', 'date', 'duration'])
-  sortBy?: 'level' | 'trade' | 'user' | 'description' | 'date' | 'duration';
+  @IsIn(['user', 'description', 'date', 'duration'])
+  sortBy?: 'user' | 'description' | 'date' | 'duration';
 
   @ApiPropertyOptional({ description: 'Sort order', enum: ['asc', 'desc'] })
   @IsOptional()

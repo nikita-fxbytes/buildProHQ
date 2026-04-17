@@ -2,8 +2,6 @@ import { loadAddTaskLookups, type AddTaskLookups } from "@/services/addTaskLooku
 import { createTaskWithOptionalPhotos } from "@/services/taskCreateWithPhotos.service";
 
 export type ManagerAddTaskLookups = {
-  levels: AddTaskLookups["levels"];
-  trades: AddTaskLookups["trades"];
   priorities: AddTaskLookups["priorities"];
   openStatusId: AddTaskLookups["openStatusId"];
   defaultPriorityId: AddTaskLookups["defaultPriorityId"];
@@ -17,12 +15,11 @@ export const managerAddTaskService = {
     title: string;
     projectId: string;
     statusId: string;
-    levelId: string;
-    tradeId: string;
     priorityId: string;
     description: string;
     dueAt?: string | null;
     assignedToUserIds?: string[];
+    taskFilterValues?: import("@/services/tasksApi.service").TaskFilterValuePayload[];
   }, files: File[]): Promise<{ id: string }> {
     return createTaskWithOptionalPhotos(values, files);
   },

@@ -17,6 +17,8 @@ import {
   UsersModule,
   NotificationsModule,
   ProjectsModule,
+  ProjectFiltersModule,
+  AnalyticsModule,
 } from './modules';
 
 import { ALL_TYPEORM_ENTITIES } from './infrastructure/persistence/typeorm/entities';
@@ -39,7 +41,9 @@ import { ALL_TYPEORM_ENTITIES } from './infrastructure/persistence/typeorm/entit
         THROTTLER_LIMIT: Joi.number().default(120),
         SWAGGER_PATH: Joi.string().default('api/docs'),
         MAX_FILE_SIZE_MB: Joi.number().default(10),
-        FRONTEND_BASE_URL: Joi.string().uri({ scheme: ['http', 'https'] }).required(),
+        FRONTEND_BASE_URL: Joi.string()
+          .uri({ scheme: ['http', 'https'] })
+          .required(),
         INVITE_TOKEN_SECRET: Joi.string()
           .min(16)
           .invalid('replace_with_a_long_random_secret')
@@ -94,6 +98,8 @@ import { ALL_TYPEORM_ENTITIES } from './infrastructure/persistence/typeorm/entit
     UsersModule,
     TasksModule,
     ProjectsModule,
+    ProjectFiltersModule,
+    AnalyticsModule,
     LookupsModule,
     FiltersModule,
     NotificationsModule,

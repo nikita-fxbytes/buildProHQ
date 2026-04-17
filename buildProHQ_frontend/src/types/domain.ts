@@ -15,8 +15,7 @@ export type User = {
 
 export type Task = {
   id: number;
-  level: string;
-  trade: string;
+  filters?: string;
   desc: string;
   days: number;
   user: string;
@@ -30,8 +29,7 @@ export type CompletedTask = Task & {
 /** Field portal completed table row (API-backed UUID id). */
 export type FieldCompletedTaskRow = {
   id: string;
-  level: string;
-  trade: string;
+  filters?: string;
   desc: string;
   date: string;
   duration: number;
@@ -43,8 +41,6 @@ export type FilterCategory = {
 };
 
 export type FilterState = {
-  trade: string[];
-  level: string[];
   user?: string[];
 };
 
@@ -75,16 +71,14 @@ export type ManagerUsersListItem = User & {
 /** Trade portal — API-backed task row (UUID id). */
 export type TradePortalTask = {
   id: string;
-  level: string;
-  trade: string;
+  filters: string;
   desc: string;
   days: number;
 };
 
 export type TradePortalCompletedTask = {
   id: string;
-  level: string;
-  trade: string;
+  filters: string;
   desc: string;
   date: string;
   duration: number;

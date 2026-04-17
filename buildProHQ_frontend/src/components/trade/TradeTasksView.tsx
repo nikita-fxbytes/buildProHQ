@@ -63,22 +63,21 @@ export function TradeTasksView(props: Props) {
 
       <AppTableShell>
         <AppTableHeader
-          columnsTemplate="80px 130px 1fr 110px 130px"
-          cells={["Level", "Trade", "Description", "Days Open", "Action"]}
+          columnsTemplate="180px 1fr 110px 130px"
+          cells={["Filters", "Description", "Days Open", "Action"]}
         />
 
         {props.loading ? (
-          <AppGridTableSkeleton columnsTemplate="80px 130px 1fr 110px 130px" rowCount={8} />
+          <AppGridTableSkeleton columnsTemplate="180px 1fr 110px 130px" rowCount={8} />
         ) : props.rows.length === 0 ? (
           <AppTableEmptyState icon={<AppIcon name="folder" size={36} />} message="No assigned tasks found." />
         ) : (
           props.rows.map((task) => (
             <AppTableRow
               key={task.id}
-              columnsTemplate="80px 130px 1fr 110px 130px"
+              columnsTemplate="180px 1fr 110px 130px"
             >
-              <AppTableCell variant="level">{task.level}</AppTableCell>
-              <AppTableCell variant="trade">{task.trade}</AppTableCell>
+              <AppTableCell variant="text">{task.filters}</AppTableCell>
               <AppTableCell variant="text">{htmlToPlainText(task.desc)}</AppTableCell>
               <DaysBadge days={task.days} />
               <AppButton

@@ -16,7 +16,6 @@ import {
   Permission,
   Role,
   Task,
-  Trade,
   UserStatus,
   UserType,
 } from '..';
@@ -85,26 +84,6 @@ export class User extends SoftDeleteTimestamps {
   assignedTasks!: Task[];
 }
 
-@Entity('user_trade_profiles')
-export class UserTradeProfile extends SoftDeleteTimestamps {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
-
-  @Index('uq_user_trade_profiles_user_id', { unique: true })
-  @Column({ type: 'uuid', name: 'user_id' })
-  userId!: string;
-
-  @OneToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
-  user!: User;
-
-  @Column({ type: 'uuid', name: 'trade_id' })
-  tradeId!: string;
-
-  @ManyToOne(() => Trade)
-  @JoinColumn({ name: 'trade_id' })
-  trade!: Trade;
-}
 
 @Entity('role_permissions')
 export class RolePermission extends SoftDeleteTimestamps {
@@ -229,7 +208,6 @@ export class UserInvitation extends SoftDeleteTimestamps {
 
 export const USER_TYPEORM_ENTITIES = [
   User,
-  UserTradeProfile,
   RolePermission,
   UserRole,
   UserInvitation,

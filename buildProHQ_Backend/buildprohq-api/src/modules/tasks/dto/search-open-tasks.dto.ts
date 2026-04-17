@@ -35,17 +35,10 @@ export class OpenTasksFiltersDto {
   @IsUUID('4', { each: true })
   projectIds?: string[];
 
-  @ApiPropertyOptional({ type: [String], description: 'Trade UUIDs' })
-  @IsOptional()
-  @IsUUID('4', { each: true })
-  tradeIds?: string[];
-
-  @ApiPropertyOptional({ type: [String], description: 'Level UUIDs' })
-  @IsOptional()
-  @IsUUID('4', { each: true })
-  levelIds?: string[];
-
-  @ApiPropertyOptional({ type: [String], description: 'Created-by user UUIDs (manager filter)' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Created-by user UUIDs (manager filter)',
+  })
   @IsOptional()
   @IsUUID('4', { each: true })
   createdByUserIds?: string[];
@@ -95,8 +88,6 @@ export class SearchOpenTasksDto {
       'title',
       'projectName',
       'daysOpen',
-      'level',
-      'trade',
       'priority',
       'description',
       'user',
@@ -109,8 +100,6 @@ export class SearchOpenTasksDto {
     'title',
     'projectName',
     'daysOpen',
-    'level',
-    'trade',
     'priority',
     'description',
     'user',
@@ -122,8 +111,6 @@ export class SearchOpenTasksDto {
     | 'title'
     | 'projectName'
     | 'daysOpen'
-    | 'level'
-    | 'trade'
     | 'priority'
     | 'description'
     | 'user'
@@ -142,4 +129,3 @@ export class SearchOpenTasksDto {
   @Type(() => OpenTasksFiltersDto)
   filters?: OpenTasksFiltersDto;
 }
-

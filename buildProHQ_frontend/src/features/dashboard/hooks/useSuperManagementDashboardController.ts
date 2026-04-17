@@ -22,9 +22,9 @@ function buildPrintableReportHtml(params: {
   const recentRows = params.recentTasks
     .map(
       (t) =>
-        `<tr><td>${esc(t.level_name ?? "—")}</td><td>${esc(t.trade_name ?? "—")}</td><td>${esc(
-          t.title ?? t.description,
-        )}</td><td>${esc(t.project_name ?? "—")}</td></tr>`,
+        `<tr><td>${esc(t.title ?? t.description)}</td><td>${esc(t.project_name ?? "—")}</td><td>${esc(
+          t.status_name ?? "—",
+        )}</td><td>${esc(t.created_at ?? "—")}</td></tr>`,
     )
     .join("");
 
@@ -32,9 +32,7 @@ function buildPrintableReportHtml(params: {
     .slice(0, 25)
     .map(
       (t) =>
-        `<tr><td>${t.daysOpen}d</td><td>${esc(t.level ?? "—")}</td><td>${esc(t.description)}</td><td>${esc(
-          t.user ?? "—",
-        )}</td></tr>`,
+        `<tr><td>${t.daysOpen}d</td><td>${esc(t.description)}</td><td>${esc(t.user ?? "—")}</td></tr>`,
     )
     .join("");
 
@@ -71,15 +69,15 @@ function buildPrintableReportHtml(params: {
   <div class="section">
     <h2>🔴 Overdue Tasks (Top 25)</h2>
     <table>
-      <tr><th>Days</th><th>Level</th><th>Description</th><th>User</th></tr>
-      ${overdueRows || "<tr><td colspan='4'>No overdue tasks.</td></tr>"}
+      <tr><th>Days</th><th>Description</th><th>User</th></tr>
+      ${overdueRows || "<tr><td colspan='3'>No overdue tasks.</td></tr>"}
     </table>
   </div>
 
   <div class="section">
     <h2>📋 Recently Added Tasks</h2>
     <table>
-      <tr><th>Level</th><th>Trade</th><th>Title</th><th>Project</th></tr>
+      <tr><th>Title</th><th>Project</th><th>Status</th><th>Created</th></tr>
       ${recentRows || "<tr><td colspan='4'>No recent tasks.</td></tr>"}
     </table>
   </div>

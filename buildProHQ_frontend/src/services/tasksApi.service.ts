@@ -30,8 +30,7 @@ export type TaskListItem = {
   status_id: string;
   status_code: string;
   status_name: string;
-  trade_name: string | null;
-  level_name: string | null;
+  filter_summary?: string | null;
   priority_id: string | null;
   priority_code: string | null;
   priority_name: string | null;
@@ -70,8 +69,6 @@ export type ListTasksResponseMeta = {
 
 export type OpenTasksFilters = {
   projectIds?: string[];
-  tradeIds?: string[];
-  levelIds?: string[];
   createdByUserIds?: string[];
   statusIds?: string[];
   priorityIds?: string[];
@@ -90,8 +87,6 @@ export type ListOpenTasksBody = {
     | "title"
     | "projectName"
     | "daysOpen"
-    | "level"
-    | "trade"
     | "priority"
     | "description"
     | "user"
@@ -100,33 +95,6 @@ export type ListOpenTasksBody = {
     | "assignedUserName";
   sortOrder?: "asc" | "desc";
   filters?: OpenTasksFilters;
-};
-
-export type CompletedTasksFilters = {
-  tradeIds?: string[];
-  levelIds?: string[];
-  completedByUserIds?: string[];
-};
-
-export type ListCompletedTasksBody = {
-  page: number;
-  limit: number;
-  search?: string;
-  sortBy?: "level" | "trade" | "user" | "description" | "date" | "duration";
-  sortOrder?: "asc" | "desc";
-  filters?: CompletedTasksFilters;
-};
-
-export type CompletedTaskListItem = {
-  id: string;
-  description: string;
-  closed_at: string;
-  days_open: number;
-  trade_name: string | null;
-  level_name: string | null;
-  completed_by_user_id: string | null;
-  completed_by_initials?: string | null;
-  completed_by_full_name?: string | null;
 };
 
 export type TaskStats = {
@@ -138,7 +106,6 @@ export type TaskStats = {
   overdue10: number;
   midRange7to10: number;
   fresh0to6: number;
-  tradesActive: number;
   /** Optional: simplified stats used by HTML cards */
   open?: number;
   today?: number;
@@ -147,35 +114,45 @@ export type TaskStats = {
   overdueDue?: number;
 };
 
-export type ManagerAnalytics = {
-  openTasks: number;
-  completedTotal: number;
-  avgCompletionDays: number;
-  byTrade: Array<{ trade: string; count: number }>;
-  byLevel: Array<{ level: string; count: number }>;
-  overdueTop: Array<{ daysOpen: number; level: string | null; description: string; user: string | null }>;
-  overdueDueCount?: number;
-  overdueDueTop?: Array<{
-    id: string;
-    title?: string | null;
-    description: string;
-    dueAt: string;
-    level?: string | null;
-    project?: string | null;
-    status?: string | null;
-  }>;
-  byUser: Array<{ user: string; completed: number }>;
-};
-
 export type RecentTaskItem = {
   id: string;
   title?: string | null;
   description: string;
   created_at: string;
   project_name?: string | null;
-  level_name?: string | null;
-  trade_name?: string | null;
   status_name?: string | null;
+};
+
+export type ManagerAnalytics = {
+  openTasks: number;
+  completedTotal: number;
+  avgCompletionDays: number;
+  overdueTop: Array<{ daysOpen: number; description: string; user: string | null }>;
+  overdueDueCount?: number;
+  overdueDueTop?: Array<{
+    id: string;
+    title: string | null;
+    description: string;
+    dueAt: string;
+    project: string | null;
+    status: string | null;
+  }>;
+  byUser: Array<{ user: string; completed: number }>;
+  completionRate: Array<{ month: string; total: string; completed: string }>;
+};
+
+export type TaskFilterValuePayload = {
+  filterId: string;
+  subFilterIds?: string[];
+  textValue?: string | null;
+};
+
+export type TaskFilterResolved = {
+  filterId: string;
+  name: string;
+  value: string;
+  subFilterNames?: string[];
+  textValue?: string | null;
 };
 
 export type CreateTaskPayload = {
@@ -183,8 +160,7 @@ export type CreateTaskPayload = {
   projectId: string;
   statusId: string;
   priorityId?: string;
-  levelId: string;
-  tradeId: string;
+  taskFilterValues?: TaskFilterValuePayload[];
   description: string;
   notes?: string;
   assignedToUserId?: string | null;
@@ -203,10 +179,11 @@ export type TaskDetailResponse = {
   project_name?: string | null;
   priority_id?: string | null;
   priority_name?: string | null;
-  level_id?: string | null;
-  trade_id?: string | null;
   assigned_to_user_id?: string | null;
   assigned_to_user_ids?: string[];
+  task_filter_selections?: TaskFilterValuePayload[];
+  /** Display-ready resolved labels for task view pages */
+  filters?: TaskFilterResolved[];
   due_at?: string | null;
   [key: string]: unknown;
 };
@@ -250,8 +227,6 @@ export const tasksApi = {
       if (v.length) qp.set(key, v.join(","));
     };
     pushCsv("filters.projectIds", f.projectIds);
-    pushCsv("filters.tradeIds", f.tradeIds);
-    pushCsv("filters.levelIds", f.levelIds);
     pushCsv("filters.createdByUserIds", f.createdByUserIds);
     pushCsv("filters.statusIds", f.statusIds);
     pushCsv("filters.priorityIds", f.priorityIds);
@@ -270,7 +245,6 @@ export const tasksApi = {
       overdue10: Number((raw as any)?.overdue10 ?? 0),
       midRange7to10: Number((raw as any)?.midRange7to10 ?? 0),
       fresh0to6: Number((raw as any)?.fresh0to6 ?? 0),
-      tradesActive: Number((raw as any)?.tradesActive ?? 0),
       open: Number((raw as any)?.open ?? (raw as any)?.totalOpen ?? 0),
       today: Number((raw as any)?.today ?? 0),
       totalTasks: Number((raw as any)?.total ?? (raw as any)?.totalTasks ?? 0),
@@ -279,14 +253,46 @@ export const tasksApi = {
     };
   },
 
-  async getAnalytics(): Promise<ManagerAnalytics> {
-    const { data } = await apiClient.get<ApiEnvelope<ManagerAnalytics>>(ApiV1.tasks.analytics);
-    return data.data;
-  },
-
   async listRecentTasks(limit = 6): Promise<RecentTaskItem[]> {
     const { data } = await apiClient.get<ApiEnvelope<RecentTaskItem[]>>(`/v1/tasks/recent?limit=${limit}`);
     return Array.isArray(data.data) ? data.data : [];
+  },
+
+  async getAnalytics(): Promise<ManagerAnalytics> {
+    const { data } = await apiClient.get<ApiEnvelope<unknown>>(ApiV1.tasks.analytics, {
+      headers: { "Cache-Control": "no-cache" },
+    });
+    const raw = (data as any)?.data ?? {};
+    return {
+      openTasks: Number((raw as any)?.openTasks ?? 0),
+      completedTotal: Number((raw as any)?.completedTotal ?? 0),
+      avgCompletionDays: Number((raw as any)?.avgCompletionDays ?? 0),
+      overdueTop: Array.isArray((raw as any)?.overdueTop)
+        ? (raw as any).overdueTop.map((x: any) => ({
+            daysOpen: Number(x?.daysOpen ?? 0),
+            description: String(x?.description ?? ""),
+            user: x?.user == null ? null : String(x.user),
+          }))
+        : [],
+      overdueDueCount: Number((raw as any)?.overdueDueCount ?? 0),
+      overdueDueTop: Array.isArray((raw as any)?.overdueDueTop)
+        ? (raw as any).overdueDueTop.map((x: any) => ({
+            id: String(x?.id ?? ""),
+            title: x?.title == null ? null : String(x.title),
+            description: String(x?.description ?? ""),
+            dueAt: String(x?.dueAt ?? ""),
+            project: x?.project == null ? null : String(x.project),
+            status: x?.status == null ? null : String(x.status),
+          }))
+        : [],
+      byUser: Array.isArray((raw as any)?.byUser)
+        ? (raw as any).byUser.map((x: any) => ({
+            user: String(x?.user ?? "—"),
+            completed: Number(x?.completed ?? 0),
+          }))
+        : [],
+      completionRate: Array.isArray((raw as any)?.completionRate) ? (raw as any).completionRate : [],
+    };
   },
 
   async listAll(
@@ -301,17 +307,6 @@ export const tasksApi = {
     body: ListOpenTasksBody,
   ): Promise<{ items: TaskListItem[]; meta: ListTasksResponseMeta }> {
     const { data } = await apiClient.post<ApiEnvelope<TaskListItem[]>>(ApiV1.tasks.open, body);
-    const meta = safeListMeta(data.meta, { page: body.page, limit: body.limit }) as ListTasksResponseMeta;
-    return { items: Array.isArray(data.data) ? data.data : [], meta };
-  },
-
-  async listCompleted(
-    body: ListCompletedTasksBody,
-  ): Promise<{ items: CompletedTaskListItem[]; meta: ListTasksResponseMeta }> {
-    const { data } = await apiClient.post<ApiEnvelope<CompletedTaskListItem[]>>(
-      "/v1/tasks/completed",
-      body,
-    );
     const meta = safeListMeta(data.meta, { page: body.page, limit: body.limit }) as ListTasksResponseMeta;
     return { items: Array.isArray(data.data) ? data.data : [], meta };
   },
@@ -348,12 +343,11 @@ export const tasksApi = {
       title?: string;
       projectId?: string;
       description?: string;
-      levelId?: string;
-      tradeId?: string;
       priorityId?: string;
       dueAt?: string | null;
       assignedToUserId?: string | null;
       assignedToUserIds?: string[];
+      taskFilterValues?: TaskFilterValuePayload[];
       notes?: string;
     },
   ): Promise<TaskDetailResponse> {

@@ -129,7 +129,7 @@ export function SuperManagementDashboardView(props: SuperManagementDashboardView
                     Due
                   </Typography>
                   <Typography sx={{ fontSize: 12, color: STYLE_TOKENS.colors.text, flex: 1 }}>
-                    {(t.level ? `${t.level} · ` : "") + (t.title?.trim() || t.description)}
+                    {t.title?.trim() || t.description}
                   </Typography>
                 </Box>
               ))}
@@ -210,13 +210,7 @@ export function SuperManagementDashboardView(props: SuperManagementDashboardView
           />
         </DashboardCard>
 
-        <DashboardCard title="🔧 Trade Breakdown">
-          <BarChartList
-            rows={(a?.byTrade ?? []).map((x) => ({ label: x.trade, value: x.count }))}
-            accent={STYLE_TOKENS.colors.blue}
-            emptyText="No data yet."
-          />
-        </DashboardCard>
+        {/* Legacy Trade/Level breakdown removed (dynamic filters only). */}
       </Box>
     </Stack>
   );

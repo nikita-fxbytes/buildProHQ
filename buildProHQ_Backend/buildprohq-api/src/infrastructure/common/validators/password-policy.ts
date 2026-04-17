@@ -8,4 +8,3 @@ export const PASSWORD_POLICY_REGEX = {
   NUMBER: /(?=.*\d)/,
   SPECIAL: /(?=.*[^A-Za-z0-9])/,
 } as const;
-

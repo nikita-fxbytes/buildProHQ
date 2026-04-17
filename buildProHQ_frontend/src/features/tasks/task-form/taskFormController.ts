@@ -5,7 +5,7 @@
  * Views must remain dumb — all API calls and navigation live here.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -14,12 +14,13 @@ import { ROUTES } from "@/constants/routes";
 import { appToast } from "@/utils/toast";
 import { getApiErrorMessage } from "@/services/apiError";
 import { managerAddTaskService, type ManagerAddTaskLookups } from "@/services/managerAddTask.service";
-import { projectsApi } from "@/services/projectsApi.service";
+import { projectsApi, type ProjectFilterDefinition } from "@/services/projectsApi.service";
 import { usersApi, type UserListItem } from "@/services/usersApi.service";
 import { tasksApi, type TaskAttachmentItem } from "@/services/tasksApi.service";
 import { taskFormSchema, type TaskFormValues } from "@/schemas/task-form.schema";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { mergeProjectOptionRow, type ProjectOptionRow } from "@/features/tasks/utils/projectAutocompleteOptions";
+import type { TaskFormViewProps } from "@/features/tasks/task-form/TaskFormView";
 import { isUuidV4 } from "@/utils/taskRouteParams";
 import type { UploadItem } from "@/components/common/FileUpload";
 import { revokeBlobUrls } from "@/utils/uploadItems";
@@ -79,6 +80,9 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
   const [projectSearchInput, setProjectSearchInput] = useState("");
   const [selectedProjectLabel, setSelectedProjectLabel] = useState("");
   const [projectOptions, setProjectOptions] = useState<ProjectOptionRow[]>([]);
+  const [projectFilterDefinitions, setProjectFilterDefinitions] = useState<ProjectFilterDefinition[]>([]);
+  const [loadingProjectFilters, setLoadingProjectFilters] = useState(false);
+  const prevProjectIdRef = useRef<string | null>(null);
 
   const debouncedProjectQuery = useDebouncedValue(projectSearchInput, 350);
 
@@ -88,8 +92,7 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
       title: "",
       description: "",
       projectId: "",
-      levelId: "",
-      tradeId: "",
+      taskFilterValues: [],
       priorityId: "",
       dueDate: "",
       assignedToUserIds: [],
@@ -97,6 +100,46 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
   });
 
   const watchedProjectId = form.watch("projectId");
+
+  const loadProjectFilters = useCallback(
+    async (projectId: string) => {
+      const pid = String(projectId || "").trim();
+      if (!pid) {
+        setProjectFilterDefinitions([]);
+        return;
+      }
+      setLoadingProjectFilters(true);
+      try {
+        const res = await projectsApi.getFilters(pid);
+        const filters = Array.isArray(res.filters) ? res.filters : [];
+        setProjectFilterDefinitions(
+          filters.slice().sort((a, b) => a.name.localeCompare(b.name)),
+        );
+      } catch {
+        setProjectFilterDefinitions([]);
+      } finally {
+        setLoadingProjectFilters(false);
+      }
+    },
+    [],
+  );
+
+  // When project changes: clear selected filters and fetch new options.
+  useEffect(() => {
+    const pid = String(watchedProjectId || "").trim();
+    const prev = prevProjectIdRef.current;
+    if (prev === null) {
+      prevProjectIdRef.current = pid || "";
+      void loadProjectFilters(pid);
+      return;
+    }
+    if (prev !== pid) {
+      prevProjectIdRef.current = pid;
+      form.setValue("taskFilterValues", []);
+    }
+    void loadProjectFilters(pid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedProjectId]);
 
   const userOptions = useMemo(
     () =>
@@ -173,18 +216,19 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
         title: (task.title as string) ?? "",
         description: (task.description as string) ?? "",
         projectId,
-        levelId: (task.level_id as string) ?? "",
-        tradeId: (task.trade_id as string) ?? "",
+        taskFilterValues: (task.task_filter_selections as TaskFormValues["taskFilterValues"]) ?? [],
         priorityId: (task.priority_id as string) ?? lu.defaultPriorityId,
         dueDate: task.due_at ? String(task.due_at).slice(0, 10) : "",
         assignedToUserIds: assignedIds,
       });
+      prevProjectIdRef.current = projectId;
+      await loadProjectFilters(projectId);
     } catch (e) {
       appToast.error(getApiErrorMessage(e, MESSAGES.task.loadFailed));
     } finally {
       setLoadingEdit(false);
     }
-  }, [form, isEdit, editTaskId]);
+  }, [form, isEdit, editTaskId, loadProjectFilters]);
 
   useEffect(() => {
     void loadEdit();
@@ -244,12 +288,11 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
           title: values.title.trim(),
           projectId: values.projectId,
           statusId: lookups.openStatusId,
-          levelId: values.levelId,
-          tradeId: values.tradeId,
           priorityId: values.priorityId,
           description: values.description,
           dueAt: values.dueDate?.trim() ? values.dueDate.trim() : null,
           assignedToUserIds: values.assignedToUserIds ?? [],
+          taskFilterValues: values.taskFilterValues ?? [],
         },
         files,
       );
@@ -283,11 +326,10 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
         title: values.title.trim(),
         projectId: values.projectId,
         description: values.description,
-        levelId: values.levelId,
-        tradeId: values.tradeId,
         priorityId: values.priorityId,
         dueAt: values.dueDate ? values.dueDate : null,
         assignedToUserIds: values.assignedToUserIds ?? [],
+        taskFilterValues: values.taskFilterValues ?? [],
       });
 
       setTaskAssignedUserIds(values.assignedToUserIds ?? []);
@@ -364,14 +406,14 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
 
   const disabled = (isCreate ? loadingLookups : loadingEdit) || submitting;
 
-  const taskFormProps = isCreate
+  const taskFormProps: TaskFormViewProps = isCreate
     ? {
         form,
         disabled,
         projectMode: "lookup" as const,
         projectLookupOptions,
-        levels: lookups?.levels ?? [],
-        trades: lookups?.trades ?? [],
+        projectFilterDefinitions,
+        loadingProjectFilters,
         priorities: lookups?.priorities ?? [],
         userOptions,
         files: { mode: "create" as const, items: photos, onChange: setPhotos },
@@ -386,8 +428,8 @@ export function useTaskFormController(opts: TaskFormControllerOpts) {
           setInput: setProjectSearchInput,
           setSelectedLabel: setSelectedProjectLabel,
         },
-        levels: lookups?.levels ?? [],
-        trades: lookups?.trades ?? [],
+        projectFilterDefinitions,
+        loadingProjectFilters,
         priorities: lookups?.priorities ?? [],
         userOptions,
         files: {

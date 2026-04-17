@@ -151,7 +151,9 @@ export class SiteLocation extends SoftDeleteTimestamps {
 }
 
 @Entity('project_users')
-@Index('uq_project_users_project_user', ['projectId', 'userId'], { unique: true })
+@Index('uq_project_users_project_user', ['projectId', 'userId'], {
+  unique: true,
+})
 export class ProjectUser extends SoftDeleteTimestamps {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

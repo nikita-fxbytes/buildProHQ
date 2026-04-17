@@ -45,12 +45,8 @@ type Props = {
   showFilters: boolean;
   setShowFilters: (value: boolean) => void;
   projectOptions?: Array<string | { value: string; label: string }>;
-  tradeOptions: Array<string | { value: string; label: string }>;
-  levelOptions: Array<string | { value: string; label: string }>;
   userOptions: Array<string | { value: string; label: string }>;
   projectFilters?: string[];
-  tradeFilters: string[];
-  levelFilters: string[];
   userFilters: string[];
   statusOptions?: Array<string | { value: string; label: string }>;
   statusFilters?: string[];
@@ -58,10 +54,6 @@ type Props = {
   priorityFilters?: string[];
   setProjectFilters?: (value: string) => void;
   setProjectFiltersDirect?: (value: string[]) => void;
-  setTradeFilters: (value: string) => void;
-  setTradeFiltersDirect?: (value: string[]) => void;
-  setLevelFilters: (value: string) => void;
-  setLevelFiltersDirect?: (value: string[]) => void;
   setUserFilters: (value: string) => void;
   setUserFiltersDirect?: (value: string[]) => void;
   setStatusFiltersDirect?: (value: string[]) => void;
@@ -74,8 +66,6 @@ type Props = {
   sortKey?:
     | "projectName"
     | "title"
-    | "level"
-    | "trade"
     | "user"
     | "assignees"
     | "priority"
@@ -87,8 +77,6 @@ type Props = {
   onSortColumn?: (key:
     | "projectName"
     | "title"
-    | "level"
-    | "trade"
     | "user"
     | "assignees"
     | "priority"
@@ -104,8 +92,6 @@ type Props = {
     id: string;
     title: string;
     project: string | undefined;
-    level: string;
-    trade: string;
     user: string;
     assignees: string;
     assigneeIds: string[];
@@ -146,8 +132,6 @@ type Props = {
     id: string;
     title: string;
     project: string | undefined;
-    level: string;
-    trade: string;
     user: string;
     assignees: string;
     assigneeIds: string[];
@@ -177,8 +161,6 @@ export function ManagerTasksView(props: Props) {
   const prioritySel = props.priorityFilters ?? [];
   const filterCount =
     (props.showProjectColumn ? props.projectFilters?.length ?? 0 : 0) +
-    props.tradeFilters.length +
-    props.levelFilters.length +
     props.userFilters.length +
     statusSel.length +
     prioritySel.length +
@@ -251,11 +233,11 @@ export function ManagerTasksView(props: Props) {
               gridTemplateColumns:
                 statusOpts.length > 0 || priorityOpts.length > 0
                   ? props.showProjectColumn
-                    ? "repeat(6,minmax(0,1fr))"
-                    : "repeat(5,minmax(0,1fr))"
-                  : props.showProjectColumn
                     ? "repeat(4,minmax(0,1fr))"
-                    : "repeat(3,minmax(0,1fr))",
+                    : "repeat(3,minmax(0,1fr))"
+                  : props.showProjectColumn
+                    ? "repeat(2,minmax(0,1fr))"
+                    : "repeat(1,minmax(0,1fr))",
               gap: "16px",
             }}
           >
@@ -268,20 +250,6 @@ export function ManagerTasksView(props: Props) {
                 placeholder="Search projects..."
               />
             ) : null}
-            <FilterMultiSelect
-              label="Trade"
-              options={props.tradeOptions}
-              selected={props.tradeFilters}
-              onChange={(next) => props.setTradeFiltersDirect?.(next)}
-              placeholder="Search trades..."
-            />
-            <FilterMultiSelect
-              label="Level"
-              options={props.levelOptions}
-              selected={props.levelFilters}
-              onChange={(next) => props.setLevelFiltersDirect?.(next)}
-              placeholder="Search levels..."
-            />
             <FilterMultiSelect
               label="User"
               options={props.userOptions}
@@ -396,8 +364,8 @@ export function ManagerTasksView(props: Props) {
         <AppTableHeader
           columnsTemplate={
             props.showProjectColumn
-              ? "36px 170px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
-              : "36px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
+              ? "36px 170px 160px 1fr 160px 80px 110px 76px 104px 200px"
+              : "36px 160px 1fr 160px 80px 110px 76px 104px 200px"
           }
           columns={[
             { key: "select", label: "" },
@@ -406,8 +374,6 @@ export function ManagerTasksView(props: Props) {
               : []),
             { key: "title", label: "Title", sortable: true, sortKey: "title" },
             { key: "description", label: "Description", sortable: true, sortKey: "description" },
-            { key: "level", label: "Level", sortable: true, sortKey: "level" },
-            { key: "trade", label: "Trade", sortable: true, sortKey: "trade" },
             { key: "assignees", label: "Assignees", sortable: true, sortKey: "assignees" },
             { key: "priority", label: "Priority", sortable: true, sortKey: "priority" },
             { key: "status", label: "Status", sortable: false },
@@ -425,8 +391,8 @@ export function ManagerTasksView(props: Props) {
           <AppGridTableSkeleton
             columnsTemplate={
               props.showProjectColumn
-                ? "36px 170px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
-                : "36px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
+                ? "36px 170px 160px 1fr 160px 80px 110px 76px 104px 200px"
+                : "36px 160px 1fr 160px 80px 110px 76px 104px 200px"
             }
             columnKinds={
               props.showProjectColumn
@@ -435,8 +401,6 @@ export function ManagerTasksView(props: Props) {
                     "text", // project
                     "text", // title
                     "text", // description
-                    "text", // level
-                    "text", // trade
                     "avatars", // assignees
                     "chip", // priority
                     "chip", // status
@@ -448,8 +412,6 @@ export function ManagerTasksView(props: Props) {
                     "checkbox", // select
                     "text", // title
                     "text", // description
-                    "text", // level
-                    "text", // trade
                     "avatars", // assignees
                     "chip", // priority
                     "chip", // status
@@ -468,8 +430,8 @@ export function ManagerTasksView(props: Props) {
               key={task.id}
               columnsTemplate={
                 props.showProjectColumn
-                  ? "36px 170px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
-                  : "36px 160px 1fr 80px 130px 160px 80px 110px 76px 104px 200px"
+                  ? "36px 170px 160px 1fr 160px 80px 110px 76px 104px 200px"
+                  : "36px 160px 1fr 160px 80px 110px 76px 104px 200px"
               }
               className="task-row-item mgmt"
             >
@@ -510,8 +472,6 @@ export function ManagerTasksView(props: Props) {
                   </Typography>
                 </Tooltip>
               </AppTableCell>
-              <AppTableCell variant="level">{task.level}</AppTableCell>
-              <AppTableCell variant="trade">{task.trade}</AppTableCell>
               <AppTableCell variant="text">
                 <Typography sx={{ fontSize: 13, color: STYLE_TOKENS.colors.text }}>
                   {task.assignees}

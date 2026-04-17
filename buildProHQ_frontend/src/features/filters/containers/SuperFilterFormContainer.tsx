@@ -2,9 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { lookupsApi, type FilterCategoryApi, type FilterOptionApi } from "@/services/lookupsApi.service";
 import { projectsApi, type ProjectListItem } from "@/services/projectsApi.service";
-import { filtersApi } from "@/services/filtersApi.service";
+import { projectFiltersApi } from "@/services/projectFiltersApi.service";
 import { appToast } from "@/utils/toast";
 import { MESSAGES } from "@/constants/messages";
 import { getApiErrorMessage } from "@/services/apiError";
@@ -24,7 +23,7 @@ function dedupeCsv(input: string): string[] {
     seen.add(k);
     out.push(t);
   }
-  return out.slice(0, 100);
+  return out.slice(0, 200);
 }
 
 export function SuperFilterFormContainer(props: { mode: SuperFilterFormMode; filterCategoryId?: string }) {
@@ -33,77 +32,74 @@ export function SuperFilterFormContainer(props: { mode: SuperFilterFormMode; fil
   const [saving, setSaving] = useState(false);
 
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
-  const [categories, setCategories] = useState<FilterCategoryApi[]>([]);
-  const [options, setOptions] = useState<FilterOptionApi[]>([]);
-
   const [projectIds, setProjectIds] = useState<string[]>([]);
-  const [projectIdReadOnly, setProjectIdReadOnly] = useState<string | null>(null);
-  const [categoryName, setCategoryName] = useState("");
+  const [name, setName] = useState("");
+  const [hasSubFilters, setHasSubFilters] = useState(false);
+  const [isMultiSelect, setIsMultiSelect] = useState(false);
   const [subsCsv, setSubsCsv] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [projs, cats, opts] = await Promise.all([
-        projectsApi.search({ page: 1, limit: 100 }),
-        lookupsApi.getFilterCategories(),
-        lookupsApi.getFilterOptions(),
-      ]);
+      const projs = await projectsApi.search({ page: 1, limit: 100 });
       setProjects(projs.items);
-      setCategories(cats);
-      setOptions(opts);
+      if (props.mode === "edit" && props.filterCategoryId) {
+        const d = await projectFiltersApi.getById(props.filterCategoryId);
+        setProjectIds(Array.isArray(d.projectIds) ? d.projectIds : d.projectId ? [d.projectId] : []);
+        setName(d.name);
+        setHasSubFilters(d.hasSubFilters);
+        setIsMultiSelect(d.isMultiSelect);
+        setSubsCsv((d.subFilters ?? []).map((s) => s.name).join(", "));
+      }
     } catch (e) {
       appToast.error(getApiErrorMessage(e, MESSAGES.common.somethingWrong));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [props.filterCategoryId, props.mode]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    if (props.mode !== "edit") return;
-    const id = props.filterCategoryId ?? "";
-    if (!id) return;
-    const cat = categories.find((c) => c.id === id);
-    if (!cat) return;
-    setCategoryName(cat.name);
-    setProjectIdReadOnly(cat.projectId ?? null);
-    setProjectIds(cat.projectId ? [cat.projectId] : []);
-    const subNames = options.filter((o) => o.filterCategoryId === id).map((o) => o.name);
-    setSubsCsv(subNames.join(", "));
-  }, [categories, options, props.filterCategoryId, props.mode]);
-
-  const projectNameReadOnly = useMemo(() => {
-    if (!projectIdReadOnly) return "Global";
-    return projects.find((p) => p.id === projectIdReadOnly)?.name ?? "—";
-  }, [projectIdReadOnly, projects]);
-
   const onSubmit = async () => {
-    const name = categoryName.trim();
-    const subFilterNames = dedupeCsv(subsCsv);
-
-    if (props.mode === "create") {
-      if (projectIds.length === 0) {
-        appToast.error("Please select at least one project.");
-        return;
-      }
-      if (name.length < 2) {
-        appToast.error(MESSAGES.filter.validation.categoryMinLength);
-        return;
-      }
+    const nameTrim = name.trim();
+    const subNames = dedupeCsv(subsCsv);
+    if (!projectIds.length) {
+      appToast.error("Please select at least one project.");
+      return;
+    }
+    if (nameTrim.length < 1) {
+      appToast.error("Filter name is required.");
+      return;
+    }
+    if (hasSubFilters && !subNames.length) {
+      appToast.error("Add at least one sub-filter name.");
+      return;
+    }
+    if (!hasSubFilters && subNames.length) {
+      appToast.error("Remove sub-filter names when not using sub-filters.");
+      return;
     }
 
     try {
       setSaving(true);
-      await filtersApi.saveFilter({
-        filterCategoryId: props.mode === "edit" ? props.filterCategoryId : undefined,
-        filterCategoryName: props.mode === "create" ? name : undefined,
-        subFilterNames: subFilterNames.length ? subFilterNames : undefined,
-        projectIds: props.mode === "create" ? projectIds : undefined,
-      });
+      if (props.mode === "create") {
+        await projectFiltersApi.create({
+          name: nameTrim,
+          projectIds,
+          hasSubFilters,
+          isMultiSelect: hasSubFilters ? isMultiSelect : false,
+          subFilterNames: hasSubFilters ? subNames : undefined,
+        });
+      } else if (props.filterCategoryId) {
+        await projectFiltersApi.update(props.filterCategoryId, {
+          name: nameTrim,
+          hasSubFilters,
+          isMultiSelect: hasSubFilters ? isMultiSelect : false,
+          subFilterNames: hasSubFilters ? subNames : [],
+        });
+      }
       appToast.success(MESSAGES.filter.saved);
       router.push(ROUTES.SUPER_FILTERS);
     } catch (e) {
@@ -121,9 +117,12 @@ export function SuperFilterFormContainer(props: { mode: SuperFilterFormMode; fil
       projects={projects}
       projectIds={projectIds}
       setProjectIds={setProjectIds}
-      projectNameReadOnly={projectNameReadOnly}
-      categoryName={categoryName}
-      setCategoryName={setCategoryName}
+      name={name}
+      setName={setName}
+      hasSubFilters={hasSubFilters}
+      setHasSubFilters={setHasSubFilters}
+      isMultiSelect={isMultiSelect}
+      setIsMultiSelect={setIsMultiSelect}
       subsCsv={subsCsv}
       setSubsCsv={setSubsCsv}
       onCancel={() => router.push(ROUTES.SUPER_FILTERS)}
@@ -131,4 +130,3 @@ export function SuperFilterFormContainer(props: { mode: SuperFilterFormMode; fil
     />
   );
 }
-

@@ -20,13 +20,19 @@ export class SaveFilterDto {
   })
   @IsOptional()
   @IsArray({ message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAMES_ARRAY })
-  @ArrayMaxSize(50, { message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAMES_MAX_COUNT })
-  @IsUUID('4', { each: true, message: MESSAGES.FILTER_VALIDATION.CATEGORY_ID_INVALID })
+  @ArrayMaxSize(50, {
+    message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAMES_MAX_COUNT,
+  })
+  @IsUUID('4', {
+    each: true,
+    message: MESSAGES.FILTER_VALIDATION.CATEGORY_ID_INVALID,
+  })
   projectIds?: string[];
 
   @ApiProperty({
     required: false,
-    description: 'Existing filter category id. Sub-filters are appended under this category.',
+    description:
+      'Existing filter category id. Sub-filters are appended under this category.',
   })
   @IsOptional()
   @IsUUID('4', { message: MESSAGES.FILTER_VALIDATION.CATEGORY_ID_INVALID })
@@ -34,13 +40,18 @@ export class SaveFilterDto {
 
   @ApiProperty({
     required: false,
-    description: 'Display name for a new category, or to resolve an existing one by name.',
+    description:
+      'Display name for a new category, or to resolve an existing one by name.',
     example: 'Zone',
   })
   @IsOptional()
   @IsString({ message: MESSAGES.FILTER_VALIDATION.CATEGORY_NAME_STRING })
-  @MinLength(2, { message: MESSAGES.FILTER_VALIDATION.CATEGORY_NAME_MIN_LENGTH })
-  @MaxLength(100, { message: MESSAGES.FILTER_VALIDATION.CATEGORY_NAME_MAX_LENGTH })
+  @MinLength(2, {
+    message: MESSAGES.FILTER_VALIDATION.CATEGORY_NAME_MIN_LENGTH,
+  })
+  @MaxLength(100, {
+    message: MESSAGES.FILTER_VALIDATION.CATEGORY_NAME_MAX_LENGTH,
+  })
   filterCategoryName?: string;
 
   @ApiProperty({
@@ -52,9 +63,20 @@ export class SaveFilterDto {
   })
   @IsOptional()
   @IsArray({ message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAMES_ARRAY })
-  @ArrayMaxSize(100, { message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAMES_MAX_COUNT })
-  @IsString({ each: true, message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAME_STRING })
-  @MinLength(1, { each: true, message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAME_MIN_LENGTH })
-  @MaxLength(100, { each: true, message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAME_MAX_LENGTH })
+  @ArrayMaxSize(100, {
+    message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAMES_MAX_COUNT,
+  })
+  @IsString({
+    each: true,
+    message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAME_STRING,
+  })
+  @MinLength(1, {
+    each: true,
+    message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAME_MIN_LENGTH,
+  })
+  @MaxLength(100, {
+    each: true,
+    message: MESSAGES.FILTER_VALIDATION.SUB_FILTER_NAME_MAX_LENGTH,
+  })
   subFilterNames?: string[];
 }

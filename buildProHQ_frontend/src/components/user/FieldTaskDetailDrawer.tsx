@@ -14,8 +14,7 @@ import { htmlToPlainText } from "@/utils/richText";
 
 export type FieldTaskDetailSummary = {
   id: string;
-  level: string;
-  trade: string;
+  filters: string;
   priority: string;
   desc: string;
   days: number;
@@ -95,14 +94,10 @@ export function FieldTaskDetailDrawer({
           <>
             <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px", mb: 2 }}>
               <Box>
-                {drawerFieldLabel(MESSAGES.task.detailLevel)}
+                {drawerFieldLabel("Filters")}
                 <Typography sx={{ fontFamily: "Rajdhani, sans-serif", fontSize: "16px", fontWeight: 700 }}>
-                  {task.level}
+                  {task.filters || "—"}
                 </Typography>
-              </Box>
-              <Box>
-                {drawerFieldLabel(MESSAGES.task.detailTrade)}
-                <Typography sx={{ fontWeight: 600, fontSize: "14px" }}>{task.trade}</Typography>
               </Box>
               <Box>
                 {drawerFieldLabel(MESSAGES.task.detailPriority)}

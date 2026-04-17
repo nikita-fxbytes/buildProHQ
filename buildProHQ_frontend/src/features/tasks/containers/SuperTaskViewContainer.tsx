@@ -9,13 +9,15 @@ import Typography from "@mui/material/Typography";
 export function SuperTaskViewContainer() {
   const params = useParams();
   const taskId = taskIdFromParams(params?.taskId);
-  if (!isUuidV4(taskId)) {
+  const isValidTaskId = isUuidV4(taskId);
+  const c = useSuperTaskViewController({ taskId: isValidTaskId ? taskId : "" });
+
+  if (!isValidTaskId) {
     return (
       <Typography sx={{ p: 2, fontWeight: 700 }} role="alert">
         This task link is invalid or incomplete.
       </Typography>
     );
   }
-  const c = useSuperTaskViewController({ taskId });
   return <SuperTaskView {...c} />;
 }

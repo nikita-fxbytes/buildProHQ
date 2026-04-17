@@ -18,4 +18,3 @@ export class PagedQueryDto {
   @Max(100)
   limit = 10;
 }
-

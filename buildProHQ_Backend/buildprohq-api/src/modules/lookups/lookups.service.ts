@@ -4,11 +4,9 @@ import { IsNull, Repository } from 'typeorm';
 import {
   FilterCategory,
   FilterOption,
-  Level,
   Role,
   TaskPriority,
   TaskStatus,
-  Trade,
   UserStatus,
   UserType,
 } from '../../infrastructure/persistence/typeorm/entities';
@@ -16,10 +14,6 @@ import {
 @Injectable()
 export class LookupsService {
   constructor(
-    @InjectRepository(Trade)
-    private readonly tradeRepository: Repository<Trade>,
-    @InjectRepository(Level)
-    private readonly levelRepository: Repository<Level>,
     @InjectRepository(TaskStatus)
     private readonly taskStatusRepository: Repository<TaskStatus>,
     @InjectRepository(TaskPriority)
@@ -35,22 +29,6 @@ export class LookupsService {
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
   ) {}
-
-  getTrades() {
-    return this.tradeRepository.find({
-      where: { deletedAt: IsNull() },
-      order: { sortOrder: 'ASC', name: 'ASC' },
-      select: { id: true, code: true, name: true, sortOrder: true },
-    });
-  }
-
-  getLevels() {
-    return this.levelRepository.find({
-      where: { deletedAt: IsNull() },
-      order: { sortOrder: 'ASC', name: 'ASC' },
-      select: { id: true, code: true, name: true, sortOrder: true },
-    });
-  }
 
   getTaskStatuses() {
     return this.taskStatusRepository.find({

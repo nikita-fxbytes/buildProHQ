@@ -7,7 +7,6 @@ export const ApiV1 = {
     stats: "/v1/tasks/stats",
     analytics: "/v1/tasks/analytics",
     open: "/v1/tasks/open",
-    completed: "/v1/tasks/completed",
     bulkComplete: "/v1/tasks/bulk-complete",
     bulkDelete: "/v1/tasks/bulk-delete",
     one: (id: string) => `/v1/tasks/${id}`,

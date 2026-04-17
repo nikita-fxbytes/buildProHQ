@@ -59,7 +59,8 @@ export class UsersController {
   @Post()
   @Roles('manager', 'super_admin')
   @ApiOperation({
-    summary: 'List/search users with pagination (POST body, manager/super admin)',
+    summary:
+      'List/search users with pagination (POST body, manager/super admin)',
     description:
       'Preferred endpoint for the Users table. Supports pagination, search, role filter, and server-side sorting.',
   })

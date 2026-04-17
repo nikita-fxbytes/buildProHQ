@@ -12,12 +12,10 @@ import { SoftDeleteTimestamps } from '../shared';
 import {
   AssignmentStatus,
   FilterOption,
-  Level,
   Project,
   Site,
   TaskPriority,
   TaskStatus,
-  Trade,
   User,
 } from '..';
 
@@ -39,16 +37,6 @@ export class Task extends SoftDeleteTimestamps {
   @ManyToOne(() => TaskPriority)
   @JoinColumn({ name: 'priority_id' })
   priority?: TaskPriority | null;
-  @Column({ type: 'uuid', name: 'level_id', nullable: true })
-  levelId?: string | null;
-  @ManyToOne(() => Level)
-  @JoinColumn({ name: 'level_id' })
-  level?: Level | null;
-  @Column({ type: 'uuid', name: 'trade_id', nullable: true })
-  tradeId?: string | null;
-  @ManyToOne(() => Trade)
-  @JoinColumn({ name: 'trade_id' })
-  trade?: Trade | null;
   @Column({
     type: 'uuid',
     name: 'project_id',
@@ -99,7 +87,12 @@ export class Task extends SoftDeleteTimestamps {
   openedAt!: Date;
   @Column({ type: 'timestamp', precision: 6, name: 'due_at', nullable: true })
   dueAt?: Date | null;
-  @Column({ type: 'timestamp', precision: 6, name: 'closed_at', nullable: true })
+  @Column({
+    type: 'timestamp',
+    precision: 6,
+    name: 'closed_at',
+    nullable: true,
+  })
   closedAt?: Date | null;
   @Column({
     type: 'int',
@@ -171,9 +164,19 @@ export class TaskAssignment extends SoftDeleteTimestamps {
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
   assignedAt!: Date;
-  @Column({ type: 'timestamp', precision: 6, name: 'responded_at', nullable: true })
+  @Column({
+    type: 'timestamp',
+    precision: 6,
+    name: 'responded_at',
+    nullable: true,
+  })
   respondedAt?: Date | null;
-  @Column({ type: 'timestamp', precision: 6, name: 'unassigned_at', nullable: true })
+  @Column({
+    type: 'timestamp',
+    precision: 6,
+    name: 'unassigned_at',
+    nullable: true,
+  })
   unassignedAt?: Date | null;
 
   @Column({
@@ -275,7 +278,12 @@ export class TaskCompletion extends SoftDeleteTimestamps {
   completedAt!: Date;
   @Column({ type: 'int', unsigned: true, name: 'duration_days' })
   durationDays!: number;
-  @Column({ type: 'varchar', name: 'gps_location', length: 100, nullable: true })
+  @Column({
+    type: 'varchar',
+    name: 'gps_location',
+    length: 100,
+    nullable: true,
+  })
   gpsLocation?: string | null;
 
   @Column({
@@ -435,10 +443,6 @@ export class TaskMetric extends SoftDeleteTimestamps {
   projectId?: string | null;
   @Column({ type: 'uuid', name: 'site_id', nullable: true })
   siteId?: string | null;
-  @Column({ type: 'uuid', name: 'trade_id', nullable: true })
-  tradeId?: string | null;
-  @Column({ type: 'uuid', name: 'level_id', nullable: true })
-  levelId?: string | null;
   @Column({
     type: 'int',
     unsigned: true,

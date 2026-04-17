@@ -48,7 +48,7 @@ export function useSuperTaskViewController(opts: { taskId: string }) {
         tasksApi.getComments(opts.taskId, { page: 1, limit: 10 }),
         tasksApi.getHistory(opts.taskId, { page: 1, limit: 10 }),
         usersApi.list(),
-        tasksApi.listTaskAttachments(opts.taskId).catch(() => []),
+        tasksApi.listTaskAttachments(opts.taskId),
       ]);
       setTask(t);
       setComments(c.items);
@@ -58,6 +58,7 @@ export function useSuperTaskViewController(opts: { taskId: string }) {
     } catch (e) {
       appToast.error(getApiErrorMessage(e, MESSAGES.task.loadFailed));
       setTask(null);
+      setAttachments([]);
     } finally {
       setLoading(false);
     }

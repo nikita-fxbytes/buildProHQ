@@ -2,8 +2,6 @@
 
 Production-style core backend implementation for BuildPro HQ aligned to:
 
-- `../docs/buildprohq_v4.html`
-- `../database/schema.sql`
 - `../database/er-diagram.md`
 - `../database/README.md`
 
@@ -25,7 +23,6 @@ Production-style core backend implementation for BuildPro HQ aligned to:
   - attachment metadata add/retrieve
 - User management APIs (manager-only): list/get/create/update
 - Lookup APIs:
-  - trades, levels
   - task statuses, priorities
   - filter categories/options
 - Audit logging hooks for important task/user actions
@@ -123,11 +120,11 @@ npm run start:dev
 - `trade@buildpro.com` / `Trade@123` (Trade User Role)
 - `super@buildpro.com` / `Super@123` (Super Admin Role)
 
-## Project-scoped Filters (important)
+## Dynamic Project Filters (important)
 
-- **System filters** like Trade/Level are global (no project id).
-- **Custom filters** are **project-wise**: each `filter_category` may have `project_id`.
-- Filter save supports **multi-project create**: `POST /api/v1/filters` with `projectIds: string[]`.
+- Filters are fully dynamic and **project-scoped** via `filters`, `sub_filters`, and `filter_projects`.
+- Task selections are stored in `task_filters` (source of truth).
+- Use `POST /api/v1/project-filters/search` for the filter CRUD table and `POST /api/v1/analytics/tasks` for project-scoped analytics.
 
 ## API Documentation
 

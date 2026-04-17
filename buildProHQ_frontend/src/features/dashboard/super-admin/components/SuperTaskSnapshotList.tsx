@@ -58,7 +58,7 @@ export function SuperTaskSnapshotList({ tasks }: SuperTaskSnapshotListProps) {
                   minWidth: 32,
                 }}
               >
-                {t.level_name || "—"}
+                {String(t.status_code ?? "").trim().toUpperCase() || "—"}
               </Typography>
               <Box sx={{ minWidth: 0 }}>
                 <Typography
@@ -74,7 +74,7 @@ export function SuperTaskSnapshotList({ tasks }: SuperTaskSnapshotListProps) {
                   {t.description}
                 </Typography>
                 <Typography sx={{ fontSize: 12, color: STYLE_TOKENS.colors.textMuted, marginTop: "2px" }}>
-                  {t.project_name || "—"}
+                  {(t.project_name || "—") + (t.filter_summary?.trim() ? ` · ${t.filter_summary.trim()}` : "")}
                 </Typography>
               </Box>
             </Box>

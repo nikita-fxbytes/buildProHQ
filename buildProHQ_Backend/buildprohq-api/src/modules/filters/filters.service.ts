@@ -1,11 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import {
   FilterCategory,
   FilterOption,
-  Level,
-  Trade,
 } from '../../infrastructure/persistence/typeorm/entities';
 import { MESSAGES } from '../../infrastructure/common/constants/messages';
 
@@ -19,7 +21,9 @@ function slugCode(input: string): string {
 }
 
 /** Trim, drop empties, dedupe within the request (case-insensitive), max 100. */
-function normalizeAndDedupeSubFilterNames(names: string[] | undefined): string[] {
+function normalizeAndDedupeSubFilterNames(
+  names: string[] | undefined,
+): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const raw of names ?? []) {
@@ -40,11 +44,111 @@ export class FiltersService {
     private readonly filterCategoryRepo: Repository<FilterCategory>,
     @InjectRepository(FilterOption)
     private readonly filterOptionRepo: Repository<FilterOption>,
-    @InjectRepository(Level)
-    private readonly levelRepo: Repository<Level>,
-    @InjectRepository(Trade)
-    private readonly tradeRepo: Repository<Trade>,
   ) {}
+
+  async list(params?: {
+    projectId?: string;
+    projectIds?: string[] | string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = Math.max(1, Number(params?.page ?? 1));
+    const limit = Math.min(100, Math.max(1, Number(params?.limit ?? 20)));
+    const offset = (page - 1) * limit;
+    const term = (params?.search ?? '').trim();
+
+    const idsFromArray = Array.isArray(params?.projectIds)
+      ? params.projectIds
+      : typeof params?.projectIds === 'string'
+        ? [params.projectIds]
+        : [];
+    const mergedIds = Array.from(
+      new Set(
+        [params?.projectId, ...idsFromArray]
+          .map((x) => (x ?? '').trim())
+          .filter(Boolean),
+      ),
+    );
+
+    try {
+      const catsQb = this.filterCategoryRepo
+        .createQueryBuilder('fc')
+        .select([
+          'fc.id AS id',
+          'fc.project_id AS projectId',
+          'fc.name AS name',
+          'fc.code AS code',
+          'fc.created_at AS createdAt',
+        ])
+        .where('fc.deleted_at IS NULL');
+
+      if (mergedIds.length) {
+        catsQb.andWhere('fc.project_id IN (:...projectIds)', {
+          projectIds: mergedIds,
+        });
+      }
+      if (term) {
+        catsQb.andWhere('fc.name ILIKE :q', { q: `%${term}%` });
+      }
+
+      catsQb.orderBy('fc.created_at', 'DESC').addOrderBy('fc.name', 'ASC');
+
+      const [cats, total] = await Promise.all([
+        catsQb.clone().offset(offset).limit(limit).getRawMany<any>(),
+        catsQb
+          .clone()
+          .select('COUNT(DISTINCT fc.id)', 'cnt')
+          .orderBy()
+          .getRawOne()
+          .then((r) => Number(r?.cnt ?? 0)),
+      ]);
+
+      const categoryIds = (Array.isArray(cats) ? cats : [])
+        .map((c) => c.id)
+        .filter(Boolean);
+      const options = categoryIds.length
+        ? await this.filterOptionRepo
+            .createQueryBuilder('fo')
+            .select([
+              'fo.id AS id',
+              'fo.filter_category_id AS filterCategoryId',
+              'fo.name AS name',
+              'fo.code AS code',
+              'fo.sort_order AS sortOrder',
+              'fo.created_at AS createdAt',
+            ])
+            .where('fo.deleted_at IS NULL')
+            .andWhere('fo.filter_category_id IN (:...categoryIds)', {
+              categoryIds,
+            })
+            .orderBy('fo.sort_order', 'ASC')
+            .addOrderBy('fo.name', 'ASC')
+            .getRawMany<any>()
+        : [];
+
+      return {
+        message: MESSAGES.COMMON.SUCCESS,
+        data: {
+          categories: Array.isArray(cats) ? cats : [],
+          options: Array.isArray(options) ? options : [],
+        },
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.max(1, Math.ceil(total / limit)),
+        },
+      };
+    } catch (error) {
+      console.error('FILTERS LIST ERROR:', error);
+      return {
+        message: MESSAGES.COMMON.SUCCESS,
+        data: { categories: [], options: [] },
+        meta: { total: 0, page, limit, totalPages: 1 },
+      };
+    }
+  }
 
   async saveFilter(params: {
     projectIds?: string[];
@@ -56,13 +160,17 @@ export class FiltersService {
     const hasId = Boolean((params.filterCategoryId ?? '').trim());
     const nameTrim = (params.filterCategoryName ?? '').trim();
     const hasName = Boolean(nameTrim);
-    const projectIds = (params.projectIds ?? []).map((p) => (p ?? '').trim()).filter(Boolean);
+    const projectIds = (params.projectIds ?? [])
+      .map((p) => (p ?? '').trim())
+      .filter(Boolean);
 
     if (!hasId && !hasName && !options.length) {
       throw new BadRequestException(MESSAGES.FILTERS.CATEGORY_OR_SUBS);
     }
     if (!hasId && !hasName && options.length) {
-      throw new BadRequestException(MESSAGES.FILTERS.CATEGORY_NAME_OR_ID_FOR_OPTIONS);
+      throw new BadRequestException(
+        MESSAGES.FILTERS.CATEGORY_NAME_OR_ID_FOR_OPTIONS,
+      );
     }
 
     if (hasId) {
@@ -81,7 +189,9 @@ export class FiltersService {
       throw new BadRequestException(MESSAGES.FILTERS.CATEGORY_NAME_REQUIRED);
     }
     if (!projectIds.length) {
-      throw new BadRequestException('projectIds is required for project-scoped filters');
+      throw new BadRequestException(
+        'projectIds is required for project-scoped filters',
+      );
     }
 
     for (const projectId of projectIds) {
@@ -120,7 +230,9 @@ export class FiltersService {
     });
     let nextSort =
       existingOpts.reduce((m, o) => Math.max(m, o.sortOrder ?? 0), 0) + 1;
-    const existingLower = new Set(existingOpts.map((o) => o.name.toLowerCase()));
+    const existingLower = new Set(
+      existingOpts.map((o) => o.name.toLowerCase()),
+    );
 
     for (const optName of options) {
       const key = optName.toLowerCase();
@@ -137,28 +249,6 @@ export class FiltersService {
     }
   }
 
-  async quickAddLevel(nameRaw: string) {
-    const name = nameRaw.trim();
-    if (!name) throw new BadRequestException(MESSAGES.COMMON.BAD_REQUEST);
-    const existing = await this.levelRepo.findOne({ where: { name, deletedAt: IsNull() }, select: { id: true } });
-    if (existing) return { message: MESSAGES.FILTERS.LEVEL_EXISTS };
-    const max = await this.levelRepo.find({ where: { deletedAt: IsNull() }, order: { sortOrder: 'DESC' }, take: 1, select: { sortOrder: true } });
-    const sortOrder = (max[0]?.sortOrder ?? 0) + 1;
-    await this.levelRepo.save(this.levelRepo.create({ name, code: slugCode(name) || `level_${sortOrder}`, sortOrder }));
-    return { message: MESSAGES.FILTERS.LEVEL_ADDED };
-  }
-
-  async quickAddTrade(nameRaw: string) {
-    const name = nameRaw.trim();
-    if (!name) throw new BadRequestException(MESSAGES.COMMON.BAD_REQUEST);
-    const existing = await this.tradeRepo.findOne({ where: { name, deletedAt: IsNull() }, select: { id: true } });
-    if (existing) return { message: MESSAGES.FILTERS.TRADE_EXISTS };
-    const max = await this.tradeRepo.find({ where: { deletedAt: IsNull() }, order: { sortOrder: 'DESC' }, take: 1, select: { sortOrder: true } });
-    const sortOrder = (max[0]?.sortOrder ?? 0) + 1;
-    await this.tradeRepo.save(this.tradeRepo.create({ name, code: slugCode(name) || `trade_${sortOrder}`, sortOrder }));
-    return { message: MESSAGES.FILTERS.TRADE_ADDED };
-  }
-
   async deleteCategory(id: string) {
     const category = await this.filterCategoryRepo.findOne({
       where: { id, deletedAt: IsNull() },
@@ -171,7 +261,10 @@ export class FiltersService {
       { filterCategoryId: id, deletedAt: IsNull() },
       { deletedAt: new Date() },
     );
-    await this.filterCategoryRepo.update({ id, deletedAt: IsNull() }, { deletedAt: new Date() });
+    await this.filterCategoryRepo.update(
+      { id, deletedAt: IsNull() },
+      { deletedAt: new Date() },
+    );
     return { message: MESSAGES.FILTERS.DELETED };
   }
 
@@ -181,8 +274,10 @@ export class FiltersService {
       select: { id: true },
     });
     if (!opt) throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
-    await this.filterOptionRepo.update({ id, deletedAt: IsNull() }, { deletedAt: new Date() });
+    await this.filterOptionRepo.update(
+      { id, deletedAt: IsNull() },
+      { deletedAt: new Date() },
+    );
     return { message: MESSAGES.FILTERS.OPTION_DELETED };
   }
 }
-

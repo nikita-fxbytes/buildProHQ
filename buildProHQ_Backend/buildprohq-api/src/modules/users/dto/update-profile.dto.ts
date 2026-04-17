@@ -19,9 +19,13 @@ export class UpdateProfileDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  @ValidateIf((o) => typeof o.avatarUrl === 'string' && o.avatarUrl.trim().length > 0)
-  @IsUrl({ require_protocol: true, require_tld: false }, { message: 'avatarUrl must be a valid URL' })
+  @ValidateIf(
+    (o) => typeof o.avatarUrl === 'string' && o.avatarUrl.trim().length > 0,
+  )
+  @IsUrl(
+    { require_protocol: true, require_tld: false },
+    { message: 'avatarUrl must be a valid URL' },
+  )
   @MaxLength(1024)
   avatarUrl?: string;
 }
-

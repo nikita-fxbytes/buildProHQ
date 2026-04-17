@@ -5,7 +5,6 @@ import { ROUTES } from "@/constants/routes";
 export type PortalNavIconName =
   | "actionItems"
   | "addActionItem"
-  | "completedItems"
   | "superAdmin"
   | "analytics"
   | "manageFilters"
@@ -13,15 +12,12 @@ export type PortalNavIconName =
   | "projects"
   | "manager"
   | "addUser"
-  | "assignedTasks"
-  | "myCompleted";
+  | "assignedTasks";
 
 export type SidebarBadgeState = {
   openTasks: number;
-  completedTasks: number;
   users: number;
   tradeAssigned: number;
-  tradeCompleted: number;
 };
 
 export type PortalNavItemConfig = {
@@ -52,13 +48,6 @@ const FIELD_SECTIONS: PortalNavSectionConfig[] = [
         badge: "openTasks",
       },
       { href: ROUTES.FIELD_ADD_TASK, label: "Add Action Item", icon: "addActionItem" },
-      {
-        href: ROUTES.FIELD_COMPLETED,
-        label: "Completed Items",
-        icon: "completedItems",
-        badge: "completedTasks",
-        badgeClass: "blue",
-      },
     ],
   },
 ];
@@ -73,13 +62,6 @@ const TRADE_SECTIONS: PortalNavSectionConfig[] = [
         label: "My Assigned Tasks",
         icon: "assignedTasks",
         badge: "tradeAssigned",
-      },
-      {
-        href: ROUTES.TRADE_COMPLETED,
-        label: "My Completed",
-        icon: "myCompleted",
-        badge: "tradeCompleted",
-        badgeClass: "blue",
       },
     ],
   },
@@ -97,13 +79,6 @@ const MANAGER_SECTIONS: PortalNavSectionConfig[] = [
         badge: "openTasks",
       },
       { href: ROUTES.MANAGER_ADD_TASK, label: "Add Action Item", icon: "addActionItem" },
-      {
-        href: ROUTES.MANAGER_COMPLETED,
-        label: "Completed Items",
-        icon: "completedItems",
-        badge: "completedTasks",
-        badgeClass: "blue",
-      },
     ],
   },
   {
@@ -124,6 +99,7 @@ const SUPER_ADMIN_SECTIONS: PortalNavSectionConfig[] = [
     items: [
       { href: ROUTES.SUPER_DASHBOARD, label: "Super Dashboard", icon: "superAdmin" },
       { href: ROUTES.SUPER_MANAGEMENT_DASHBOARD, label: "Management Dashboard", icon: "manager" },
+      { href: ROUTES.SUPER_ANALYTICS, label: "Analytics", icon: "analytics" },
     ],
   },
   {
@@ -132,14 +108,6 @@ const SUPER_ADMIN_SECTIONS: PortalNavSectionConfig[] = [
     items: [
       { href: ROUTES.SUPER_PROJECTS, label: "Projects", icon: "projects" },
       { href: ROUTES.SUPER_TASKS, label: "All Action Items", icon: "actionItems", badge: "openTasks" },
-      {
-        href: ROUTES.SUPER_COMPLETED,
-        label: "All Completed",
-        icon: "completedItems",
-        badge: "completedTasks",
-        badgeClass: "blue",
-      },
-      { href: ROUTES.SUPER_ANALYTICS, label: "Analytics", icon: "analytics" },
       { href: ROUTES.SUPER_USERS, label: "All Users", icon: "users", badge: "users" },
       { href: ROUTES.SUPER_FILTERS, label: "Filters", icon: "manageFilters" },
     ],

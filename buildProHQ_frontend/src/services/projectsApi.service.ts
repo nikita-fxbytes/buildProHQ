@@ -80,6 +80,15 @@ export type AssignProjectMemberBody = {
   projectRole?: string;
 };
 
+/** Dynamic filter definitions for a project (task form). */
+export type ProjectFilterDefinition = {
+  id: string;
+  name: string;
+  hasSubFilters: boolean;
+  isMultiSelect: boolean;
+  subFilters: Array<{ id: string; name: string }>;
+};
+
 export const projectsApi = {
   async listMine(): Promise<MyProjectItem[]> {
     const { data } = await apiClient.get<ApiEnvelope<MyProjectItem[]>>("/v1/projects/my");
@@ -87,7 +96,13 @@ export const projectsApi = {
   },
 
   async search(body: SearchProjectsBody): Promise<{ items: ProjectListItem[]; meta: ListProjectsResponseMeta }> {
-    const { data } = await apiClient.post<ApiEnvelope<ProjectListItem[]>>("/v1/projects/search", body);
+    const safeLimit = Math.min(body.limit || 20, 100);
+    const safePage = Math.max(1, body.page || 1);
+    const { data } = await apiClient.post<ApiEnvelope<ProjectListItem[]>>("/v1/projects/search", {
+      ...body,
+      page: safePage,
+      limit: safeLimit,
+    });
     const meta = safeListMeta(data.meta) as ListProjectsResponseMeta;
     return { items: Array.isArray(data.data) ? data.data : [], meta };
   },
@@ -146,5 +161,11 @@ export const projectsApi = {
     const { data } = await apiClient.delete<ApiEnvelope<{ message: string }>>(`/v1/projects/${projectId}`);
     return data.data;
   },
-};
 
+  async getFilters(projectId: string): Promise<{ filters: ProjectFilterDefinition[] }> {
+    const { data } = await apiClient.get<ApiEnvelope<{ filters: ProjectFilterDefinition[] }>>(
+      `/v1/projects/${encodeURIComponent(projectId)}/filters`,
+    );
+    return data.data ?? { filters: [] };
+  },
+};

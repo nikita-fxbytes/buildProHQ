@@ -1,5 +1,16 @@
-import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { LookupsService } from './lookups.service';
 import { MESSAGES } from '../../infrastructure/common/constants/messages';
@@ -11,16 +22,6 @@ import { isUUID } from 'class-validator';
 @Controller({ path: 'lookups', version: '1' })
 export class LookupsController {
   constructor(private readonly lookupsService: LookupsService) {}
-
-  @Get('trades')
-  getTrades() {
-    return this.lookupsService.getTrades();
-  }
-
-  @Get('levels')
-  getLevels() {
-    return this.lookupsService.getLevels();
-  }
 
   @Get('task-statuses')
   getTaskStatuses() {
@@ -67,7 +68,9 @@ export class LookupsController {
       return this.lookupsService.getFilterOptions();
     }
     if (!isUUID(filterCategoryId, 4)) {
-      throw new BadRequestException(MESSAGES.LOOKUPS.FILTER_CATEGORY_ID_INVALID);
+      throw new BadRequestException(
+        MESSAGES.LOOKUPS.FILTER_CATEGORY_ID_INVALID,
+      );
     }
     return this.lookupsService.getFilterOptions(filterCategoryId);
   }

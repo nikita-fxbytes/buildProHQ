@@ -45,11 +45,14 @@ export function sanitizeRichHtml(html: string): string {
   s = s.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
   s = s.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
 
-  return s.replace(/<\/?([a-zA-Z][a-zA-Z0-9:-]*)\b[^>]*>/g, (full, name: string) => {
-    const lower = name.toLowerCase();
-    if (!SANITIZE_TAGS.has(lower)) return '';
-    if (full.startsWith('</')) return `</${lower}>`;
-    if (lower === 'br') return '<br>';
-    return `<${lower}>`;
-  });
+  return s.replace(
+    /<\/?([a-zA-Z][a-zA-Z0-9:-]*)\b[^>]*>/g,
+    (full, name: string) => {
+      const lower = name.toLowerCase();
+      if (!SANITIZE_TAGS.has(lower)) return '';
+      if (full.startsWith('</')) return `</${lower}>`;
+      if (lower === 'br') return '<br>';
+      return `<${lower}>`;
+    },
+  );
 }

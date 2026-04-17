@@ -23,7 +23,10 @@ export class NotificationsController {
 
   @Get()
   @ApiOperation({ summary: 'Get current user notifications' })
-  findAll(@CurrentUser() user: AuthUser, @Query() query: QueryNotificationsDto) {
+  findAll(
+    @CurrentUser() user: AuthUser,
+    @Query() query: QueryNotificationsDto,
+  ) {
     return this.notificationsService.findAll(user, query);
   }
 

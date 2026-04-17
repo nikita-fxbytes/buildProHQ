@@ -5,5 +5,6 @@ export const TASK_PRIORITY_CODES = {
   critical: 'critical',
 } as const;
 
-export const ALLOWED_TASK_PRIORITY_CODES = new Set<string>(Object.values(TASK_PRIORITY_CODES));
-
+export const ALLOWED_TASK_PRIORITY_CODES = new Set<string>(
+  Object.values(TASK_PRIORITY_CODES),
+);

@@ -12,15 +12,19 @@ import { useTaskFormController } from "@/features/tasks/task-form/taskFormContro
 import { isUuidV4 } from "@/utils/taskRouteParams";
 
 export function SuperTaskEditContainer(props: { taskId: string }) {
-  if (!isUuidV4(props.taskId)) {
+  const isValidTaskId = isUuidV4(props.taskId);
+  const c = useTaskFormController({
+    mode: "edit",
+    taskId: isValidTaskId ? props.taskId : "",
+  });
+
+  if (!isValidTaskId) {
     return (
       <Typography sx={{ p: 2, fontWeight: 700 }} role="alert">
         This task link is invalid or incomplete.
       </Typography>
     );
   }
-
-  const c = useTaskFormController({ mode: "edit", taskId: props.taskId });
 
   return (
     <Box sx={{ maxWidth: "640px" }}>

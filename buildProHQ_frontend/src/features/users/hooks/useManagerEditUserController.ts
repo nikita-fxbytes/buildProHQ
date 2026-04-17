@@ -21,10 +21,10 @@ import type { UploadItem } from "@/components/common/FormUploadField";
 import { resolvePublicUrl } from "@/utils/urls";
 import { emitUsersChanged } from "@/utils/taskEvents";
 
-export function useManagerEditUserController() {
-  const params = useParams<{ id: string }>();
+export function useManagerEditUserController(options?: { basePath?: string }) {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const id = params.id ?? "";
+  const basePath = options?.basePath ?? ROUTES.MANAGER_USERS;
   const [lookups, setLookups] = useState<UserCreateLookups | null>(null);
   const [loadedUser, setLoadedUser] = useState<UserListItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,7 @@ export function useManagerEditUserController() {
         }
       } catch {
         appToast.error(MESSAGES.common.somethingWrong);
-        router.push(ROUTES.MANAGER_USERS);
+        router.push(basePath);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -115,7 +115,7 @@ export function useManagerEditUserController() {
       });
       emitUsersChanged();
       appToast.success(MESSAGES.user.updated);
-      router.push(ROUTES.MANAGER_USERS);
+      router.push(basePath);
     } catch (e) {
       appToast.error(getApiErrorMessage(e, MESSAGES.common.saveFailed));
     } finally {
@@ -124,7 +124,7 @@ export function useManagerEditUserController() {
   });
 
   const onCancel = () => {
-    router.push(ROUTES.MANAGER_USERS);
+    router.push(basePath);
   };
 
   return {

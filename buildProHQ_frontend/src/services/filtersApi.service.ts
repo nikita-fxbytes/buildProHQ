@@ -19,14 +19,6 @@ export const filtersApi = {
     await apiClient.post<ApiEnvelope<{ message: string }>>("/v1/filters", body);
   },
 
-  async quickAddLevel(levelName: string): Promise<void> {
-    await apiClient.post<ApiEnvelope<{ message: string }>>("/v1/filters/levels", { levelName });
-  },
-
-  async quickAddTrade(tradeName: string): Promise<void> {
-    await apiClient.post<ApiEnvelope<{ message: string }>>("/v1/filters/trades", { tradeName });
-  },
-
   async deleteCategory(id: string): Promise<void> {
     await apiClient.delete<ApiEnvelope<{ message: string }>>(`/v1/filters/categories/${encodeURIComponent(id)}`);
   },

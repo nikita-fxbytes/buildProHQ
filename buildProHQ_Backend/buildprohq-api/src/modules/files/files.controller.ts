@@ -130,7 +130,12 @@ export class FilesController {
       throw new BadRequestException(MESSAGES.FILES.REQUIRED);
     }
     try {
-      assertImageUploadAllowed(file.mimetype, file.originalname, file.size, maxBytes);
+      assertImageUploadAllowed(
+        file.mimetype,
+        file.originalname,
+        file.size,
+        maxBytes,
+      );
     } catch (e) {
       fs.unlink(this.filesService.resolveStoredPath(file.filename), () => {});
       throw e;

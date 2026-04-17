@@ -44,6 +44,7 @@ export type ManagerUsersListViewProps = {
   search: string;
   roleFilter: RoleFilter;
   addUserHref?: string;
+  editUserHref?: (id: string) => string;
   sortKey?: "createdAt" | "name" | "email" | "role" | "tasks" | "lastLoginAt" | null;
   sortDirection?: "asc" | "desc";
   onSortColumn?: (key: "createdAt" | "name" | "email" | "role" | "tasks" | "lastLoginAt") => void;
@@ -69,6 +70,7 @@ export function ManagerUsersListView({
   search,
   roleFilter,
   addUserHref = ROUTES.MANAGER_ADD_USER,
+  editUserHref,
   sortKey,
   sortDirection,
   onSortColumn,
@@ -213,7 +215,7 @@ export function ManagerUsersListView({
                     <Tooltip title="Edit" arrow>
                       <IconButton
                         component={Link}
-                        href={`${ROUTES.MANAGER_USERS}/${user.id}/edit`}
+                        href={editUserHref ? editUserHref(String(user.id)) : `${ROUTES.MANAGER_USERS}/${user.id}/edit`}
                         aria-label="Edit"
                         size="small"
                         sx={{

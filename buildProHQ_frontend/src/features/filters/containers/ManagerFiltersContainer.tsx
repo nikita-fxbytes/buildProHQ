@@ -1,10 +1,10 @@
 "use client";
 
-import { ManageFiltersView } from "@/components/filters/ManageFiltersView";
-import { useManageFiltersController } from "@/features/filters/hooks/useManageFiltersController";
+import { SuperFiltersListView } from "@/components/filters/SuperFiltersListView";
+import { useSuperFiltersListController } from "@/features/filters/hooks/useSuperFiltersListController";
 
+/** Manager portal: same project-filter list + CRUD via API (add uses super route when available). */
 export function ManagerFiltersContainer() {
-  const controller = useManageFiltersController();
-  return <ManageFiltersView {...controller} />;
+  const c = useSuperFiltersListController();
+  return <SuperFiltersListView {...c} addFilterHref={null} />;
 }
-

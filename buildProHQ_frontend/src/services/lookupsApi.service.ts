@@ -40,14 +40,6 @@ export type FilterOptionApi = {
 };
 
 export const lookupsApi = {
-  async getTrades(): Promise<LookupItem[]> {
-    const { data } = await apiClient.get<ApiEnvelope<LookupItem[]>>("/v1/lookups/trades");
-    return data.data;
-  },
-  async getLevels(): Promise<LookupItem[]> {
-    const { data } = await apiClient.get<ApiEnvelope<LookupItem[]>>("/v1/lookups/levels");
-    return data.data;
-  },
   async getTaskPriorities(): Promise<LookupItem[]> {
     const { data } = await apiClient.get<ApiEnvelope<LookupItem[]>>(
       "/v1/lookups/task-priorities",

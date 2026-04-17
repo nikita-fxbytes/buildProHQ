@@ -7,8 +7,6 @@ import { CommentTaskDto } from './dto/comment-task.dto';
 import { CompleteTaskDto } from './dto/complete-task.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { PagedQueryDto } from './dto/paged-query.dto';
-import { QueryTasksDto } from './dto/query-tasks.dto';
-import { SearchCompletedTasksDto } from './dto/search-completed-tasks.dto';
 import { SearchOpenTasksDto } from './dto/search-open-tasks.dto';
 import { TaskStatsQueryDto } from './dto/task-stats-query.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
@@ -40,14 +38,6 @@ export class TasksService {
     return this.queries.searchAll(user, dto);
   }
 
-  listCompleted(user: AuthUser, query: QueryTasksDto) {
-    return this.queries.listCompleted(user, query);
-  }
-
-  searchCompleted(user: AuthUser, dto: SearchCompletedTasksDto) {
-    return this.queries.searchCompleted(user, dto);
-  }
-
   getById(id: string, user: AuthUser) {
     return this.queries.getById(id, user);
   }
@@ -63,7 +53,11 @@ export class TasksService {
   delete(
     id: string,
     user: AuthUser,
-    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+    meta?: {
+      ipAddress?: string | null;
+      requestId?: string | null;
+      userAgent?: string | null;
+    },
   ) {
     return this.commands.delete(id, user, meta);
   }
@@ -72,7 +66,11 @@ export class TasksService {
     id: string,
     dto: AssignTaskDto,
     user: AuthUser,
-    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+    meta?: {
+      ipAddress?: string | null;
+      requestId?: string | null;
+      userAgent?: string | null;
+    },
   ) {
     return this.commands.assign(id, dto, user, meta);
   }
@@ -111,7 +109,11 @@ export class TasksService {
     id: string,
     dto: UpdateTaskStatusDto,
     user: AuthUser,
-    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+    meta?: {
+      ipAddress?: string | null;
+      requestId?: string | null;
+      userAgent?: string | null;
+    },
   ) {
     return this.commands.updateStatus(id, dto, user, meta);
   }
@@ -144,8 +146,11 @@ export class TasksService {
     return this.commands.bulkDelete(dto, user);
   }
 
-  addAttachmentFromUpload(taskId: string, dto: AddAttachmentDto, user: AuthUser) {
+  addAttachmentFromUpload(
+    taskId: string,
+    dto: AddAttachmentDto,
+    user: AuthUser,
+  ) {
     return this.commands.addAttachment(taskId, dto, user);
   }
 }
-

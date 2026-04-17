@@ -8,16 +8,12 @@ import { DataSource, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import {
   ALL_TYPEORM_ENTITIES,
-  FilterCategory,
-  FilterOption,
-  Level,
   Project,
   ProjectUser,
   Role,
   Task,
   TaskPriority,
   TaskStatus,
-  Trade,
   User,
   UserRole,
   UserStatus,
@@ -94,8 +90,6 @@ async function ensureTask(params: {
   projectId: string;
   statusId: string;
   priorityId: string;
-  levelId: string;
-  tradeId: string;
   createdByUserId: string;
   assignedToUserId?: string;
   notes?: string;
@@ -114,8 +108,6 @@ async function ensureTask(params: {
     projectId: params.projectId,
     statusId: params.statusId,
     priorityId: params.priorityId,
-    levelId: params.levelId,
-    tradeId: params.tradeId,
     createdByUserId: params.createdByUserId,
     assignedToUserId: params.assignedToUserId ?? null,
     notes: params.notes ?? null,
@@ -133,10 +125,6 @@ async function run(): Promise<void> {
   const roleRepo = dataSource.getRepository(Role);
   const taskStatusRepo = dataSource.getRepository(TaskStatus);
   const taskPriorityRepo = dataSource.getRepository(TaskPriority);
-  const tradeRepo = dataSource.getRepository(Trade);
-  const levelRepo = dataSource.getRepository(Level);
-  const filterCategoryRepo = dataSource.getRepository(FilterCategory);
-  const filterOptionRepo = dataSource.getRepository(FilterOption);
   const projectRepo = dataSource.getRepository(Project);
   const projectUserRepo = dataSource.getRepository(ProjectUser);
 
@@ -210,77 +198,13 @@ async function run(): Promise<void> {
     sortOrder: 4,
   });
 
-  const painterTrade = await getOrCreateByCode(tradeRepo, 'painter', {
-    name: 'Painter',
-    sortOrder: 1,
-  });
-  const electricianTrade = await getOrCreateByCode(tradeRepo, 'electrician', {
-    name: 'Electrician',
-    sortOrder: 2,
-  });
-  await getOrCreateByCode(tradeRepo, 'plumber', {
-    name: 'Plumber',
-    sortOrder: 3,
-  });
-  await getOrCreateByCode(tradeRepo, 'plasterer', {
-    name: 'Plasterer',
-    sortOrder: 4,
-  });
-
-  const level1 = await getOrCreateByCode(levelRepo, 'l1', {
-    name: 'L1',
-    sortOrder: 1,
-  });
-  const level2 = await getOrCreateByCode(levelRepo, 'l2', {
-    name: 'L2',
-    sortOrder: 2,
-  });
-  await getOrCreateByCode(levelRepo, 'l3', { name: 'L3', sortOrder: 3 });
-  for (let i = 4; i <= 10; i++) {
-    await getOrCreateByCode(levelRepo, `l${i}`, {
-      name: `L${i}`,
-      sortOrder: i,
-    });
-  }
-
-  const tradeCategory = await getOrCreateByCode(filterCategoryRepo, 'trade', {
-    name: 'Trade',
-    isSystemCategory: true,
-    projectId: null,
-  });
-  const levelCategory = await getOrCreateByCode(filterCategoryRepo, 'level', {
-    name: 'Level',
-    isSystemCategory: true,
-    projectId: null,
-  });
-
-  const ensureFilterOption = async (
-    filterCategoryId: string,
-    code: string,
-    name: string,
-    sortOrder: number,
-  ): Promise<void> => {
-    const existing = await filterOptionRepo.findOne({
-      where: { filterCategoryId, code, deletedAt: IsNull() },
-    });
-    if (!existing) {
-      const row = filterOptionRepo.create({
-        filterCategoryId,
-        code,
-        name,
-        sortOrder,
-      });
-      await filterOptionRepo.save(row);
-    }
-  };
-
-  await ensureFilterOption(tradeCategory.id, 'painter', 'Painter', 1);
-  await ensureFilterOption(tradeCategory.id, 'electrician', 'Electrician', 2);
-  await ensureFilterOption(levelCategory.id, 'l1', 'L1', 1);
-  await ensureFilterOption(levelCategory.id, 'l2', 'L2', 2);
+  // Level/Trade lookups and legacy filter categories are removed. Seed only task statuses/priorities + users/projects.
 
   // Projects
-  const ensureProject = async (code: string, name: string): Promise<Project> => {
+  const ensureProject = async (
+    code: string,
+    name: string,
+  ): Promise<Project> => {
     const existing = await projectRepo.findOne({
       where: { code, deletedAt: IsNull() },
     });
@@ -357,8 +281,6 @@ async function run(): Promise<void> {
     projectId: p1.id,
     statusId: openStatus.id,
     priorityId: highPriority.id,
-    levelId: level2.id,
-    tradeId: painterTrade.id,
     createdByUserId: field.id,
     notes: 'Open flow seed task',
   });
@@ -367,8 +289,6 @@ async function run(): Promise<void> {
     projectId: p1.id,
     statusId: openStatus.id,
     priorityId: mediumPriority.id,
-    levelId: level1.id,
-    tradeId: electricianTrade.id,
     createdByUserId: field.id,
     assignedToUserId: trade.id,
     notes: 'Assigned to trade user',
@@ -378,36 +298,10 @@ async function run(): Promise<void> {
     projectId: p2.id,
     statusId: completedStatus.id,
     priorityId: lowPriority.id,
-    levelId: level1.id,
-    tradeId: painterTrade.id,
     createdByUserId: field.id,
     assignedToUserId: trade.id,
     notes: 'Completed flow seed task',
   });
-
-  // Project-wise custom filters (matches HTML idea)
-  const ensureProjectFilter = async (projectId: string, name: string, subs: string[]) => {
-    const existing = await filterCategoryRepo.findOne({
-      where: { projectId, name, deletedAt: IsNull() },
-    });
-    const cat =
-      existing ??
-      (await filterCategoryRepo.save(
-        filterCategoryRepo.create({
-          projectId,
-          code: `custom_${name.toLowerCase().replace(/\s+/g, '_')}`,
-          name,
-          isSystemCategory: false,
-        }),
-      ));
-    let order = 1;
-    for (const s of subs) {
-      const key = s.toLowerCase().replace(/\s+/g, '_');
-      await ensureFilterOption(cat.id, `opt_${key}`, s, order++);
-    }
-  };
-  await ensureProjectFilter(p1.id, 'Zone', ['North', 'South', 'East', 'West']);
-  await ensureProjectFilter(p2.id, 'Floor', ['Ground', 'First', 'Second']);
 
   await dataSource.destroy();
   console.log('Seed completed');

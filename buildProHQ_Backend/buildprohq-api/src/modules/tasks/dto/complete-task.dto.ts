@@ -7,7 +7,10 @@ export class CompleteTaskDto {
   @IsString()
   notes?: string;
 
-  @ApiPropertyOptional({ type: [String], description: 'List of photo URLs for verification' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'List of photo URLs for verification',
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -18,4 +21,3 @@ export class CompleteTaskDto {
   @IsString()
   gps?: string;
 }
-

@@ -23,24 +23,25 @@ export const MESSAGES = {
     CATEGORY_ID_INVALID:
       'Filter category: choose a valid saved category from the list, or leave it blank and type a new category name.',
     CATEGORY_NAME_STRING: 'Filter category name must be text.',
-    CATEGORY_NAME_MIN_LENGTH: 'Filter category name must be at least 2 characters.',
-    CATEGORY_NAME_MAX_LENGTH: 'Filter category name must be at most 100 characters.',
+    CATEGORY_NAME_MIN_LENGTH:
+      'Filter category name must be at least 2 characters.',
+    CATEGORY_NAME_MAX_LENGTH:
+      'Filter category name must be at most 100 characters.',
     SUB_FILTER_NAMES_ARRAY: 'Sub-filters must be sent as a list of names.',
     SUB_FILTER_NAMES_MAX_COUNT: 'You can add at most 100 sub-filters at once.',
     SUB_FILTER_NAME_STRING: 'Each sub-filter name must be text.',
-    SUB_FILTER_NAME_MIN_LENGTH: 'Each sub-filter name must be at least 1 character.',
-    SUB_FILTER_NAME_MAX_LENGTH: 'Each sub-filter name must be at most 100 characters.',
+    SUB_FILTER_NAME_MIN_LENGTH:
+      'Each sub-filter name must be at least 1 character.',
+    SUB_FILTER_NAME_MAX_LENGTH:
+      'Each sub-filter name must be at most 100 characters.',
   },
   TASK_VALIDATION: {
     PROJECT_ID_INVALID: 'Project must be a valid identifier',
     STATUS_ID_REQUIRED: 'Please select a valid task status',
     STATUS_ID_INVALID: 'Task status must be a valid identifier',
-    STATUS_NAME_INVALID: 'Task status must be one of: Open, In Progress, Completed',
+    STATUS_NAME_INVALID:
+      'Task status must be one of: Open, In Progress, Completed',
     PRIORITY_ID_INVALID: 'Priority must be a valid identifier',
-    LEVEL_ID_REQUIRED: 'Please select a level',
-    LEVEL_ID_INVALID: 'Level must be a valid identifier',
-    TRADE_ID_REQUIRED: 'Please select a trade',
-    TRADE_ID_INVALID: 'Trade must be a valid identifier',
     DESCRIPTION_REQUIRED: 'Description is required',
     DESCRIPTION_MIN: 'Description must be at least 3 characters',
     ASSIGNED_USER_ID_INVALID: 'Assigned user must be a valid identifier',
@@ -53,8 +54,7 @@ export const MESSAGES = {
   },
   FILES: {
     REQUIRED: 'Please choose a file to upload',
-    INVALID_TYPE:
-      'Please upload a valid image file (JPG, PNG, HEIC, or WebP)',
+    INVALID_TYPE: 'Please upload a valid image file (JPG, PNG, HEIC, or WebP)',
     TOO_LARGE: 'File is too large',
     NOT_FOUND: 'File not found',
   },
@@ -90,10 +90,6 @@ export const MESSAGES = {
     CATEGORY_NAME_REQUIRED:
       'A category name is required when no existing category is selected',
     SAVED: 'Filter saved',
-    LEVEL_ADDED: 'Level added',
-    LEVEL_EXISTS: 'Level already exists',
-    TRADE_ADDED: 'Trade added',
-    TRADE_EXISTS: 'Trade already exists',
     DELETED: 'Filter deleted',
     OPTION_DELETED: 'Sub-filter deleted',
   },

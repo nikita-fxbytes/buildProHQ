@@ -17,8 +17,8 @@ import {
   TaskAssignmentResponse,
   TaskComment,
   TaskCompletion,
-  TaskFilterValue,
   TaskHistory,
+  TaskFilterRow,
   TaskPriority,
   TaskStatus,
 } from '../../infrastructure/persistence/typeorm/entities';
@@ -40,6 +40,7 @@ import {
 } from './utils/task-access';
 import { ALLOWED_TASK_PRIORITY_CODES } from './constants/task.constants';
 import { TasksQueriesRepository } from './tasks-queries.repository';
+import { ProjectFiltersService } from '../project-filters/project-filters.service';
 
 @Injectable()
 export class TasksCommandsService {
@@ -67,6 +68,7 @@ export class TasksCommandsService {
     private readonly taskAttachments: TaskAttachmentsService,
     private readonly audit: AuditService,
     private readonly queries: TasksQueriesRepository,
+    private readonly projectFilters: ProjectFiltersService,
   ) {}
 
   async create(dto: CreateTaskDto, user: AuthUser) {
@@ -74,15 +76,13 @@ export class TasksCommandsService {
     if (dto.priorityId) {
       await this.assertAllowedPriorityId(dto.priorityId);
     }
-
     const assignedIds = Array.from(
       new Set(
-        (
-          dto.assignedToUserIds?.length
-            ? dto.assignedToUserIds
-            : dto.assignedToUserId
-              ? [dto.assignedToUserId]
-              : []
+        (dto.assignedToUserIds?.length
+          ? dto.assignedToUserIds
+          : dto.assignedToUserId
+            ? [dto.assignedToUserId]
+            : []
         ).filter((x): x is string => Boolean(x)),
       ),
     );
@@ -92,8 +92,6 @@ export class TasksCommandsService {
       projectId: dto.projectId,
       statusId: dto.statusId,
       priorityId: dto.priorityId ?? null,
-      levelId: dto.levelId,
-      tradeId: dto.tradeId,
       createdByUserId: user.id,
       assignedToUserId: assignedIds[0] ?? null,
       description: sanitizeRichHtml(dto.description),
@@ -103,6 +101,12 @@ export class TasksCommandsService {
       updatedBy: user.id,
     });
     const saved = await this.taskRepository.save(task);
+
+    await this.projectFilters.replaceTaskFilters(
+      saved.id,
+      dto.projectId,
+      dto.taskFilterValues,
+    );
 
     const taskHistory = this.taskHistoryRepository.create({
       taskId: saved.id,
@@ -153,15 +157,13 @@ export class TasksCommandsService {
     if (dto.priorityId) {
       await this.assertAllowedPriorityId(dto.priorityId);
     }
-
     const nextAssignedIds = Array.from(
       new Set(
-        (
-          dto.assignedToUserIds?.length
-            ? dto.assignedToUserIds
-            : dto.assignedToUserId
-              ? [dto.assignedToUserId]
-              : []
+        (dto.assignedToUserIds?.length
+          ? dto.assignedToUserIds
+          : dto.assignedToUserId
+            ? [dto.assignedToUserId]
+            : []
         ).filter((x): x is string => Boolean(x)),
       ),
     );
@@ -171,14 +173,28 @@ export class TasksCommandsService {
       projectId: dto.projectId ?? undefined,
       statusId: dto.statusId ?? undefined,
       priorityId: dto.priorityId ?? undefined,
-      levelId: dto.levelId ?? undefined,
-      tradeId: dto.tradeId ?? undefined,
+      // level/trade removed (dynamic filters only)
       assignedToUserId: nextAssignedIds[0] ?? null,
-      description: dto.description ? sanitizeRichHtml(dto.description) : undefined,
+      description: dto.description
+        ? sanitizeRichHtml(dto.description)
+        : undefined,
       notes: dto.notes ?? undefined,
-      dueAt: dto.dueAt ? new Date(dto.dueAt) : dto.dueAt === null ? null : undefined,
+      dueAt: dto.dueAt
+        ? new Date(dto.dueAt)
+        : dto.dueAt === null
+          ? null
+          : undefined,
       updatedBy: user.id,
     } as any);
+
+    if (dto.taskFilterValues !== undefined) {
+      const nextProjectId = dto.projectId ?? existing.project_id;
+      await this.projectFilters.replaceTaskFilters(
+        id,
+        nextProjectId,
+        dto.taskFilterValues,
+      );
+    }
 
     // Replace assignments if provided.
     if (dto.assignedToUserIds || dto.assignedToUserId) {
@@ -208,12 +224,17 @@ export class TasksCommandsService {
         oldStatusId: existing.status_id,
         newStatusId: dto.statusId ?? existing.status_id,
         oldAssigneeUserId: existing.assigned_to_user_id ?? null,
-        newAssigneeUserId: nextAssignedIds[0] ?? existing.assigned_to_user_id ?? null,
+        newAssigneeUserId:
+          nextAssignedIds[0] ?? existing.assigned_to_user_id ?? null,
         changeReason: 'task_updated',
         changedBy: user.id,
         createdBy: user.id,
         updatedBy: user.id,
-        metadata: { assignedToUserIds: nextAssignedIds.length ? nextAssignedIds : undefined },
+        metadata: {
+          assignedToUserIds: nextAssignedIds.length
+            ? nextAssignedIds
+            : undefined,
+        },
       } as any),
     );
 
@@ -232,7 +253,11 @@ export class TasksCommandsService {
   async delete(
     id: string,
     user: AuthUser,
-    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+    meta?: {
+      ipAddress?: string | null;
+      requestId?: string | null;
+      userAgent?: string | null;
+    },
   ) {
     const existing = await this.queries.getById(id, user);
     enforceTaskDeleteScope(user, existing);
@@ -252,11 +277,14 @@ export class TasksCommandsService {
       const completionRepo = em.getRepository(TaskCompletion);
       const commentRepo = em.getRepository(TaskComment);
       const historyRepo = em.getRepository(TaskHistory);
-      const filterValueRepo = em.getRepository(TaskFilterValue);
+      const filterValueRepo = em.getRepository(TaskFilterRow);
       const attachmentRepo = em.getRepository(Attachment);
 
       await taskRepo.softDelete(id);
-      await taskRepo.update(id, { updatedBy: user.id, statusId: deletedStatus.id });
+      await taskRepo.update(id, {
+        updatedBy: user.id,
+        statusId: deletedStatus.id,
+      });
 
       const assignments = await assignmentRepo.find({
         where: { taskId: id, deletedAt: IsNull() },
@@ -327,7 +355,11 @@ export class TasksCommandsService {
     id: string,
     dto: AssignTaskDto,
     user: AuthUser,
-    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+    meta?: {
+      ipAddress?: string | null;
+      requestId?: string | null;
+      userAgent?: string | null;
+    },
   ) {
     const existing = await this.queries.getById(id, user);
     enforceTaskWriteScope(user, existing);
@@ -335,7 +367,10 @@ export class TasksCommandsService {
     const anyDto = dto as any;
     const assignedIds: string[] = Array.from(
       new Set(
-        (Array.isArray(anyDto.assignedToUserIds) ? anyDto.assignedToUserIds : [dto.assigneeUserId]).filter(
+        (Array.isArray(anyDto.assignedToUserIds)
+          ? anyDto.assignedToUserIds
+          : [dto.assigneeUserId]
+        ).filter(
           (x): x is string => typeof x === 'string' && x.trim().length > 0,
         ),
       ),
@@ -489,14 +524,22 @@ export class TasksCommandsService {
         );
       }
     }
-    return { id: saved.id, commentAdded: true, message: MESSAGES.TASKS.UPDATED };
+    return {
+      id: saved.id,
+      commentAdded: true,
+      message: MESSAGES.TASKS.UPDATED,
+    };
   }
 
   async updateStatus(
     id: string,
     dto: UpdateTaskStatusDto,
     user: AuthUser,
-    meta?: { ipAddress?: string | null; requestId?: string | null; userAgent?: string | null },
+    meta?: {
+      ipAddress?: string | null;
+      requestId?: string | null;
+      userAgent?: string | null;
+    },
   ) {
     const existing = await this.queries.getById(id, user);
     enforceTaskWriteScope(user, existing);
@@ -507,11 +550,16 @@ export class TasksCommandsService {
       select: { id: true, code: true, name: true },
     });
     if (!status) {
-      throw new BadRequestException(MESSAGES.TASK_VALIDATION.STATUS_NAME_INVALID);
+      throw new BadRequestException(
+        MESSAGES.TASK_VALIDATION.STATUS_NAME_INVALID,
+      );
     }
 
     const oldStatusId = existing.status_id;
-    await this.taskRepository.update(id, { statusId: status.id, updatedBy: user.id });
+    await this.taskRepository.update(id, {
+      statusId: status.id,
+      updatedBy: user.id,
+    });
 
     await this.taskHistoryRepository.save(
       this.taskHistoryRepository.create({
@@ -531,8 +579,16 @@ export class TasksCommandsService {
       tableName: 'tasks',
       recordId: id,
       actionType: 'UPDATE',
-      oldValue: { statusId: oldStatusId, statusName: existing.status_name, statusCode: existing.status_code },
-      newValue: { statusId: status.id, statusName: status.name, statusCode: status.code },
+      oldValue: {
+        statusId: oldStatusId,
+        statusName: existing.status_name,
+        statusCode: existing.status_code,
+      },
+      newValue: {
+        statusId: status.id,
+        statusName: status.name,
+        statusCode: status.code,
+      },
       performedBy: user.id,
       ipAddress: meta?.ipAddress ?? null,
       requestId: meta?.requestId ?? null,
@@ -553,34 +609,56 @@ export class TasksCommandsService {
   }
 
   async bulkComplete(dto: BulkTasksDto, user: AuthUser) {
-    const results: Array<{ id: string; status: 'success' | 'error'; message?: string }> = [];
+    const results: Array<{
+      id: string;
+      status: 'success' | 'error';
+      message?: string;
+    }> = [];
     for (const id of dto.ids) {
       try {
         await this.complete(id, { notes: 'Bulk completion' }, user);
         results.push({ id, status: 'success' });
       } catch (error) {
-        this.logger.error(`Bulk complete failed for task ${id}`, error as Error);
-        results.push({ id, status: 'error', message: MESSAGES.TASKS.BULK_ITEM_FAILED });
+        this.logger.error(
+          `Bulk complete failed for task ${id}`,
+          error as Error,
+        );
+        results.push({
+          id,
+          status: 'error',
+          message: MESSAGES.TASKS.BULK_ITEM_FAILED,
+        });
       }
     }
     return results;
   }
 
   async bulkDelete(dto: BulkTasksDto, user: AuthUser) {
-    const results: Array<{ id: string; status: 'success' | 'error'; message?: string }> = [];
+    const results: Array<{
+      id: string;
+      status: 'success' | 'error';
+      message?: string;
+    }> = [];
     for (const id of dto.ids) {
       try {
         await this.delete(id, user);
         results.push({ id, status: 'success' });
       } catch (error) {
         this.logger.error(`Bulk delete failed for task ${id}`, error as Error);
-        results.push({ id, status: 'error', message: MESSAGES.TASKS.BULK_ITEM_FAILED });
+        results.push({
+          id,
+          status: 'error',
+          message: MESSAGES.TASKS.BULK_ITEM_FAILED,
+        });
       }
     }
     return results;
   }
 
-  private async assertProjectMembership(user: AuthUser, projectId: string): Promise<void> {
+  private async assertProjectMembership(
+    user: AuthUser,
+    projectId: string,
+  ): Promise<void> {
     if (user.role === 'super_admin') return;
     const membership = await this.projectUserRepository.findOne({
       where: { projectId, userId: user.id, deletedAt: IsNull() },
@@ -597,11 +675,14 @@ export class TasksCommandsService {
       select: { id: true, code: true },
     });
     if (!row) {
-      throw new BadRequestException(MESSAGES.TASK_VALIDATION.PRIORITY_ID_INVALID);
+      throw new BadRequestException(
+        MESSAGES.TASK_VALIDATION.PRIORITY_ID_INVALID,
+      );
     }
     if (!ALLOWED_TASK_PRIORITY_CODES.has(String(row.code).toLowerCase())) {
-      throw new BadRequestException(MESSAGES.TASK_VALIDATION.PRIORITY_NOT_ALLOWED);
+      throw new BadRequestException(
+        MESSAGES.TASK_VALIDATION.PRIORITY_NOT_ALLOWED,
+      );
     }
   }
 }
-

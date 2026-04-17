@@ -12,6 +12,7 @@ import { STYLE_TOKENS } from "@/constants/style-tokens";
 import { MESSAGES } from "@/constants/messages";
 import type { TaskAttachmentItem, TaskDetailResponse } from "@/services/tasksApi.service";
 import { sanitizeRichHtml } from "@/utils/richText";
+import { formatResolvedTaskFilters } from "@/utils/taskFilters";
 import { TaskStatusBadge } from "@/components/common/badges/TaskStatusBadge";
 import { PriorityBadge } from "@/components/common/badges/PriorityBadge";
 import { TaskTimeline, type TaskTimelineItem } from "@/features/tasks/components/TaskTimeline";
@@ -69,6 +70,7 @@ export function SuperTaskView(props: Props) {
   const t = props.task;
   const comments = Array.isArray(props.comments) ? props.comments : [];
   const history = Array.isArray(props.history) ? props.history : [];
+  const resolvedFilters = formatResolvedTaskFilters(t?.filters);
 
   const avatarLetter = (fullName?: string | null) => {
     const s = String(fullName ?? "").trim();
@@ -163,12 +165,6 @@ export function SuperTaskView(props: Props) {
             </FieldBlock>
 
             <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
-              <FieldBlock label="Level">
-                <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{String(t.level_name ?? "—")}</Typography>
-              </FieldBlock>
-              <FieldBlock label="Trade">
-                <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{String(t.trade_name ?? "—")}</Typography>
-              </FieldBlock>
               <FieldBlock label="Status">
                 <TaskStatusBadge label={String(t.status_name ?? "Open")} />
               </FieldBlock>
@@ -176,6 +172,20 @@ export function SuperTaskView(props: Props) {
                 <PriorityBadge label={String(t.priority_name ?? "-")} />
               </FieldBlock>
             </Box>
+
+            <FieldBlock label="Filters">
+              {resolvedFilters.length ? (
+                <Stack spacing={0.5}>
+                  {resolvedFilters.map((line) => (
+                    <Typography key={line} sx={{ fontSize: 13.5 }}>
+                      {line}
+                    </Typography>
+                  ))}
+                </Stack>
+              ) : (
+                <Typography sx={{ fontSize: 13.5, color: STYLE_TOKENS.colors.textMuted }}>—</Typography>
+              )}
+            </FieldBlock>
 
             <FieldBlock label="Assigned user">
               <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{props.assigneeLabel}</Typography>

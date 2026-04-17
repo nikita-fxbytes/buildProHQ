@@ -9,7 +9,6 @@ import { DaysBadge } from "@/components/common/badges/DaysBadge";
 import { PriorityBadge } from "@/components/common/badges/PriorityBadge";
 import { AppIcon } from "@/components/common/AppIcon";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
-import { FilterChipGroup } from "@/components/common/filters/FilterChipGroup";
 import { FilterPanel } from "@/components/common/filters/FilterPanel";
 import { AppTableCell } from "@/components/common/table/AppTableCell";
 import { AppTableEmptyState } from "@/components/common/table/AppTableEmptyState";
@@ -29,14 +28,13 @@ import type { TaskAttachmentItem } from "@/services/tasksApi.service";
 
 type ActionItemRow = {
   id: string;
-  level: string;
-  trade: string;
+  filters: string;
   priority: string;
   desc: string;
   days: number;
 };
 
-type SortKey = "level" | "trade" | "priority" | "description" | "daysOpen" | "createdAt";
+type SortKey = "priority" | "description" | "daysOpen" | "createdAt";
 
 type Props = {
   statsLoading: boolean;
@@ -52,16 +50,10 @@ type Props = {
     openTasks: number;
     overdue10: number;
     completed: number;
-    tradesActive: number;
+    urgent: number;
   };
   showFilters: boolean;
   setShowFilters: (value: boolean) => void;
-  tradeOptions: Array<string | { value: string; label: string }>;
-  levelOptions: Array<string | { value: string; label: string }>;
-  tradeFilters: string[];
-  levelFilters: string[];
-  setTradeFilters: (value: string) => void;
-  setLevelFilters: (value: string) => void;
   sortDays: "asc" | "desc" | null;
   setSortDays: (dir: "asc" | "desc") => void;
   sortKey?: SortKey | null;
@@ -90,8 +82,7 @@ type Props = {
 };
 
 export function UserTasksView(props: Props) {
-  const filterCount =
-    props.tradeFilters.length + props.levelFilters.length + (props.sortDays ? 1 : 0);
+  const filterCount = props.sortDays ? 1 : 0;
 
   return (
     <Stack spacing={2}>
@@ -102,7 +93,7 @@ export function UserTasksView(props: Props) {
           <StatCard value={props.stats.openTasks} label="Open Tasks" accentColor="#F5A623" />
           <StatCard value={props.stats.overdue10} label="Overdue (10+ days)" accentColor="#EF4444" />
           <StatCard value={props.stats.completed} label="Completed" accentColor="#22C55E" />
-          <StatCard value={props.stats.tradesActive} label="Trades Active" accentColor="#3BB0D8" />
+          <StatCard value={props.stats.urgent} label="High Priority" accentColor="#3BB0D8" />
         </Box>
       )}
 
@@ -110,7 +101,7 @@ export function UserTasksView(props: Props) {
         <Box sx={{ flex: 1, minWidth: 220 }}>
           <SearchInput
             value={props.search}
-            placeholder="Search by level, trade, description..."
+            placeholder="Search by filters or description..."
             onChange={props.setSearch}
             sx={{
               "& .MuiInputBase-root": {
@@ -152,55 +143,43 @@ export function UserTasksView(props: Props) {
       </PageToolbar>
 
       <FilterPanel open={props.showFilters}>
-          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: "16px" }}>
-            <FilterChipGroup
-              label="Trade"
-              options={props.tradeOptions}
-              selected={props.tradeFilters}
-              onToggle={props.setTradeFilters}
-            />
-            <FilterChipGroup
-              label="Level"
-              options={props.levelOptions}
-              selected={props.levelFilters}
-              onToggle={props.setLevelFilters}
-            />
-            <Box>
-              <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#7B89A8", textTransform: "uppercase", mb: 1 }}>
-                Sort by Days
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                <AppButton
-                  type="button"
-                  size="small"
-                  variant="outlined"
-                  onClick={() => props.setSortDays("asc")}
-                  sx={{
-                    borderColor: "#E4E8F0",
-                    background: props.sortDays === "asc" ? "#F5A623" : "#fff",
-                    color: props.sortDays === "asc" ? "#fff" : "#7B89A8",
-                    fontSize: 12,
-                  }}
-                >
-                  {"\u2191"} Ascending
-                </AppButton>
-                <AppButton
-                  type="button"
-                  size="small"
-                  variant="outlined"
-                  onClick={() => props.setSortDays("desc")}
-                  sx={{
-                    borderColor: "#E4E8F0",
-                    background: props.sortDays === "desc" ? "#F5A623" : "#fff",
-                    color: props.sortDays === "desc" ? "#fff" : "#7B89A8",
-                    fontSize: 12,
-                  }}
-                >
-                  {"\u2193"} Descending
-                </AppButton>
-              </Stack>
-            </Box>
+        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: "16px" }}>
+          <Box>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#7B89A8", textTransform: "uppercase", mb: 1 }}>
+              Sort by Days
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <AppButton
+                type="button"
+                size="small"
+                variant="outlined"
+                onClick={() => props.setSortDays("asc")}
+                sx={{
+                  borderColor: "#E4E8F0",
+                  background: props.sortDays === "asc" ? "#F5A623" : "#fff",
+                  color: props.sortDays === "asc" ? "#fff" : "#7B89A8",
+                  fontSize: 12,
+                }}
+              >
+                {"\u2191"} Ascending
+              </AppButton>
+              <AppButton
+                type="button"
+                size="small"
+                variant="outlined"
+                onClick={() => props.setSortDays("desc")}
+                sx={{
+                  borderColor: "#E4E8F0",
+                  background: props.sortDays === "desc" ? "#F5A623" : "#fff",
+                  color: props.sortDays === "desc" ? "#fff" : "#7B89A8",
+                  fontSize: 12,
+                }}
+              >
+                {"\u2193"} Descending
+              </AppButton>
+            </Stack>
           </Box>
+        </Box>
           <Box sx={{ mt: 2, pt: 2, borderTop: "1px solid #E4E8F0" }}>
             <AppButton
               type="button"
@@ -250,11 +229,10 @@ export function UserTasksView(props: Props) {
         ) : null}
 
         <AppTableHeader
-          columnsTemplate="36px 80px 130px 80px 1fr 100px 84px"
+          columnsTemplate="36px 180px 80px 1fr 100px 84px"
           columns={[
             { key: "select", label: "" },
-            { key: "level", label: "Level", sortable: true, sortKey: "level" },
-            { key: "trade", label: "Trade", sortable: true, sortKey: "trade" },
+            { key: "filters", label: "Filters" },
             { key: "priority", label: "Priority", sortable: true, sortKey: "priority" },
             { key: "description", label: "Description", sortable: true, sortKey: "description" },
             { key: "daysOpen", label: "Days Open", sortable: true, sortKey: "daysOpen" },
@@ -266,14 +244,14 @@ export function UserTasksView(props: Props) {
         />
 
         {props.tableLoading ? (
-          <AppGridTableSkeleton columnsTemplate="36px 80px 130px 80px 1fr 100px 84px" rowCount={8} />
+          <AppGridTableSkeleton columnsTemplate="36px 180px 80px 1fr 100px 84px" rowCount={8} />
         ) : props.rows.length === 0 ? (
           <AppTableEmptyState icon={<AppIcon name="folder" size={36} />} message="No action items match your filters." />
         ) : (
           props.rows.map((task) => (
             <AppTableRow
               key={task.id}
-              columnsTemplate="36px 80px 130px 80px 1fr 100px 84px"
+              columnsTemplate="36px 180px 80px 1fr 100px 84px"
               className="task-row-item"
             >
               <Box>
@@ -284,8 +262,7 @@ export function UserTasksView(props: Props) {
                   sx={{ p: 0 }}
                 />
               </Box>
-              <AppTableCell variant="level">{task.level}</AppTableCell>
-              <AppTableCell variant="trade">{task.trade}</AppTableCell>
+              <AppTableCell variant="text">{task.filters}</AppTableCell>
               <AppTableCell variant="default">
                 <PriorityBadge label={task.priority} />
               </AppTableCell>

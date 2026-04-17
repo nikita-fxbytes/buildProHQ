@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class UniqueProjectNameCiAndProjectDelete1775200000000
-  implements MigrationInterface
-{
+export class UniqueProjectNameCiAndProjectDelete1775200000000 implements MigrationInterface {
   name = 'UniqueProjectNameCiAndProjectDelete1775200000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -18,4 +16,3 @@ export class UniqueProjectNameCiAndProjectDelete1775200000000
     await queryRunner.query(`DROP INDEX IF EXISTS "uq_projects_name_ci"`);
   }
 }
-

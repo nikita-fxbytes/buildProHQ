@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsArray,
   IsDateString,
@@ -9,7 +10,9 @@ import {
   MinLength,
   Validate,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+import { TaskFilterValueInputDto } from '../../project-filters/dto/task-filter-value-input.dto';
 import { MESSAGES } from '../../../infrastructure/common/constants/messages';
 import { IsRichTaskDescriptionConstraint } from '../../../infrastructure/common/validators/rich-description.constraint';
 
@@ -32,7 +35,8 @@ export class CreateTaskDto {
   projectId!: string;
 
   @ApiProperty({
-    description: 'Task status id (use open status when creating a new action item).',
+    description:
+      'Task status id (use open status when creating a new action item).',
     example: '1b6a0fb1-2d3f-4f05-8c7f-5c9fdb1e3d42',
   })
   @IsUUID('4', { message: MESSAGES.TASK_VALIDATION.STATUS_ID_INVALID })
@@ -45,20 +49,6 @@ export class CreateTaskDto {
   @IsOptional()
   @IsUUID('4', { message: MESSAGES.TASK_VALIDATION.PRIORITY_ID_INVALID })
   priorityId?: string;
-
-  @ApiProperty({
-    description: 'Building level id.',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  })
-  @IsUUID('4', { message: MESSAGES.TASK_VALIDATION.LEVEL_ID_INVALID })
-  levelId!: string;
-
-  @ApiProperty({
-    description: 'Trade id.',
-    example: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
-  })
-  @IsUUID('4', { message: MESSAGES.TASK_VALIDATION.TRADE_ID_INVALID })
-  tradeId!: string;
 
   @ApiPropertyOptional({
     description: 'User id to assign the task to (optional).',
@@ -74,11 +64,26 @@ export class CreateTaskDto {
   })
   @IsOptional()
   @IsArray()
-  @IsUUID('4', { each: true, message: MESSAGES.TASK_VALIDATION.ASSIGNED_USER_ID_INVALID })
+  @IsUUID('4', {
+    each: true,
+    message: MESSAGES.TASK_VALIDATION.ASSIGNED_USER_ID_INVALID,
+  })
   assignedToUserIds?: string[];
 
   @ApiPropertyOptional({
-    description: 'Due date / deadline (optional). ISO date string, e.g. 2026-04-15.',
+    description:
+      'Dynamic project filter values (per filter: sub-filters and/or text).',
+    type: [TaskFilterValueInputDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TaskFilterValueInputDto)
+  taskFilterValues?: TaskFilterValueInputDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'Due date / deadline (optional). ISO date string, e.g. 2026-04-15.',
     example: '2026-04-15',
   })
   @ValidateIf((_, v) => v !== undefined && v !== null && v !== '')

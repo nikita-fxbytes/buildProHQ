@@ -5,14 +5,13 @@ import { FiltersService } from './filters.service';
 import {
   FilterCategory,
   FilterOption,
-  Level,
-  Trade,
 } from '../../infrastructure/persistence/typeorm/entities';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FilterCategory, FilterOption, Level, Trade])],
+  imports: [
+    TypeOrmModule.forFeature([FilterCategory, FilterOption]),
+  ],
   controllers: [FiltersController],
   providers: [FiltersService],
 })
 export class FiltersModule {}
-

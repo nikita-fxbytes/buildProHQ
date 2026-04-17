@@ -1,6 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 const SORT_BY = ['createdAt', 'name', 'code', 'members'] as const;
 type SortBy = (typeof SORT_BY)[number];
@@ -38,4 +46,3 @@ export class SearchProjectsDto {
   @IsIn(SORT_ORDER)
   sortOrder?: SortOrder;
 }
-

@@ -19,7 +19,9 @@ export class NotificationsService {
       .where('n.user_id = :userId', { userId: user.id });
 
     if (query.isRead !== undefined) {
-      qb.andWhere('n.is_read = :isRead', { isRead: query.isRead === 'true' ? 1 : 0 });
+      qb.andWhere('n.is_read = :isRead', {
+        isRead: query.isRead === 'true' ? 1 : 0,
+      });
     }
 
     qb.orderBy('n.created_at', 'DESC');

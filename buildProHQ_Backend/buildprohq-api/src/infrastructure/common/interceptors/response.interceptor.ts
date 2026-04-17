@@ -17,7 +17,8 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, unknown> {
         const isObject = result && typeof result === 'object';
         const data = isObject && 'data' in result ? result.data : result;
         const meta = isObject && 'meta' in result ? result.meta : undefined;
-        const message = isObject && 'message' in result ? result.message : 'Success';
+        const message =
+          isObject && 'message' in result ? result.message : 'Success';
 
         return {
           success: true,
@@ -30,4 +31,3 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, unknown> {
     );
   }
 }
-

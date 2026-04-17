@@ -121,7 +121,7 @@ Required conditional columns:
 - `tasks`
 - `task_assignments`
 - `task_completions`
-- `task_filter_values` (user-applied filter tagging in task workflows)
+- `task_filters` (dynamic filter selections applied to tasks)
 - `task_comments`
 - `task_history`
 - `attachments`
@@ -130,7 +130,7 @@ Required conditional columns:
 
 - Lookup/master tables:
   - `user_types`, `user_statuses`, `task_statuses`, `invitation_statuses`,
-    `trades`, `levels`, `roles`, `permissions`, `filter_categories`, `filter_options`
+    `roles`, `permissions`, `filters`, `sub_filters`
 - Non-critical system mapping/config:
   - `role_permissions`, `settings`
 
@@ -140,9 +140,8 @@ Rationale: actor-level auditing here provides low business value relative to wri
 
 - 3NF+ maintained:
   - No hardcoded business enums in transactional tables.
-  - Status/priority/type/trade/level/filter metadata normalized into dedicated tables.
-  - Many-to-many relationships represented via junction tables (`user_roles`, `role_permissions`, `task_filter_values`).
-- One-to-one trade specialization retained via `user_trade_profiles`.
+  - Status/priority/type/filter metadata normalized into dedicated tables.
+  - Many-to-many relationships represented via junction tables (`user_roles`, `role_permissions`, `task_filters`, `filter_projects`).
 - Referential integrity enforced via explicit FKs and clear delete/update actions.
 
 ## 5) Index and query-path improvements
@@ -178,10 +177,10 @@ Rationale: actor-level auditing here provides low business value relative to wri
   - `task_comments` -> `tasks`
   - `task_history` -> `tasks`
   - `task_assignments` -> `tasks`
-  - `task_filter_values` -> `tasks`
+  - `task_filters` -> `tasks`
   - `attachments` -> `tasks`
 - `ON DELETE RESTRICT` for lookup integrity where deleting master data would break historical semantics:
-  - examples: statuses/roles/permissions/trades where applicable.
+  - examples: statuses/roles/permissions where applicable.
 - `ON UPDATE CASCADE` is consistently applied across foreign keys.
 
 ## 7) Scalability decisions
@@ -199,16 +198,17 @@ Rationale: actor-level auditing here provides low business value relative to wri
   - status transition (`task_statuses`), and
   - completion facts (`task_completions`).
 - Task comments/history are included as production hardening for multi-user collaboration and forensics, while remaining fully compatible with current docs behavior.
-- Field User and Trade User are represented through `user_types`; Trade-specific specialization is represented in `user_trade_profiles`.
-- Dynamic filter management in UI maps to `filter_categories` + `filter_options` + `task_filter_values`.
+- Field User and Trade User are represented through `user_types`.
+- Field User and Trade User are represented through `user_types`.
+- Dynamic filter management in UI maps to `filters` + `sub_filters` + `filter_projects` + `task_filters`.
 
 ## 9) Requirement-to-DB mapping (production pass)
 
 | Requirement | Table(s) | Status |
 |---|---|---|
-| User roles (Field, Trade, Manager) | `users`, `user_types`, `roles`, `user_roles`, `permissions`, `role_permissions`, `user_trade_profiles` | Covered |
+| User roles (Field, Trade, Manager) | `users`, `user_types`, `roles`, `user_roles`, `permissions`, `role_permissions` | Covered |
 | Task lifecycle (open/assigned/completed/deleted/history) | `tasks`, `task_statuses`, `task_assignments`, `task_completions`, `task_history`, `task_comments` | Covered |
-| Filters and search | `filter_categories`, `filter_options`, `task_filter_values`, `tasks` (FTS + indexes) | Covered |
+| Filters and search | `filters`, `sub_filters`, `filter_projects`, `task_filters`, `tasks` (FTS + indexes) | Covered |
 | Manager dashboard data paths | `tasks`, `task_completions`, `users`, `task_metrics` | Covered |
 | Assignment acceptance / rejection | `assignment_statuses`, `task_assignments`, `task_assignment_responses` | Covered |
 | Completion tracking (who/when/duration) | `task_completions`, `task_history` | Covered |
@@ -217,7 +217,7 @@ Rationale: actor-level auditing here provides low business value relative to wri
 | Attachments + metadata + before/after + annotation | `attachments` | Covered |
 | Audit/history | `audit_logs`, `task_history` | Covered |
 | User management + invitations | `users`, `user_statuses`, `user_invitations`, `invitation_statuses` | Covered |
-| Filter management | `filter_categories`, `filter_options` | Covered |
+| Filter management | `filters`, `sub_filters`, `filter_projects` | Covered |
 | Multi-project/site | `projects`, `sites`, `site_users`, `tasks.project_id`, `tasks.site_id` | Covered |
 | Geofencing/site location | `site_locations` (`allowed_radius_meters`) | Covered |
 | Offline sync | `device_sync_states`, `sync_logs`, `change_queue` | Covered |

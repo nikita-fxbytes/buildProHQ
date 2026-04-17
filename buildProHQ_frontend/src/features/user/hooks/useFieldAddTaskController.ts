@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { MESSAGES } from "@/constants/messages";
@@ -22,7 +22,7 @@ import type { UploadItem } from "@/components/common/FormUploadField";
 import { revokeBlobUrls } from "@/utils/uploadItems";
 import { useTaskDescriptionTools } from "@/hooks/useTaskDescriptionTools";
 import { emitTasksChanged } from "@/utils/taskEvents";
-import { projectsApi, type MyProjectItem } from "@/services/projectsApi.service";
+import { projectsApi, type MyProjectItem, type ProjectFilterDefinition } from "@/services/projectsApi.service";
 
 export function useFieldAddTaskController() {
   const router = useRouter();
@@ -31,6 +31,9 @@ export function useFieldAddTaskController() {
   const [projects, setProjects] = useState<MyProjectItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [photos, setPhotos] = useState<UploadItem[]>([]);
+  const [projectFilterDefinitions, setProjectFilterDefinitions] = useState<ProjectFilterDefinition[]>([]);
+  const [loadingProjectFilters, setLoadingProjectFilters] = useState(false);
+  const prevProjectIdRef = useRef<string | null>(null);
 
   const form = useForm<FieldAddTaskFormValues>({
     resolver: zodResolver(fieldAddTaskSchema),
@@ -38,11 +41,48 @@ export function useFieldAddTaskController() {
       title: "",
       projectId: "",
       description: "",
-      levelId: "",
-      tradeId: "",
+      taskFilterValues: [],
       priorityId: "",
     },
   });
+
+  const watchedProjectId = form.watch("projectId");
+
+  useEffect(() => {
+    const pid = String(watchedProjectId || "").trim();
+    const prev = prevProjectIdRef.current;
+    if (prev === null) {
+      prevProjectIdRef.current = pid || "";
+    } else if (prev !== pid) {
+      prevProjectIdRef.current = pid;
+      form.setValue("taskFilterValues", []);
+    }
+    if (!pid) {
+      setProjectFilterDefinitions([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingProjectFilters(true);
+    projectsApi
+      .getFilters(pid)
+      .then((res) => {
+        if (cancelled) return;
+        const filters = Array.isArray(res.filters) ? res.filters : [];
+        setProjectFilterDefinitions(filters.slice().sort((a, b) => a.name.localeCompare(b.name)));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setProjectFilterDefinitions([]);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoadingProjectFilters(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedProjectId]);
 
   const { voiceActive, toggleVoice, onPaste } = useTaskDescriptionTools(form);
 
@@ -112,11 +152,11 @@ export function useFieldAddTaskController() {
     loadingLookups,
     submitting,
     projects,
-    levels: lookups?.levels ?? [],
-    trades: lookups?.trades ?? [],
     priorityOptions,
     photos,
     setPhotos,
+    projectFilterDefinitions,
+    loadingProjectFilters,
     voiceActive,
     onSubmit,
     onCancel,

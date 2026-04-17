@@ -1,13 +1,28 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 
 function csvToArray(value: unknown): string[] | undefined {
   if (value == null || value === '') return undefined;
-  if (Array.isArray(value)) return value.map(String).map((s) => s.trim()).filter(Boolean);
+  if (Array.isArray(value))
+    return value
+      .map(String)
+      .map((s) => s.trim())
+      .filter(Boolean);
   const s = String(value).trim();
   if (!s) return undefined;
-  return s.split(',').map((x) => x.trim()).filter(Boolean);
+  return s
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
 export class TaskStatsFiltersDto {
@@ -15,16 +30,6 @@ export class TaskStatsFiltersDto {
   @IsOptional()
   @Transform(({ value }) => csvToArray(value))
   projectIds?: string[];
-
-  @ApiPropertyOptional({ description: 'Trade IDs (comma-separated)' })
-  @IsOptional()
-  @Transform(({ value }) => csvToArray(value))
-  tradeIds?: string[];
-
-  @ApiPropertyOptional({ description: 'Level IDs (comma-separated)' })
-  @IsOptional()
-  @Transform(({ value }) => csvToArray(value))
-  levelIds?: string[];
 
   @ApiPropertyOptional({ description: 'Created-by user IDs (comma-separated)' })
   @IsOptional()
@@ -55,7 +60,10 @@ export class TaskStatsQueryDto {
   filters?: TaskStatsFiltersDto;
 
   // Optional future-proofing: constrain allowed status codes, if needed.
-  @ApiPropertyOptional({ enum: ['open', 'all'], description: 'Stats scope (reserved)' })
+  @ApiPropertyOptional({
+    enum: ['open', 'all'],
+    description: 'Stats scope (reserved)',
+  })
   @IsOptional()
   @IsIn(['open', 'all'])
   scope?: 'open' | 'all';
@@ -75,4 +83,3 @@ export class TaskStatsQueryDto {
   @Max(100)
   limit?: number = 20;
 }
-

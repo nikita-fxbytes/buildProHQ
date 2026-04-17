@@ -3,8 +3,8 @@
 import { ManagerEditUserView } from "@/components/users/ManagerEditUserView";
 import { useManagerEditUserController } from "@/features/users/hooks/useManagerEditUserController";
 
-export function ManagerEditUserContainer() {
-  const controller = useManagerEditUserController();
+export function ManagerEditUserContainer(props?: { basePath?: string }) {
+  const controller = useManagerEditUserController({ basePath: props?.basePath });
   return (
     <ManagerEditUserView
       form={controller.form}

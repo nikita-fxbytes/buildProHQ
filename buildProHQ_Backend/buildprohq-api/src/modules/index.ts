@@ -9,3 +9,5 @@ export * from './notifications/notifications.module';
 export * from './mail/mail.module';
 export * from './filters/filters.module';
 export * from './projects/projects.module';
+export * from './project-filters/project-filters.module';
+export * from './analytics/analytics.module';
