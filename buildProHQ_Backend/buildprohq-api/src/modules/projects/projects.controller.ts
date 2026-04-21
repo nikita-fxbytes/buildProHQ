@@ -7,6 +7,7 @@ import {
   Ip,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -20,7 +21,7 @@ import type { AuthUser } from '../../infrastructure/common/interfaces/auth-user.
 import { ProjectsService } from './projects.service';
 import { ProjectFiltersService } from '../project-filters/project-filters.service';
 import { SearchProjectsDto } from './dto/search-projects.dto';
-import { CreateProjectDto } from './dto/create-project.dto';
+import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
 import {
   AssignProjectMemberDto,
   SearchProjectMembersDto,
@@ -34,7 +35,7 @@ export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly projectFiltersService: ProjectFiltersService,
-  ) {}
+  ) { }
 
   @Get('my')
   @Roles('super_admin', 'manager', 'field_user', 'trade_user')
@@ -61,6 +62,28 @@ export class ProjectsController {
   @ApiBody({ type: CreateProjectDto })
   create(@CurrentUser() actor: AuthUser, @Body() dto: CreateProjectDto) {
     return this.projectsService.createProject(actor, dto);
+  }
+
+  @Get(':projectId')
+  @Roles('super_admin', 'manager')
+  @ApiOperation({ summary: 'Get project details by ID' })
+  getOne(
+    @CurrentUser() actor: AuthUser,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
+  ) {
+    return this.projectsService.getProjectById(actor, projectId);
+  }
+
+  @Patch(':projectId')
+  @Roles('super_admin', 'manager')
+  @ApiOperation({ summary: 'Update project details' })
+  @ApiBody({ type: UpdateProjectDto })
+  update(
+    @CurrentUser() actor: AuthUser,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
+    @Body() dto: UpdateProjectDto,
+  ) {
+    return this.projectsService.updateProject(actor, projectId, dto);
   }
 
   @Post(':projectId/members')
@@ -102,7 +125,7 @@ export class ProjectsController {
   }
 
   @Post(':projectId/members/assign')
-  @Roles('super_admin')
+  @Roles('super_admin', 'manager')
   @ApiOperation({ summary: 'Assign user to project (super admin)' })
   @ApiBody({ type: AssignProjectMemberDto })
   assign(
@@ -114,7 +137,7 @@ export class ProjectsController {
   }
 
   @Delete(':projectId/members/:userId')
-  @Roles('super_admin')
+  @Roles('super_admin', 'manager')
   @ApiOperation({ summary: 'Unassign user from project (super admin)' })
   unassign(
     @CurrentUser() actor: AuthUser,
@@ -122,6 +145,17 @@ export class ProjectsController {
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
   ) {
     return this.projectsService.unassignMember(actor, projectId, userId);
+  }
+
+  @Get(':projectId/members/:userId/assigned-tasks/count')
+  @Roles('super_admin', 'manager')
+  @ApiOperation({ summary: 'Count tasks in project assigned to a user' })
+  memberAssignedTasksCount(
+    @CurrentUser() actor: AuthUser,
+    @Param('projectId', new ParseUUIDPipe({ version: '4' })) projectId: string,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+  ) {
+    return this.projectsService.countMemberAssignedTasks(actor, projectId, userId);
   }
 
   @Delete(':projectId')

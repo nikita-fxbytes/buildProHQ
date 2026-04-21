@@ -51,6 +51,8 @@ export const MESSAGES = {
     TITLE_REQUIRED: 'Title is required',
     TITLE_MAX_LENGTH: 'Title must be at most 500 characters',
     FILE_URL_INVALID: 'Attachment URL must be a valid http(s) address',
+    PROJECT_MEMBERSHIP_REQUIRED: 'User is not part of this project',
+    USER_NOT_IN_PROJECT: 'User is not part of this project',
   },
   FILES: {
     REQUIRED: 'Please choose a file to upload',

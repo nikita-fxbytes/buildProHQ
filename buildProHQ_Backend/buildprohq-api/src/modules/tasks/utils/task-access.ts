@@ -26,7 +26,6 @@ export function enforceTaskWriteScope(user: AuthUser, task: any): void {
 
 export function enforceTaskDeleteScope(user: AuthUser, task: any): void {
   if (user.role === 'super_admin') return;
-  if (user.role === 'manager') return;
   if (user.role === 'field_user' && task.created_by_user_id === user.id) return;
   throw new ForbiddenException(MESSAGES.TASKS.DELETE_SCOPE_DENIED);
 }

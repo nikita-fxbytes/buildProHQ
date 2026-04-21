@@ -9,6 +9,7 @@ import {
   TaskAssignment,
   TaskComment,
   TaskHistory,
+  ProjectUser,
 } from '../../infrastructure/persistence/typeorm/entities';
 import { ProjectFiltersService } from '../project-filters/project-filters.service';
 import { QueryTasksDto } from './dto/query-tasks.dto';
@@ -64,10 +65,12 @@ export class TasksQueriesRepository {
     private readonly taskCommentRepository: Repository<TaskComment>,
     @InjectRepository(TaskHistory)
     private readonly taskHistoryRepository: Repository<TaskHistory>,
+    @InjectRepository(ProjectUser)
+    private readonly projectUserRepository: Repository<ProjectUser>,
     @InjectRepository(Attachment)
     private readonly attachmentRepository: Repository<Attachment>,
     private readonly projectFilters: ProjectFiltersService,
-  ) {}
+  ) { }
 
   async searchOpen(user: AuthUser, dto: SearchOpenTasksDto) {
     return this.searchTerminalTasksPaged(
@@ -128,35 +131,45 @@ export class TasksQueriesRepository {
   }
 
   async getById(id: string, user: AuthUser) {
-    const row = await this.taskRepository
+    const qb = this.taskRepository
       .createQueryBuilder('t')
       .leftJoin('task_statuses', 'ts', 'ts.id = t.status_id')
       .leftJoin('task_priorities', 'tp', 'tp.id = t.priority_id')
       .leftJoin('projects', 'pr', 'pr.id = t.project_id')
       .select([
         't.id AS id',
-        't.project_id AS project_id',
-        'pr.name AS project_name',
-        't.status_id AS status_id',
-        't.priority_id AS priority_id',
-        't.created_by_user_id AS created_by_user_id',
-        't.assigned_to_user_id AS assigned_to_user_id',
+        't.project_id AS projectId',
+        'pr.name AS projectName',
+        't.status_id AS statusId',
+        't.priority_id AS priorityId',
+        't.created_by_user_id AS createdByUserId',
+        't.assigned_to_user_id AS assignedToUserId',
         't.title AS title',
         't.description AS description',
         't.notes AS notes',
-        't.due_at AS due_at',
-        't.opened_at AS opened_at',
-        't.closed_at AS closed_at',
-        't.days_open AS days_open',
-        't.created_at AS created_at',
-        't.updated_at AS updated_at',
-        'ts.code AS status_code',
-        'ts.name AS status_name',
-        'tp.name AS priority_name',
+        't.due_at AS dueAt',
+        't.opened_at AS openedAt',
+        't.closed_at AS closedAt',
+        't.days_open AS daysOpen',
+        't.created_at AS createdAt',
+        't.updated_at AS updatedAt',
+        'ts.code AS statusCode',
+        'ts.name AS statusName',
+        'tp.name AS priorityName',
       ])
       .where('t.id = :id', { id })
-      .andWhere('t.deleted_at IS NULL')
-      .getRawOne<any>();
+      .andWhere('t.deleted_at IS NULL');
+
+    if (user.role === 'manager') {
+      qb.innerJoin(
+        'project_users',
+        'pu_m',
+        'pu_m.project_id = t.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+        { authUserId: user.id },
+      );
+    }
+
+    const row = await qb.getRawOne<any>();
 
     if (!row) {
       throw new NotFoundException(MESSAGES.COMMON.NOT_FOUND);
@@ -482,7 +495,14 @@ export class TasksQueriesRepository {
       );
     }
 
-    if (user.role === 'trade_user') {
+    if (user.role === 'manager') {
+      qbBase.innerJoin(
+        'project_users',
+        'pu_m',
+        'pu_m.project_id = t.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+        { authUserId: user.id },
+      );
+    } else if (user.role === 'trade_user') {
       qbBase.andWhere('t.assigned_to_user_id = :authUserId', {
         authUserId: user.id,
       });
@@ -550,7 +570,7 @@ export class TasksQueriesRepository {
     const sortCol = sorting.sortMap[effectiveSortBy].column;
     const nulls =
       effectiveSortBy === 'assignedUser' ||
-      effectiveSortBy === 'assignedUserName'
+        effectiveSortBy === 'assignedUserName'
         ? 'NULLS LAST'
         : undefined;
     qbList

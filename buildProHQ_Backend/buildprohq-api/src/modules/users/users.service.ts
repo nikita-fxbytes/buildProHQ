@@ -36,7 +36,7 @@ export class UsersService {
     private readonly taskRepository: Repository<Task>,
     private readonly auditService: AuditService,
     private readonly invitationsService: InvitationsService,
-  ) {}
+  ) { }
 
   async list(actor: AuthUser) {
     // Lightweight list endpoint used by lookups/filters/badges.
@@ -77,10 +77,7 @@ export class UsersService {
       .addGroupBy('us.code')
       .addGroupBy('us.name')
       .orderBy('u.created_at', 'DESC');
-    // Super Admin can see all users. Managers are scoped to users they created.
-    if (actor.role !== 'super_admin') {
-      qb.andWhere('u.created_by = :actorId', { actorId: actor.id });
-    }
+    // Managers/Admins see all active users for assignment across projects.
 
     return qb.getRawMany();
   }
@@ -111,10 +108,7 @@ export class UsersService {
       )
       .where('u.deleted_at IS NULL');
 
-    // Super Admin can see all users. Managers are scoped to users they created.
-    if (actor.role !== 'super_admin') {
-      qb.andWhere('u.created_by = :actorId', { actorId: actor.id });
-    }
+    // Managers/Admins see all users.
 
     const term = dto.search?.trim();
     if (term) {
@@ -215,9 +209,7 @@ export class UsersService {
       .createQueryBuilder('u')
       .innerJoin(UserType, 'ut', 'ut.id = u.user_type_id')
       .where('u.deleted_at IS NULL');
-    if (actor.role !== 'super_admin') {
-      qbCount.andWhere('u.created_by = :actorId', { actorId: actor.id });
-    }
+    // Count all users for managers/admins.
     if (term) {
       qbCount.andWhere(
         '(u.full_name ILIKE :search OR u.email ILIKE :search OR ut.name ILIKE :search OR ut.code ILIKE :search OR u.initials ILIKE :search)',
@@ -516,10 +508,10 @@ export class UsersService {
       actionType: 'DELETE',
       oldValue: existing
         ? {
-            id: existing.id,
-            email: existing.email,
-            fullName: existing.fullName,
-          }
+          id: existing.id,
+          email: existing.email,
+          fullName: existing.fullName,
+        }
         : null,
       newValue: { action: 'USER_DELETED', id },
       performedBy: actorId,

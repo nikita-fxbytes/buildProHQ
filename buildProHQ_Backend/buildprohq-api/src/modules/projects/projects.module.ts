@@ -4,6 +4,8 @@ import {
   Project,
   ProjectUser,
   Role,
+  Task,
+  TaskAssignment,
   User,
   UserRole,
 } from '../../infrastructure/persistence/typeorm/entities';
@@ -14,7 +16,15 @@ import { ProjectFiltersModule } from '../project-filters/project-filters.module'
 @Module({
   imports: [
     ProjectFiltersModule,
-    TypeOrmModule.forFeature([Project, ProjectUser, User, UserRole, Role]),
+    TypeOrmModule.forFeature([
+      Project,
+      ProjectUser,
+      User,
+      UserRole,
+      Role,
+      Task,
+      TaskAssignment,
+    ]),
   ],
   controllers: [ProjectsController],
   providers: [ProjectsService],

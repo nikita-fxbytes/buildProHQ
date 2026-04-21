@@ -69,7 +69,7 @@ export class TasksCommandsService {
     private readonly audit: AuditService,
     private readonly queries: TasksQueriesRepository,
     private readonly projectFilters: ProjectFiltersService,
-  ) {}
+  ) { }
 
   async create(dto: CreateTaskDto, user: AuthUser) {
     await this.assertProjectMembership(user, dto.projectId);
@@ -85,6 +85,14 @@ export class TasksCommandsService {
             : []
         ).filter((x): x is string => Boolean(x)),
       ),
+    );
+
+    // Controlled auto-assignment check
+    await this.ensureProjectMemberships(
+      assignedIds,
+      dto.projectId,
+      dto.assignWithProjectJoin ?? false,
+      user.id,
     );
 
     const task = this.taskRepository.create({
@@ -168,6 +176,15 @@ export class TasksCommandsService {
       ),
     );
 
+    // Controlled auto-assignment check
+    const nextProjectId = dto.projectId ?? existing.projectId;
+    await this.ensureProjectMemberships(
+      nextAssignedIds,
+      nextProjectId,
+      (dto as any).assignWithProjectJoin ?? false,
+      user.id,
+    );
+
     await this.taskRepository.update(id, {
       title: dto.title?.trim() ?? undefined,
       projectId: dto.projectId ?? undefined,
@@ -188,7 +205,7 @@ export class TasksCommandsService {
     } as any);
 
     if (dto.taskFilterValues !== undefined) {
-      const nextProjectId = dto.projectId ?? existing.project_id;
+      const nextProjectId = dto.projectId ?? existing.projectId;
       await this.projectFilters.replaceTaskFilters(
         id,
         nextProjectId,
@@ -221,11 +238,11 @@ export class TasksCommandsService {
     await this.taskHistoryRepository.save(
       this.taskHistoryRepository.create({
         taskId: id,
-        oldStatusId: existing.status_id,
-        newStatusId: dto.statusId ?? existing.status_id,
-        oldAssigneeUserId: existing.assigned_to_user_id ?? null,
+        oldStatusId: existing.statusId,
+        newStatusId: dto.statusId ?? existing.statusId,
+        oldAssigneeUserId: existing.assignedToUserId ?? null,
         newAssigneeUserId:
-          nextAssignedIds[0] ?? existing.assigned_to_user_id ?? null,
+          nextAssignedIds[0] ?? existing.assignedToUserId ?? null,
         changeReason: 'task_updated',
         changedBy: user.id,
         createdBy: user.id,
@@ -351,6 +368,56 @@ export class TasksCommandsService {
     return { deleted: true, message: MESSAGES.TASKS.DELETED };
   }
 
+
+  private async ensureProjectMemberships(
+    userIds: string[],
+    projectId: string,
+    autoJoin: boolean,
+    actorId: string,
+  ): Promise<void> {
+    if (!userIds.length) return;
+
+    const existing = await this.projectUserRepository.find({
+      where: userIds.map((userId) => ({ projectId, userId, deletedAt: IsNull() })),
+      select: { userId: true },
+    });
+    const assigned = new Set(existing.map((e) => e.userId));
+    const notInProject = userIds.filter((id) => !assigned.has(id));
+
+    if (notInProject.length === 0) return;
+
+    if (!autoJoin) {
+      throw new BadRequestException(
+        MESSAGES.TASK_VALIDATION.USER_NOT_IN_PROJECT,
+      );
+    }
+
+    // Auto-join: add them to the project.
+    const newMembers = notInProject.map((userId) =>
+      this.projectUserRepository.create({
+        projectId,
+        userId,
+      }),
+    );
+    await this.projectUserRepository.save(newMembers);
+
+    // Audit log for each new member.
+    for (const m of newMembers) {
+      await this.audit.log({
+        tableName: 'project_users',
+        recordId: m.id,
+        actionType: 'CREATE',
+        newValue: {
+          action: 'PROJECT_AUTO_JOIN_VIA_TASK',
+          projectId,
+          userId: m.userId,
+          reason: 'Added to project via task assignment',
+        },
+        performedBy: actorId,
+      });
+    }
+  }
+
   async assign(
     id: string,
     dto: AssignTaskDto,
@@ -364,20 +431,18 @@ export class TasksCommandsService {
     const existing = await this.queries.getById(id, user);
     enforceTaskWriteScope(user, existing);
 
-    const anyDto = dto as any;
-    const assignedIds: string[] = Array.from(
-      new Set(
-        (Array.isArray(anyDto.assignedToUserIds)
-          ? anyDto.assignedToUserIds
-          : [dto.assigneeUserId]
-        ).filter(
-          (x): x is string => typeof x === 'string' && x.trim().length > 0,
-        ),
-      ),
+    const assigneeUserIds = Array.from(new Set((dto.assigneeUserIds ?? []).filter(Boolean)));
+
+    // Controlled auto-assignment check
+    await this.ensureProjectMemberships(
+      assigneeUserIds,
+      existing.projectId,
+      dto.assignWithProjectJoin ?? false,
+      user.id,
     );
 
     await this.taskRepository.update(id, {
-      assignedToUserId: (assignedIds[0] ?? null) as any,
+      assignedToUserId: assigneeUserIds[0] ?? null,
       updatedBy: user.id,
     } as any);
 
@@ -387,30 +452,35 @@ export class TasksCommandsService {
       .where('"task_id" = :taskId', { taskId: id })
       .execute();
 
-    if (assignedIds.length) {
-      const rows = assignedIds.map((assigneeUserId: string) => ({
-        taskId: id,
-        assigneeUserId,
-        assignedByUserId: user.id,
-        notes: dto.notes ?? null,
-        createdBy: user.id,
-        updatedBy: user.id,
-      }));
-      await this.taskAssignmentRepository.save(rows as any);
+    if (assigneeUserIds.length) {
+      const rows = assigneeUserIds.map((assigneeUserId) =>
+        this.taskAssignmentRepository.create({
+          taskId: id,
+          assigneeUserId,
+          assignedByUserId: user.id,
+          notes: dto.notes ?? null,
+          createdBy: user.id,
+          updatedBy: user.id,
+        }),
+      );
+      await this.taskAssignmentRepository.save(rows);
     }
 
     await this.taskHistoryRepository.save(
       this.taskHistoryRepository.create({
         taskId: id,
-        oldStatusId: existing.status_id,
-        newStatusId: existing.status_id,
-        oldAssigneeUserId: existing.assigned_to_user_id ?? null,
-        newAssigneeUserId: assignedIds[0] ?? null,
+        oldStatusId: existing.statusId,
+        newStatusId: existing.statusId,
+        oldAssigneeUserId: existing.assignedToUserId ?? null,
+        newAssigneeUserId: assigneeUserIds[0] ?? null,
         changeReason: 'task_assigned',
         changedBy: user.id,
         createdBy: user.id,
         updatedBy: user.id,
-        metadata: { assignedToUserIds: assignedIds },
+        metadata: {
+          assignedToUserIds: assigneeUserIds,
+          autoJoined: dto.assignWithProjectJoin ?? false,
+        },
       } as any),
     );
 
@@ -456,7 +526,7 @@ export class TasksCommandsService {
           taskId: id,
           completedByUserId: user.id,
           notes: dto.notes ?? null,
-          durationDays: existing.days_open ?? 0,
+          durationDays: existing.daysOpen ?? 0,
           createdBy: user.id,
           updatedBy: user.id,
         }),
@@ -466,10 +536,10 @@ export class TasksCommandsService {
     await this.taskHistoryRepository.save(
       this.taskHistoryRepository.create({
         taskId: id,
-        oldStatusId: existing.status_id,
+        oldStatusId: existing.statusId,
         newStatusId: completedStatus.id,
-        oldAssigneeUserId: existing.assigned_to_user_id ?? null,
-        newAssigneeUserId: existing.assigned_to_user_id ?? null,
+        oldAssigneeUserId: existing.assignedToUserId ?? null,
+        newAssigneeUserId: existing.assignedToUserId ?? null,
         changeReason: 'task_completed',
         changedBy: user.id,
         createdBy: user.id,
@@ -555,7 +625,7 @@ export class TasksCommandsService {
       );
     }
 
-    const oldStatusId = existing.status_id;
+    const oldStatusId = existing.statusId;
     await this.taskRepository.update(id, {
       statusId: status.id,
       updatedBy: user.id,
@@ -566,8 +636,8 @@ export class TasksCommandsService {
         taskId: id,
         oldStatusId,
         newStatusId: status.id,
-        oldAssigneeUserId: existing.assigned_to_user_id ?? null,
-        newAssigneeUserId: existing.assigned_to_user_id ?? null,
+        oldAssigneeUserId: existing.assignedToUserId ?? null,
+        newAssigneeUserId: existing.assignedToUserId ?? null,
         changeReason: 'task_status_changed',
         changedBy: user.id,
         createdBy: user.id,
@@ -581,8 +651,8 @@ export class TasksCommandsService {
       actionType: 'UPDATE',
       oldValue: {
         statusId: oldStatusId,
-        statusName: existing.status_name,
-        statusCode: existing.status_code,
+        statusName: existing.statusName,
+        statusCode: existing.statusCode,
       },
       newValue: {
         statusId: status.id,
@@ -665,7 +735,9 @@ export class TasksCommandsService {
       select: { id: true },
     });
     if (!membership) {
-      throw new ForbiddenException(MESSAGES.COMMON.FORBIDDEN);
+      throw new ForbiddenException(
+        MESSAGES.TASK_VALIDATION.PROJECT_MEMBERSHIP_REQUIRED,
+      );
     }
   }
 

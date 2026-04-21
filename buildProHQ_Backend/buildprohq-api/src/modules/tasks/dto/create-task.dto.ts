@@ -103,4 +103,11 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Auto-join assignees to project if not members.',
+    example: false,
+  })
+  @IsOptional()
+  assignWithProjectJoin?: boolean;
 }

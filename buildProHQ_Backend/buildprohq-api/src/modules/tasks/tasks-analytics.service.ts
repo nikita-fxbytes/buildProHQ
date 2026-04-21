@@ -6,6 +6,7 @@ import { MESSAGES } from '../../infrastructure/common/constants/messages';
 import {
   Task,
   TaskCompletion,
+  ProjectUser,
 } from '../../infrastructure/persistence/typeorm/entities';
 
 /**
@@ -21,7 +22,9 @@ export class TasksAnalyticsService {
     private readonly taskRepository: Repository<Task>,
     @InjectRepository(TaskCompletion)
     private readonly taskCompletionRepository: Repository<TaskCompletion>,
-  ) {}
+    @InjectRepository(ProjectUser)
+    private readonly projectUserRepository: Repository<ProjectUser>,
+  ) { }
 
   async getStats(
     user: AuthUser,
@@ -34,22 +37,32 @@ export class TasksAnalyticsService {
       scope === 'all' &&
       (user.role === 'manager' || user.role === 'super_admin')
     ) {
-      const row = await this.taskRepository
+      const qbStatsGlobal = this.taskRepository
         .createQueryBuilder('t')
         .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
-        .leftJoin('task_priorities', 'tp', 'tp.id = t.priority_id')
-        .select([
-          `COUNT(DISTINCT t.id) AS total`,
-          `COUNT(DISTINCT t.id) FILTER (WHERE ts.code = 'open') AS open`,
-          `COUNT(DISTINCT t.id) FILTER (WHERE ts.code = 'completed') AS completed`,
-          `COUNT(DISTINCT t.id) FILTER (WHERE DATE(t.created_at) = CURRENT_DATE) AS today`,
-          `COUNT(DISTINCT t.id) FILTER (WHERE t.due_at IS NOT NULL AND DATE(t.due_at) < CURRENT_DATE AND ts.code != 'completed') AS overdue`,
-          `COUNT(DISTINCT t.id) FILTER (WHERE ts.code != 'completed' AND tp.code = 'critical') AS urgent`,
-          `COUNT(DISTINCT t.id) FILTER (WHERE ts.code != 'completed' AND t.days_open > 7) AS overdue7`,
-          `COUNT(DISTINCT t.id) FILTER (WHERE ts.code != 'completed' AND t.days_open > 10) AS overdue10`,
-          `COUNT(DISTINCT t.id) FILTER (WHERE ts.code != 'completed' AND t.days_open > 6 AND t.days_open <= 10) AS midRange7to10`,
-          `COUNT(DISTINCT t.id) FILTER (WHERE ts.code != 'completed' AND t.days_open <= 6) AS fresh0to6`,
-        ])
+        .leftJoin('task_priorities', 'tp', 'tp.id = t.priority_id');
+
+      if (user.role === 'manager') {
+        qbStatsGlobal.innerJoin(
+          'project_users',
+          'pu_m',
+          'pu_m.project_id = t.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+          { authUserId: user.id },
+        );
+      }
+
+      const row = await qbStatsGlobal.select([
+        `COUNT(DISTINCT t.id) AS total`,
+        `COUNT(DISTINCT t.id) FILTER (WHERE ts.code = 'open') AS open`,
+        `COUNT(DISTINCT t.id) FILTER (WHERE ts.code = 'completed') AS completed`,
+        `COUNT(DISTINCT t.id) FILTER (WHERE DATE(t.created_at) = CURRENT_DATE) AS today`,
+        `COUNT(DISTINCT t.id) FILTER (WHERE t.due_at IS NOT NULL AND DATE(t.due_at) < CURRENT_DATE AND ts.code != 'completed') AS overdue`,
+        `COUNT(DISTINCT t.id) FILTER (WHERE ts.code != 'completed' AND tp.code = 'critical') AS urgent`,
+        `COUNT(DISTINCT t.id) FILTER (WHERE ts.code != 'completed' AND t.days_open > 7) AS overdue7`,
+        `COUNT(DISTINCT t.id) FILTER (WHERE ts.code != 'completed' AND t.days_open > 10) AS overdue10`,
+        `COUNT(DISTINCT t.id) FILTER (WHERE ts.code != 'completed' AND t.days_open > 6 AND t.days_open <= 10) AS midRange7to10`,
+        `COUNT(DISTINCT t.id) FILTER (WHERE ts.code != 'completed' AND t.days_open <= 6) AS fresh0to6`,
+      ])
         .where('t.deleted_at IS NULL')
         .andWhere('ts.deleted_at IS NULL')
         .getRawOne<{
@@ -91,7 +104,14 @@ export class TasksAnalyticsService {
       .leftJoin('users', 'uc', 'uc.id = t.created_by_user_id')
       .where('t.deleted_at IS NULL');
 
-    if (user.role === 'trade_user') {
+    if (user.role === 'manager') {
+      qbAll.innerJoin(
+        'project_users',
+        'pu_m',
+        'pu_m.project_id = t.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+        { authUserId: user.id },
+      );
+    } else if (user.role === 'trade_user') {
       qbAll.andWhere('t.assigned_to_user_id = :userId', { userId: user.id });
     } else if (user.role === 'field_user') {
       qbAll.andWhere(
@@ -239,16 +259,38 @@ export class TasksAnalyticsService {
       throw new ForbiddenException(MESSAGES.TASKS.ANALYTICS_MANAGER_ONLY);
     }
 
+    const qbOpenTasks = this.taskRepository
+      .createQueryBuilder('t')
+      .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id');
+
+    if (user.role === 'manager') {
+      qbOpenTasks.innerJoin(
+        'project_users',
+        'pu_m',
+        'pu_m.project_id = t.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+        { authUserId: user.id },
+      );
+    }
+
+    const qbCompletedTotal = this.taskRepository
+      .createQueryBuilder('t')
+      .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id');
+
+    if (user.role === 'manager') {
+      qbCompletedTotal.innerJoin(
+        'project_users',
+        'pu_m',
+        'pu_m.project_id = t.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+        { authUserId: user.id },
+      );
+    }
+
     const [openTasks, completedTotalRaw, avgCompletionRaw] = await Promise.all([
-      this.taskRepository
-        .createQueryBuilder('t')
-        .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
+      qbOpenTasks
         .where('t.deleted_at IS NULL')
         .andWhere('ts.is_terminal = :isTerminal', { isTerminal: false })
         .getCount(),
-      this.taskRepository
-        .createQueryBuilder('t')
-        .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
+      qbCompletedTotal
         .where('t.deleted_at IS NULL')
         .andWhere('ts.is_terminal = :isTerminal', { isTerminal: true })
         .getCount(),
@@ -258,22 +300,45 @@ export class TasksAnalyticsService {
         .where('tc.deleted_at IS NULL')
         .getRawOne<{ avg: string | null }>(),
     ]);
+
     const avgCompletionDays = Math.round(Number(avgCompletionRaw?.avg ?? 0));
 
-    const [overdueDueCountRaw, overdueDueTop] = await Promise.all([
-      this.taskRepository
-        .createQueryBuilder('t')
-        .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
+    const qbOverdueCount = this.taskRepository
+      .createQueryBuilder('t')
+      .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id');
+
+    if (user.role === 'manager') {
+      qbOverdueCount.innerJoin(
+        'project_users',
+        'pu_m',
+        'pu_m.project_id = t.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+        { authUserId: user.id },
+      );
+    }
+
+    const qbOverdueTop = this.taskRepository
+      .createQueryBuilder('t')
+      .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
+      .leftJoin('projects', 'p', 'p.id = t.project_id');
+
+    if (user.role === 'manager') {
+      qbOverdueTop.innerJoin(
+        'project_users',
+        'pu_m',
+        'pu_m.project_id = t.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+        { authUserId: user.id },
+      );
+    }
+
+    const [overdueDueCountRaw, overdueDueTopRaw] = await Promise.all([
+      qbOverdueCount
         .where('t.deleted_at IS NULL')
         .andWhere('t.due_at IS NOT NULL')
         .andWhere('DATE(t.due_at) < CURRENT_DATE')
         .andWhere('ts.code != :completed', { completed: 'completed' })
         .select('COUNT(DISTINCT t.id)', 'count')
         .getRawOne<{ count: string }>(),
-      this.taskRepository
-        .createQueryBuilder('t')
-        .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
-        .leftJoin('projects', 'p', 'p.id = t.project_id')
+      qbOverdueTop
         .select([
           't.id AS id',
           't.title AS title',
@@ -298,9 +363,19 @@ export class TasksAnalyticsService {
         }>(),
     ]);
 
-    const completionRate = await this.taskRepository
+    const qbCompletionRate = this.taskRepository
       .createQueryBuilder('t')
-      .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
+      .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id');
+
+    if (user.role === 'manager') {
+      qbCompletionRate.innerJoin(
+        'project_users',
+        'pu_m',
+        'pu_m.project_id = t.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+        { authUserId: user.id },
+      );
+    }
+    const completionRate = await qbCompletionRate
       .select("to_char(t.created_at, 'YYYY-MM')", 'month')
       .addSelect('COUNT(t.id)', 'total')
       .addSelect(
@@ -313,10 +388,20 @@ export class TasksAnalyticsService {
       .limit(6)
       .getRawMany();
 
-    const overdueTop = await this.taskRepository
+    const qbOverdueLegacyTop = this.taskRepository
       .createQueryBuilder('t')
       .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
-      .leftJoin('users', 'uc', 'uc.id = t.created_by_user_id')
+      .leftJoin('users', 'uc', 'uc.id = t.created_by_user_id');
+
+    if (user.role === 'manager') {
+      qbOverdueLegacyTop.innerJoin(
+        'project_users',
+        'pu_m',
+        'pu_m.project_id = t.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+        { authUserId: user.id },
+      );
+    }
+    const overdueTop = await qbOverdueLegacyTop
       .select([
         't.days_open AS days_open',
         't.description AS description',
@@ -333,9 +418,20 @@ export class TasksAnalyticsService {
         user_initials: string | null;
       }>();
 
-    const byUser = await this.taskCompletionRepository
+    const qbByUser = this.taskCompletionRepository
       .createQueryBuilder('tc')
-      .leftJoin('users', 'u', 'u.id = tc.completed_by_user_id')
+      .innerJoin('tasks', 'tk', 'tk.id = tc.task_id')
+      .leftJoin('users', 'u', 'u.id = tc.completed_by_user_id');
+
+    if (user.role === 'manager') {
+      qbByUser.innerJoin(
+        'project_users',
+        'pu_m',
+        'pu_m.project_id = tk.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+        { authUserId: user.id },
+      );
+    }
+    const byUser = await qbByUser
       .select("COALESCE(u.initials, '–')", 'user')
       .addSelect('COUNT(tc.id)', 'completed')
       .where('tc.deleted_at IS NULL')
@@ -353,7 +449,7 @@ export class TasksAnalyticsService {
         user: r.user_initials,
       })),
       overdueDueCount: Number(overdueDueCountRaw?.count ?? 0),
-      overdueDueTop: overdueDueTop.map((r) => ({
+      overdueDueTop: overdueDueTopRaw.map((r) => ({
         id: r.id,
         title: r.title,
         description: r.description,
@@ -373,10 +469,20 @@ export class TasksAnalyticsService {
     if (user.role !== 'manager' && user.role !== 'super_admin') {
       throw new ForbiddenException(MESSAGES.TASKS.ANALYTICS_MANAGER_ONLY);
     }
-    return this.taskRepository
+    const qbRecent = this.taskRepository
       .createQueryBuilder('t')
       .innerJoin('task_statuses', 'ts', 'ts.id = t.status_id')
-      .leftJoin('projects', 'p', 'p.id = t.project_id')
+      .leftJoin('projects', 'p', 'p.id = t.project_id');
+
+    if (user.role === 'manager') {
+      qbRecent.innerJoin(
+        'project_users',
+        'pu_m',
+        'pu_m.project_id = t.project_id AND pu_m.user_id = :authUserId AND pu_m.deleted_at IS NULL',
+        { authUserId: user.id },
+      );
+    }
+    return qbRecent
       .select([
         't.id AS id',
         't.title AS title',

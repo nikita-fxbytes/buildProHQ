@@ -62,7 +62,7 @@ export class FilesController {
   @Post('upload')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('manager', 'field_user', 'trade_user')
+  @Roles('manager', 'field_user', 'trade_user', 'super_admin')
   @ApiOperation({
     summary: 'Upload an image file (before/after photos)',
     description:

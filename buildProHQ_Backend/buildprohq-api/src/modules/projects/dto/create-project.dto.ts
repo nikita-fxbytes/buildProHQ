@@ -16,4 +16,28 @@ export class CreateProjectDto {
   @IsString()
   @MaxLength(50)
   code?: string;
+
+  @ApiProperty({ required: false, example: 'Main construction project for North Tower' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+export class UpdateProjectDto {
+  @ApiProperty({ required: false, example: 'Project Alpha — North Tower' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  name?: string;
+
+  @ApiProperty({ required: false, example: 'p1' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  code?: string;
+
+  @ApiProperty({ required: false, example: 'Main construction project for North Tower' })
+  @IsOptional()
+  @IsString()
+  description?: string;
 }
